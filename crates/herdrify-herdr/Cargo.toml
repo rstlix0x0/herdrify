@@ -1,0 +1,19 @@
+[package]
+name        = "herdrify-herdr"
+description = "Writes herdrify files into the Herdr home and drives herdr-app and herdr-core."
+version     = "0.0.0"
+readme      = "README.md"
+
+edition.workspace      = true
+rust-version.workspace = true
+license.workspace      = true
+repository.workspace   = true
+authors.workspace      = true
+
+[lints]
+workspace = true
+
+[dependencies]
+herdrify-core = { workspace = true }
+herdrify-hc = { workspace = true }
+herdrify-app = { workspace = true }

@@ -1,5 +1,5 @@
 ---
-status: approved
+status: done
 created: 2026-11-22
 built-on: 38eeb1508131
 ---
@@ -116,3 +116,27 @@ crates/herdrify-cli/src/main.rs            — create: `main` prints `version_li
 - `cargo run -q -p herdrify-cli` prints `herdrify 0.0.0`.
 - The nine edge listings match spec §4. `cargo tree -d --workspace` prints nothing to print.
 - Every created file is byte-identical to `<probe>`.
+
+## Review findings
+
+Reviewer verdict: COMPLIANT, `blocking: none` (code 0🔴 0🟡 3🔵 1❓ · plan 0🔴 0🟡 1❓ 1 note). No fix round was needed.
+
+- ❓ open: `herdrify-cli` has `herdrify-testkit` as a normal dependency, so the fakes are linked into the release binary. The plan requires this edge (spec §4), so this plan cannot act on it.
+- 🔵 open (not actionable, probe bytes fixed): `version_line` returns an allocated `String`; a `const` built with `concat!` would do.
+- 🔵 open (not actionable): the test builds its expected value with the same `format!` as the code. It pins the `herdrify ` prefix; the `cargo run` check pins `herdrify 0.0.0`.
+- 🔵 open (not actionable): each library's exemption line gives the reason but not the unit-test-mandate exemption number.
+- ❓ plan: the red state is not visible in an uncommitted tree. The coder recorded it: `error[E0432]: unresolved import `super::version_line`` … `could not compile `herdrify-cli` (bin "herdrify" test) due to 1 previous error`. Green: `test tests::version_line_names_the_command_and_its_package_version ... ok`.
+- note: the commit was not made (see Deviations).
+
+Verification on the tree (orchestrator run, 2026-11-22):
+- `diff -r -x target <probe>/crates crates` → no output, rc=0; root-file diffs → no `DIFF` lines.
+- `cargo run -q -p herdrify-cli` → `herdrify 0.0.0`, rc=0.
+- `cargo tree -d --workspace` → `warning: nothing to print.`, rc=0.
+- `cargo metadata --no-deps` → the nine `herdrify-*` packages.
+- The nine edge listings match `evidence/probe-edges.txt`.
+- The five Definition-of-Done commands → rc=0 each, 0 warning/error lines in the colour-stripped log.
+
+## Deviations
+
+- 2026-11-22: Not committed. The execute instruction did not say to commit, so the commit `build(workspace): add the nine-crate Cargo workspace and pinned toolchain` is left to the author.
+- 2026-11-22: The handoff session tree `.airsstack/` is not covered by `.gitignore` and shows as untracked. It was not added to `.gitignore`, because no plan names that file. It must not be committed.
