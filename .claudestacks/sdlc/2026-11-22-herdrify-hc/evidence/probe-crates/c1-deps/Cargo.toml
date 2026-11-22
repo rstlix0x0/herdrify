@@ -1,0 +1,16 @@
+[package]
+name = "c1-deps"
+version = "0.0.0"
+edition = "2024"
+rust-version = "1.94"
+license = "Apache-2.0"
+publish = false
+
+[workspace]
+
+[dependencies]
+tokio = { version = "1.54.1", features = ["process", "io-util", "rt", "macros", "sync", "time"] }
+serde = { version = "1.0.229", features = ["derive"] }
+serde_json = { version = "1.0.154", features = ["raw_value"] }
+thiserror = "2.0.21"
+bytes = "1.12.2"

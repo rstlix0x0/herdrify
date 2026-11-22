@@ -1,0 +1,44 @@
+$ rustc -V
+rustc 1.94.1 (e408947bf 2026-03-25)
+$ cargo info base64
+    Updating crates.io index
+     Locking 1 package to latest Rust 1.94 compatible version
+      Adding base64 v0.22.1 (available: v0.23.1)
+    Updating crates.io index
+base64 #base64 #utf8 #encode #decode #no_std
+encodes and decodes base64 as bytes or utf8
+version: 0.22.1 (latest 0.23.1)
+license: MIT OR Apache-2.0
+$ cargo run -q
+encode("hello") = aGVsbG8=
+encode("x\n") = eAo=
+decode("eAo=") = Ok([120, 10])
+decode("abcd") = Ok([105, 183, 29])
+decode("not base64!") = Err("Invalid symbol 32, offset 3.")
+decode("") = Ok([])
+exit: 0
+name = "base64"
+version = "0.22.1"
+$ cargo deny check licenses  (repo deny.toml, allow = Apache-2.0 only)
+error[unlicensed]: probe-base64 = 0.0.0 is unlicensed
+ ├ probe-base64 v0.0.0 (*)
+
+licenses FAILED
+exit: 0
+$ (probe Cargo.toml now declares license = "Apache-2.0") cargo deny check licenses  (repo deny.toml, allow = Apache-2.0 only)
+licenses ok
+exit: 0
+$ cargo info base64@0.23.1 | rust-version
+version: 0.23.1
+license: MIT OR Apache-2.0
+rust-version: 1.71.0
+$ (Cargo.toml: base64 = "0.23") cargo run -q
+encode("hello") = aGVsbG8=
+encode("x\n") = eAo=
+decode("eAo=") = Ok([120, 10])
+decode("abcd") = Ok([105, 183, 29])
+decode("not base64!") = Err("Invalid symbol 32, offset 3.")
+decode("") = Ok([])
+exit: 0
+name = "base64"
+version = "0.23.1"

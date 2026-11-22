@@ -1,0 +1,10 @@
+$ rustc -V
+rustc 1.94.1 (e408947bf 2026-03-25)
+$ cargo run -q
+hello reply line: Some(Line("ok"))
+core got frame bytes: Ok("ping")
+client got frames: [Frame([65, 66, 67, 68]), Frame([69, 70, 71, 72])]
+exit: 0
+name = "tokio"
+version = "1.54.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"

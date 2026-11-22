@@ -1,0 +1,652 @@
+probe-plain: herdr-core plain-mode evidence over `hc connect` (Rust probe, source: evidence/probe-plain/src/main.rs)
+Every hc process the probe spawns gets: HC_SESSION=hfy-plain XDG_STATE_HOME=$HFY_D/state XDG_CONFIG_HOME=$HFY_D/config XDG_RUNTIME_DIR=$HFY_D/run, and every inherited HC_* variable (HC_SCOPE, HC_TERMINAL_ID, HC_TERMINAL_SOCKET were set in this shell) removed.
+Log format: '-> [conn +ms]' line written to hc connect stdin; '<- [conn +ms]' line read from its stdout (verbatim, minus the trailing 
+; lines over 4096 bytes are cut by the probe and say so); '!! [conn +ms]' stderr; 'probe:' the probe's own notes. ms are relative to the probe process start.
+
+== VERSIONS
+$ cd evidence/probe-plain && rustc -V && cargo -V
+rustc 1.94.1 (e408947bf 2026-03-25)
+cargo 1.94.1 (29ea6fb6a 2026-03-24)
+$ hc --version
+hc 0.1.21
+$ grep -A1 -E '^name = "(tokio|serde_json|serde)"$' Cargo.lock
+name = "serde"
+version = "1.0.229"
+--
+name = "serde_json"
+version = "1.0.154"
+--
+name = "tokio"
+version = "1.54.1"
+$ uname -sr
+Darwin 25.3.0
+probe: default core pid passed to a1 below (73079) was read at setup with `hc server status --json | jq .pid` (no isolated env, only pid printed); it is re-read live at the end of TEARDOWN.
+
+== A1-pre Isolation with the original recipe D=$(mktemp -d -t hfya) on macOS: socket path too long
+$ cd evidence/probe-plain && HFY_D=/var/folders/8w/4ccj7cw90nx4d32s72tqf5nw0000gn/T/hfya.sCIJXwB33v cargo run -q -- a1 73079
+probe: env for every hc: HC_SESSION=hfy-plain XDG_STATE_HOME=$HFY_D/state XDG_CONFIG_HOME=$HFY_D/config XDG_RUNTIME_DIR=$HFY_D/run, all other HC_* removed
+probe: step 1, make sure the isolated core is not running
+probe: $ hc server stop (isolated env)
+probe: [+15ms] exit status: ExitStatus(unix_wait_status(512))
+probe: stdout (0 bytes):
+
+probe: stderr (194 bytes):
+{"error":{"hint":"use a shorter HC_SESSION (or socket in the config)","kind":"usage","message":"the socket path for session \"hfy-plain\" is too long here (110 bytes; this system allows 103)"}}
+
+probe: isolated socket $HFY_D/run/herdr-core/hfy-plain.sock exists = false
+probe: step 2, hc connect with no core running (no hc server start)
+probe: [c1 +15ms] spawn: hc connect (env HC_SESSION=hfy-plain + isolated XDG)
+-> [c1 +18ms] {"id":0,"jsonrpc":"2.0","method":"hello","params":{"generation":1}}
+!! [c1 +23ms] stderr: {"error":{"hint":"use a shorter HC_SESSION (or socket in the config)","kind":"usage","message":"the socket path for session \"hfy-plain\" is too long here (110 bytes; this system allows 103)"}}
+<- [c1 +23ms] <EOF on stdout>
+!! [c1 +23ms] <EOF on stderr>
+probe: [c1 +23ms] connection closed while waiting for id 0
+probe: hello got no reply; exit: exited at +23ms with ExitStatus(unix_wait_status(512))
+probe: running hc server start
+probe: $ hc server start (isolated env)
+probe: [+28ms] exit status: ExitStatus(unix_wait_status(512))
+probe: stdout (0 bytes):
+
+probe: stderr (194 bytes):
+{"error":{"hint":"use a shorter HC_SESSION (or socket in the config)","kind":"usage","message":"the socket path for session \"hfy-plain\" is too long here (110 bytes; this system allows 103)"}}
+
+probe: [c1b +28ms] spawn: hc connect (env HC_SESSION=hfy-plain + isolated XDG)
+-> [c1b +30ms] {"id":0,"jsonrpc":"2.0","method":"hello","params":{"generation":1}}
+!! [c1b +34ms] stderr: {"error":{"hint":"use a shorter HC_SESSION (or socket in the config)","kind":"usage","message":"the socket path for session \"hfy-plain\" is too long here (110 bytes; this system allows 103)"}}
+<- [c1b +34ms] <EOF on stdout>
+!! [c1b +34ms] <EOF on stderr>
+probe: [c1b +34ms] connection closed while waiting for id 0
+-> [c1b +34ms] {"id":1,"jsonrpc":"2.0","method":"server.status","params":{}}
+probe: [c1b +34ms] write error: Broken pipe (os error 32)
+probe: [c1b +34ms] connection already closed (EOF seen); no reply for id 1
+probe: socket exists now = false
+probe: step 3, CLI status after connect
+probe: $ hc server status --json (isolated env)
+probe: [+40ms] exit status: ExitStatus(unix_wait_status(512))
+probe: stdout (0 bytes):
+
+probe: stderr (194 bytes):
+{"error":{"hint":"use a shorter HC_SESSION (or socket in the config)","kind":"usage","message":"the socket path for session \"hfy-plain\" is too long here (110 bytes; this system allows 103)"}}
+
+probe: isolated pid None vs default pid 73079: differ = false
+probe: step 4, hc connect --session hfy-plain with HC_SESSION removed
+probe: [c2 +40ms] spawn: hc connect --session hfy-plain (HC_SESSION removed + isolated XDG)
+-> [c2 +41ms] {"id":0,"jsonrpc":"2.0","method":"hello","params":{"generation":1}}
+!! [c2 +44ms] stderr: {"error":{"hint":"use a shorter HC_SESSION (or socket in the config)","kind":"usage","message":"the socket path for session \"default\" is too long here (108 bytes; this system allows 103)"}
+!! [c2 +44ms] stderr: }
+<- [c2 +45ms] <EOF on stdout>
+!! [c2 +45ms] <EOF on stderr>
+probe: [c2 +45ms] connection closed while waiting for id 0
+-> [c2 +45ms] {"id":1,"jsonrpc":"2.0","method":"server.status","params":{}}
+probe: [c2 +45ms] write error: Broken pipe (os error 32)
+probe: [c2 +45ms] connection already closed (EOF seen); no reply for id 1
+probe: --session pid None vs HC_SESSION pid None: same core = false
+probe: an isolated default.sock exists (would mean --session was ignored) = false
+probe: step 5, does `hc server status` itself start a stopped core?
+probe: $ hc server stop (isolated env)
+probe: [+50ms] exit status: ExitStatus(unix_wait_status(512))
+probe: stdout (0 bytes):
+
+probe: stderr (194 bytes):
+{"error":{"hint":"use a shorter HC_SESSION (or socket in the config)","kind":"usage","message":"the socket path for session \"hfy-plain\" is too long here (110 bytes; this system allows 103)"}}
+
+probe: socket exists after stop = false
+probe: $ hc server status --json (isolated env)
+probe: [+56ms] exit status: ExitStatus(unix_wait_status(512))
+probe: stdout (0 bytes):
+
+probe: stderr (194 bytes):
+{"error":{"hint":"use a shorter HC_SESSION (or socket in the config)","kind":"usage","message":"the socket path for session \"hfy-plain\" is too long here (110 bytes; this system allows 103)"}}
+
+probe: socket exists after status = false
+[exit 0]
+
+== A1 Isolation: does hc connect auto-start the isolated core; isolated pid vs default; --session vs HC_SESSION; does hc server status start a stopped core
+$ cd evidence/probe-plain && HFY_D=/tmp/hfyvclde8 cargo run -q -- a1 73079
+probe: env for every hc: HC_SESSION=hfy-plain XDG_STATE_HOME=$HFY_D/state XDG_CONFIG_HOME=$HFY_D/config XDG_RUNTIME_DIR=$HFY_D/run, all other HC_* removed
+probe: step 1, make sure the isolated core is not running
+probe: $ hc server stop (isolated env)
+probe: [+36ms] exit status: ExitStatus(unix_wait_status(0))
+probe: stdout (17 bytes):
+{"stopped":true}
+
+probe: stderr (0 bytes):
+
+probe: isolated socket $HFY_D/run/herdr-core/hfy-plain.sock exists = false
+probe: step 2, hc connect with no core running (no hc server start)
+probe: [c1 +36ms] spawn: hc connect (env HC_SESSION=hfy-plain + isolated XDG)
+-> [c1 +39ms] {"id":0,"jsonrpc":"2.0","method":"hello","params":{"generation":1}}
+<- [c1 +197ms] {"id":0,"jsonrpc":"2.0","result":{"core":{"id":"fdf328619a6eb255651d94a149cc7181","name":"hiraqs-macbook-air"},"features":["framed","attach","events","status","shell","resize_notifications","automatic_input","restart_environment"],"framed":false,"generation":1,"keeps_running_after_logout":null,"login_session":{"gui":true,"id":100002,"user":501},"logout_linger_user":null,"methods":["hello","server.status","server.stop","server.restart","terminal.run","templates.list","terminal.list","terminal.get","terminal.kill","terminal.rm","terminal.keep","terminal.label","terminal.read","terminal.attach","terminal.send","terminal.wait","terminal.keys","terminal.interrupt","terminal.put","machine.exec","file.read","file.write","file.edit","doc.get","doc.set","events.subscribe","machine.add","machine.list","machine.connect","machine.rename","machine.rm","rpc.discover"],"version":"0.1.21"}}
+-> [c1 +197ms] {"id":1,"jsonrpc":"2.0","method":"server.status","params":{}}
+<- [c1 +198ms] {"id":1,"jsonrpc":"2.0","result":{"core":{"id":"fdf328619a6eb255651d94a149cc7181","name":"hiraqs-macbook-air"},"finished":0,"holder":null,"holders":[],"installed_by":null,"keeps_running_after_logout":null,"live":0,"logout_linger_user":null,"pid":37934,"uptime_ms":9,"version":"0.1.21"}}
+probe: socket exists now = true
+probe: step 3, CLI status after connect
+probe: $ hc server status --json (isolated env)
+probe: [+210ms] exit status: ExitStatus(unix_wait_status(0))
+probe: stdout (254 bytes):
+{"core":{"id":"fdf328619a6eb255651d94a149cc7181","name":"hiraqs-macbook-air"},"finished":0,"holder":null,"holders":[],"installed_by":null,"keeps_running_after_logout":null,"live":0,"logout_linger_user":null,"pid":37934,"uptime_ms":22,"version":"0.1.21"}
+
+probe: stderr (0 bytes):
+
+probe: isolated pid Some(37934) vs default pid 73079: differ = true
+probe: step 4, hc connect --session hfy-plain with HC_SESSION removed
+probe: [c2 +210ms] spawn: hc connect --session hfy-plain (HC_SESSION removed + isolated XDG)
+-> [c2 +211ms] {"id":0,"jsonrpc":"2.0","method":"hello","params":{"generation":1}}
+<- [c2 +230ms] {"id":0,"jsonrpc":"2.0","result":{"core":{"id":"fdf328619a6eb255651d94a149cc7181","name":"hiraqs-macbook-air"},"features":["framed","attach","events","status","shell","resize_notifications","automatic_input","restart_environment"],"framed":false,"generation":1,"keeps_running_after_logout":null,"login_session":{"gui":true,"id":100002,"user":501},"logout_linger_user":null,"methods":["hello","server.status","server.stop","server.restart","terminal.run","templates.list","terminal.list","terminal.get","terminal.kill","terminal.rm","terminal.keep","terminal.label","terminal.read","terminal.attach","terminal.send","terminal.wait","terminal.keys","terminal.interrupt","terminal.put","machine.exec","file.read","file.write","file.edit","doc.get","doc.set","events.subscribe","machine.add","machine.list","machine.connect","machine.rename","machine.rm","rpc.discover"],"version":"0.1.21"}}
+-> [c2 +230ms] {"id":1,"jsonrpc":"2.0","method":"server.status","params":{}}
+<- [c2 +230ms] {"id":1,"jsonrpc":"2.0","result":{"core":{"id":"fdf328619a6eb255651d94a149cc7181","name":"hiraqs-macbook-air"},"finished":0,"holder":null,"holders":[],"installed_by":null,"keeps_running_after_logout":null,"live":0,"logout_linger_user":null,"pid":37934,"uptime_ms":42,"version":"0.1.21"}}
+probe: --session pid Some(37934) vs HC_SESSION pid Some(37934): same core = true
+probe: an isolated default.sock exists (would mean --session was ignored) = false
+probe: step 5, does `hc server status` itself start a stopped core?
+probe: $ hc server stop (isolated env)
+<- [c2 +231ms] <EOF on stdout>
+!! [c2 +231ms] <EOF on stderr>
+!! [c1 +231ms] <EOF on stderr>
+<- [c1 +231ms] <EOF on stdout>
+probe: [+257ms] exit status: ExitStatus(unix_wait_status(0))
+probe: stdout (17 bytes):
+{"stopped":true}
+
+probe: stderr (0 bytes):
+
+probe: socket exists after stop = false
+probe: $ hc server status --json (isolated env)
+probe: [+375ms] exit status: ExitStatus(unix_wait_status(0))
+probe: stdout (253 bytes):
+{"core":{"id":"fdf328619a6eb255651d94a149cc7181","name":"hiraqs-macbook-air"},"finished":0,"holder":null,"holders":[],"installed_by":null,"keeps_running_after_logout":null,"live":0,"logout_linger_user":null,"pid":38064,"uptime_ms":0,"version":"0.1.21"}
+
+probe: stderr (0 bytes):
+
+probe: socket exists after status = true
+[exit 0]
+
+== A2 Is a request before hello accepted (terminal.list {} first)?
+$ cd evidence/probe-plain && HFY_D=/tmp/hfyvclde8 cargo run -q -- a2
+probe: [a2 +0ms] spawn: hc connect (env HC_SESSION=hfy-plain + isolated XDG)
+-> [a2 +2ms] {"id":1,"jsonrpc":"2.0","method":"terminal.list","params":{}}
+<- [a2 +21ms] {"id":1,"jsonrpc":"2.0","result":{"hidden_finished":0,"machines":[],"terminals":[]}}
+probe: request before hello answered = true
+-> [a2 +21ms] {"id":2,"jsonrpc":"2.0","method":"hello","params":{"generation":1}}
+<- [a2 +21ms] {"id":2,"jsonrpc":"2.0","result":{"core":{"id":"fdf328619a6eb255651d94a149cc7181","name":"hiraqs-macbook-air"},"features":["framed","attach","events","status","shell","resize_notifications","automatic_input","restart_environment"],"framed":false,"generation":1,"keeps_running_after_logout":null,"login_session":{"gui":true,"id":100002,"user":501},"logout_linger_user":null,"methods":["hello","server.status","server.stop","server.restart","terminal.run","templates.list","terminal.list","terminal.get","terminal.kill","terminal.rm","terminal.keep","terminal.label","terminal.read","terminal.attach","terminal.send","terminal.wait","terminal.keys","terminal.interrupt","terminal.put","machine.exec","file.read","file.write","file.edit","doc.get","doc.set","events.subscribe","machine.add","machine.list","machine.connect","machine.rename","machine.rm","rpc.discover"],"version":"0.1.21"}}
+probe: hello afterwards answered = true
+-> [a2 +21ms] {"id":3,"jsonrpc":"2.0","method":"terminal.list","params":{}}
+<- [a2 +21ms] {"id":3,"jsonrpc":"2.0","result":{"hidden_finished":0,"machines":[],"terminals":[]}}
+probe: terminal.list after hello answered = true
+<- [a2 +22ms] <EOF on stdout>
+!! [a2 +22ms] <EOF on stderr>
+[exit 0]
+
+== A3 hello: generation 1 full reply; {} ; generation 2; generation 0; second hello on the same connection; features and methods count
+$ cd evidence/probe-plain && HFY_D=/tmp/hfyvclde8 cargo run -q -- a3
+probe: case generation 1
+probe: [g1 +2ms] spawn: hc connect (env HC_SESSION=hfy-plain + isolated XDG)
+-> [g1 +4ms] {"id":1,"jsonrpc":"2.0","method":"hello","params":{"generation":1}}
+<- [g1 +21ms] {"id":1,"jsonrpc":"2.0","result":{"core":{"id":"fdf328619a6eb255651d94a149cc7181","name":"hiraqs-macbook-air"},"features":["framed","attach","events","status","shell","resize_notifications","automatic_input","restart_environment"],"framed":false,"generation":1,"keeps_running_after_logout":null,"login_session":{"gui":true,"id":100002,"user":501},"logout_linger_user":null,"methods":["hello","server.status","server.stop","server.restart","terminal.run","templates.list","terminal.list","terminal.get","terminal.kill","terminal.rm","terminal.keep","terminal.label","terminal.read","terminal.attach","terminal.send","terminal.wait","terminal.keys","terminal.interrupt","terminal.put","machine.exec","file.read","file.write","file.edit","doc.get","doc.set","events.subscribe","machine.add","machine.list","machine.connect","machine.rename","machine.rm","rpc.discover"],"version":"0.1.21"}}
+probe: features (8): ["framed", "attach", "events", "status", "shell", "resize_notifications", "automatic_input", "restart_environment"]
+probe: methods count: 32
+probe: schema methods count: 32
+probe: in hello not in schema: []
+probe: in schema not in hello: []
+probe: second hello on same connection
+-> [g1 +21ms] {"id":2,"jsonrpc":"2.0","method":"hello","params":{"generation":1}}
+<- [g1 +22ms] {"id":2,"jsonrpc":"2.0","result":{"core":{"id":"fdf328619a6eb255651d94a149cc7181","name":"hiraqs-macbook-air"},"features":["framed","attach","events","status","shell","resize_notifications","automatic_input","restart_environment"],"framed":false,"generation":1,"keeps_running_after_logout":null,"login_session":{"gui":true,"id":100002,"user":501},"logout_linger_user":null,"methods":["hello","server.status","server.stop","server.restart","terminal.run","templates.list","terminal.list","terminal.get","terminal.kill","terminal.rm","terminal.keep","terminal.label","terminal.read","terminal.attach","terminal.send","terminal.wait","terminal.keys","terminal.interrupt","terminal.put","machine.exec","file.read","file.write","file.edit","doc.get","doc.set","events.subscribe","machine.add","machine.list","machine.connect","machine.rename","machine.rm","rpc.discover"],"version":"0.1.21"}}
+probe: connection still usable after second hello?
+-> [g1 +22ms] {"id":3,"jsonrpc":"2.0","method":"terminal.list","params":{}}
+<- [g1 +22ms] {"id":3,"jsonrpc":"2.0","result":{"hidden_finished":0,"machines":[],"terminals":[]}}
+probe: case hello {}
+probe: [gnone +22ms] spawn: hc connect (env HC_SESSION=hfy-plain + isolated XDG)
+-> [gnone +23ms] {"id":1,"jsonrpc":"2.0","method":"hello","params":{}}
+<- [gnone +41ms] {"id":1,"jsonrpc":"2.0","result":{"core":{"id":"fdf328619a6eb255651d94a149cc7181","name":"hiraqs-macbook-air"},"features":["framed","attach","events","status","shell","resize_notifications","automatic_input","restart_environment"],"framed":false,"generation":1,"keeps_running_after_logout":null,"login_session":{"gui":true,"id":100002,"user":501},"logout_linger_user":null,"methods":["hello","server.status","server.stop","server.restart","terminal.run","templates.list","terminal.list","terminal.get","terminal.kill","terminal.rm","terminal.keep","terminal.label","terminal.read","terminal.attach","terminal.send","terminal.wait","terminal.keys","terminal.interrupt","terminal.put","machine.exec","file.read","file.write","file.edit","doc.get","doc.set","events.subscribe","machine.add","machine.list","machine.connect","machine.rename","machine.rm","rpc.discover"],"version":"0.1.21"}}
+probe: connection usable afterwards (terminal.list)?
+-> [gnone +41ms] {"id":2,"jsonrpc":"2.0","method":"terminal.list","params":{}}
+<- [gnone +41ms] {"id":2,"jsonrpc":"2.0","result":{"hidden_finished":0,"machines":[],"terminals":[]}}
+probe: answered = true
+probe: hello generation 1 afterwards?
+-> [gnone +41ms] {"id":3,"jsonrpc":"2.0","method":"hello","params":{"generation":1}}
+<- [gnone +41ms] {"id":3,"jsonrpc":"2.0","result":{"core":{"id":"fdf328619a6eb255651d94a149cc7181","name":"hiraqs-macbook-air"},"features":["framed","attach","events","status","shell","resize_notifications","automatic_input","restart_environment"],"framed":false,"generation":1,"keeps_running_after_logout":null,"login_session":{"gui":true,"id":100002,"user":501},"logout_linger_user":null,"methods":["hello","server.status","server.stop","server.restart","terminal.run","templates.list","terminal.list","terminal.get","terminal.kill","terminal.rm","terminal.keep","terminal.label","terminal.read","terminal.attach","terminal.send","terminal.wait","terminal.keys","terminal.interrupt","terminal.put","machine.exec","file.read","file.write","file.edit","doc.get","doc.set","events.subscribe","machine.add","machine.list","machine.connect","machine.rename","machine.rm","rpc.discover"],"version":"0.1.21"}}
+probe: case hello {"generation":2}
+probe: [g2 +41ms] spawn: hc connect (env HC_SESSION=hfy-plain + isolated XDG)
+<- [gnone +42ms] <EOF on stdout>
+!! [gnone +42ms] <EOF on stderr>
+-> [g2 +43ms] {"id":1,"jsonrpc":"2.0","method":"hello","params":{"generation":2}}
+<- [g2 +60ms] {"error":{"code":-32000,"data":{"hint":"this core speaks generation 1","kind":"unsupported_generation"},"message":"protocol generation 2 not supported"},"id":1,"jsonrpc":"2.0"}
+probe: connection usable afterwards (terminal.list)?
+-> [g2 +60ms] {"id":2,"jsonrpc":"2.0","method":"terminal.list","params":{}}
+<- [g2 +60ms] {"id":2,"jsonrpc":"2.0","result":{"hidden_finished":0,"machines":[],"terminals":[]}}
+probe: answered = true
+probe: hello generation 1 afterwards?
+-> [g2 +60ms] {"id":3,"jsonrpc":"2.0","method":"hello","params":{"generation":1}}
+<- [g2 +60ms] {"id":3,"jsonrpc":"2.0","result":{"core":{"id":"fdf328619a6eb255651d94a149cc7181","name":"hiraqs-macbook-air"},"features":["framed","attach","events","status","shell","resize_notifications","automatic_input","restart_environment"],"framed":false,"generation":1,"keeps_running_after_logout":null,"login_session":{"gui":true,"id":100002,"user":501},"logout_linger_user":null,"methods":["hello","server.status","server.stop","server.restart","terminal.run","templates.list","terminal.list","terminal.get","terminal.kill","terminal.rm","terminal.keep","terminal.label","terminal.read","terminal.attach","terminal.send","terminal.wait","terminal.keys","terminal.interrupt","terminal.put","machine.exec","file.read","file.write","file.edit","doc.get","doc.set","events.subscribe","machine.add","machine.list","machine.connect","machine.rename","machine.rm","rpc.discover"],"version":"0.1.21"}}
+probe: case hello {"generation":0}
+probe: [g0 +60ms] spawn: hc connect (env HC_SESSION=hfy-plain + isolated XDG)
+<- [g2 +61ms] <EOF on stdout>
+!! [g2 +61ms] <EOF on stderr>
+-> [g0 +63ms] {"id":1,"jsonrpc":"2.0","method":"hello","params":{"generation":0}}
+<- [g0 +80ms] {"error":{"code":-32000,"data":{"hint":"this core speaks generation 1","kind":"unsupported_generation"},"message":"protocol generation 0 not supported"},"id":1,"jsonrpc":"2.0"}
+probe: connection usable afterwards (terminal.list)?
+-> [g0 +81ms] {"id":2,"jsonrpc":"2.0","method":"terminal.list","params":{}}
+<- [g0 +81ms] {"id":2,"jsonrpc":"2.0","result":{"hidden_finished":0,"machines":[],"terminals":[]}}
+probe: answered = true
+probe: hello generation 1 afterwards?
+-> [g0 +81ms] {"id":3,"jsonrpc":"2.0","method":"hello","params":{"generation":1}}
+<- [g0 +81ms] {"id":3,"jsonrpc":"2.0","result":{"core":{"id":"fdf328619a6eb255651d94a149cc7181","name":"hiraqs-macbook-air"},"features":["framed","attach","events","status","shell","resize_notifications","automatic_input","restart_environment"],"framed":false,"generation":1,"keeps_running_after_logout":null,"login_session":{"gui":true,"id":100002,"user":501},"logout_linger_user":null,"methods":["hello","server.status","server.stop","server.restart","terminal.run","templates.list","terminal.list","terminal.get","terminal.kill","terminal.rm","terminal.keep","terminal.label","terminal.read","terminal.attach","terminal.send","terminal.wait","terminal.keys","terminal.interrupt","terminal.put","machine.exec","file.read","file.write","file.edit","doc.get","doc.set","events.subscribe","machine.add","machine.list","machine.connect","machine.rename","machine.rm","rpc.discover"],"version":"0.1.21"}}
+<- [g0 +81ms] <EOF on stdout>
+probe: captured results now 2 entries in $HFY_D/captured.json
+!! [g0 +81ms] <EOF on stderr>
+<- [g1 +82ms] <EOF on stdout>
+!! [g1 +82ms] <EOF on stderr>
+[exit 0]
+
+== A4 Error shapes: unknown terminal, missing required, wrong type, unknown method, malformed line, empty line, params array, string id, null id, no id (notification); connection survival after each
+$ cd evidence/probe-plain && HFY_D=/tmp/hfyvclde8 cargo run -q -- a4
+probe: ---- case 1: terminal.get t999
+probe: [a4.1 +0ms] spawn: hc connect (env HC_SESSION=hfy-plain + isolated XDG)
+-> [a4.1 +1ms] {"id":0,"jsonrpc":"2.0","method":"hello","params":{"generation":1}}
+<- [a4.1 +18ms] {"id":0,"jsonrpc":"2.0","result":{"core":{"id":"fdf328619a6eb255651d94a149cc7181","name":"hiraqs-macbook-air"},"features":["framed","attach","events","status","shell","resize_notifications","automatic_input","restart_environment"],"framed":false,"generation":1,"keeps_running_after_logout":null,"login_session":{"gui":true,"id":100002,"user":501},"logout_linger_user":null,"methods":["hello","server.status","server.stop","server.restart","terminal.run","templates.list","terminal.list","terminal.get","terminal.kill","terminal.rm","terminal.keep","terminal.label","terminal.read","terminal.attach","terminal.send","terminal.wait","terminal.keys","terminal.interrupt","terminal.put","machine.exec","file.read","file.write","file.edit","doc.get","doc.set","events.subscribe","machine.add","machine.list","machine.connect","machine.rename","machine.rm","rpc.discover"],"version":"0.1.21"}}
+-> [a4.1 +18ms] {"jsonrpc":"2.0","id":1,"method":"terminal.get","params":{"terminal":"t999"}}
+<- [a4.1 +18ms] {"error":{"code":-32000,"data":{"hint":"see `hc ls --all`","kind":"not_found"},"message":"no terminal \"t999\""},"id":1,"jsonrpc":"2.0"}
+probe: lines received within 2s after the case: 1
+-> [a4.1 +2021ms] {"id":99,"jsonrpc":"2.0","method":"server.status","params":{}}
+<- [a4.1 +2021ms] {"id":99,"jsonrpc":"2.0","result":{"core":{"id":"fdf328619a6eb255651d94a149cc7181","name":"hiraqs-macbook-air"},"finished":0,"holder":null,"holders":[],"installed_by":null,"keeps_running_after_logout":null,"live":0,"logout_linger_user":null,"pid":38064,"uptime_ms":21033,"version":"0.1.21"}}
+probe: connection survived (server.status id 99 answered) = true
+probe: ---- case 2: terminal.get missing required
+probe: [a4.2 +2021ms] spawn: hc connect (env HC_SESSION=hfy-plain + isolated XDG)
+<- [a4.1 +2022ms] <EOF on stdout>
+!! [a4.1 +2022ms] <EOF on stderr>
+-> [a4.2 +2023ms] {"id":0,"jsonrpc":"2.0","method":"hello","params":{"generation":1}}
+<- [a4.2 +2038ms] {"id":0,"jsonrpc":"2.0","result":{"core":{"id":"fdf328619a6eb255651d94a149cc7181","name":"hiraqs-macbook-air"},"features":["framed","attach","events","status","shell","resize_notifications","automatic_input","restart_environment"],"framed":false,"generation":1,"keeps_running_after_logout":null,"login_session":{"gui":true,"id":100002,"user":501},"logout_linger_user":null,"methods":["hello","server.status","server.stop","server.restart","terminal.run","templates.list","terminal.list","terminal.get","terminal.kill","terminal.rm","terminal.keep","terminal.label","terminal.read","terminal.attach","terminal.send","terminal.wait","terminal.keys","terminal.interrupt","terminal.put","machine.exec","file.read","file.write","file.edit","doc.get","doc.set","events.subscribe","machine.add","machine.list","machine.connect","machine.rename","machine.rm","rpc.discover"],"version":"0.1.21"}}
+-> [a4.2 +2038ms] {"jsonrpc":"2.0","id":2,"method":"terminal.get","params":{}}
+<- [a4.2 +2038ms] {"error":{"code":-32602,"data":{"hint":"see `hc schema`","kind":"invalid_params"},"message":"missing field `terminal`"},"id":2,"jsonrpc":"2.0"}
+probe: lines received within 2s after the case: 1
+-> [a4.2 +4041ms] {"id":99,"jsonrpc":"2.0","method":"server.status","params":{}}
+<- [a4.2 +4042ms] {"id":99,"jsonrpc":"2.0","result":{"core":{"id":"fdf328619a6eb255651d94a149cc7181","name":"hiraqs-macbook-air"},"finished":0,"holder":null,"holders":[],"installed_by":null,"keeps_running_after_logout":null,"live":0,"logout_linger_user":null,"pid":38064,"uptime_ms":23054,"version":"0.1.21"}}
+probe: connection survived (server.status id 99 answered) = true
+probe: ---- case 3: terminal.get wrong type
+probe: [a4.3 +4042ms] spawn: hc connect (env HC_SESSION=hfy-plain + isolated XDG)
+<- [a4.2 +4042ms] <EOF on stdout>
+!! [a4.2 +4042ms] <EOF on stderr>
+-> [a4.3 +4043ms] {"id":0,"jsonrpc":"2.0","method":"hello","params":{"generation":1}}
+<- [a4.3 +4062ms] {"id":0,"jsonrpc":"2.0","result":{"core":{"id":"fdf328619a6eb255651d94a149cc7181","name":"hiraqs-macbook-air"},"features":["framed","attach","events","status","shell","resize_notifications","automatic_input","restart_environment"],"framed":false,"generation":1,"keeps_running_after_logout":null,"login_session":{"gui":true,"id":100002,"user":501},"logout_linger_user":null,"methods":["hello","server.status","server.stop","server.restart","terminal.run","templates.list","terminal.list","terminal.get","terminal.kill","terminal.rm","terminal.keep","terminal.label","terminal.read","terminal.attach","terminal.send","terminal.wait","terminal.keys","terminal.interrupt","terminal.put","machine.exec","file.read","file.write","file.edit","doc.get","doc.set","events.subscribe","machine.add","machine.list","machine.connect","machine.rename","machine.rm","rpc.discover"],"version":"0.1.21"}}
+-> [a4.3 +4062ms] {"jsonrpc":"2.0","id":3,"method":"terminal.get","params":{"terminal":5}}
+<- [a4.3 +4062ms] {"error":{"code":-32602,"data":{"hint":"see `hc schema`","kind":"invalid_params"},"message":"invalid type: integer `5`, expected a string"},"id":3,"jsonrpc":"2.0"}
+probe: lines received within 2s after the case: 1
+-> [a4.3 +6064ms] {"id":99,"jsonrpc":"2.0","method":"server.status","params":{}}
+<- [a4.3 +6065ms] {"id":99,"jsonrpc":"2.0","result":{"core":{"id":"fdf328619a6eb255651d94a149cc7181","name":"hiraqs-macbook-air"},"finished":0,"holder":null,"holders":[],"installed_by":null,"keeps_running_after_logout":null,"live":0,"logout_linger_user":null,"pid":38064,"uptime_ms":25077,"version":"0.1.21"}}
+probe: connection survived (server.status id 99 answered) = true
+probe: ---- case 4: unknown method
+probe: [a4.4 +6065ms] spawn: hc connect (env HC_SESSION=hfy-plain + isolated XDG)
+<- [a4.3 +6067ms] <EOF on stdout>
+!! [a4.3 +6067ms] <EOF on stderr>
+-> [a4.4 +6069ms] {"id":0,"jsonrpc":"2.0","method":"hello","params":{"generation":1}}
+<- [a4.4 +6107ms] {"id":0,"jsonrpc":"2.0","result":{"core":{"id":"fdf328619a6eb255651d94a149cc7181","name":"hiraqs-macbook-air"},"features":["framed","attach","events","status","shell","resize_notifications","automatic_input","restart_environment"],"framed":false,"generation":1,"keeps_running_after_logout":null,"login_session":{"gui":true,"id":100002,"user":501},"logout_linger_user":null,"methods":["hello","server.status","server.stop","server.restart","terminal.run","templates.list","terminal.list","terminal.get","terminal.kill","terminal.rm","terminal.keep","terminal.label","terminal.read","terminal.attach","terminal.send","terminal.wait","terminal.keys","terminal.interrupt","terminal.put","machine.exec","file.read","file.write","file.edit","doc.get","doc.set","events.subscribe","machine.add","machine.list","machine.connect","machine.rename","machine.rm","rpc.discover"],"version":"0.1.21"}}
+-> [a4.4 +6107ms] {"jsonrpc":"2.0","id":4,"method":"nope.x","params":{}}
+<- [a4.4 +6108ms] {"error":{"code":-32601,"data":{"hint":"see `hc schema`","kind":"unknown_method"},"message":"unknown method \"nope.x\""},"id":4,"jsonrpc":"2.0"}
+probe: lines received within 2s after the case: 1
+-> [a4.4 +8110ms] {"id":99,"jsonrpc":"2.0","method":"server.status","params":{}}
+<- [a4.4 +8111ms] {"id":99,"jsonrpc":"2.0","result":{"core":{"id":"fdf328619a6eb255651d94a149cc7181","name":"hiraqs-macbook-air"},"finished":0,"holder":null,"holders":[],"installed_by":null,"keeps_running_after_logout":null,"live":0,"logout_linger_user":null,"pid":38064,"uptime_ms":27123,"version":"0.1.21"}}
+probe: connection survived (server.status id 99 answered) = true
+probe: ---- case 5: malformed line
+probe: [a4.5 +8111ms] spawn: hc connect (env HC_SESSION=hfy-plain + isolated XDG)
+<- [a4.4 +8113ms] <EOF on stdout>
+!! [a4.4 +8113ms] <EOF on stderr>
+-> [a4.5 +8116ms] {"id":0,"jsonrpc":"2.0","method":"hello","params":{"generation":1}}
+<- [a4.5 +8137ms] {"id":0,"jsonrpc":"2.0","result":{"core":{"id":"fdf328619a6eb255651d94a149cc7181","name":"hiraqs-macbook-air"},"features":["framed","attach","events","status","shell","resize_notifications","automatic_input","restart_environment"],"framed":false,"generation":1,"keeps_running_after_logout":null,"login_session":{"gui":true,"id":100002,"user":501},"logout_linger_user":null,"methods":["hello","server.status","server.stop","server.restart","terminal.run","templates.list","terminal.list","terminal.get","terminal.kill","terminal.rm","terminal.keep","terminal.label","terminal.read","terminal.attach","terminal.send","terminal.wait","terminal.keys","terminal.interrupt","terminal.put","machine.exec","file.read","file.write","file.edit","doc.get","doc.set","events.subscribe","machine.add","machine.list","machine.connect","machine.rename","machine.rm","rpc.discover"],"version":"0.1.21"}}
+-> [a4.5 +8138ms] {
+<- [a4.5 +8138ms] {"error":{"code":-32700,"data":{"hint":"see `hc schema`","kind":"parse_error"},"message":"EOF while parsing an object at line 2 column 0"},"id":null,"jsonrpc":"2.0"}
+probe: lines received within 2s after the case: 1
+-> [a4.5 +10140ms] {"id":99,"jsonrpc":"2.0","method":"server.status","params":{}}
+<- [a4.5 +10141ms] {"id":99,"jsonrpc":"2.0","result":{"core":{"id":"fdf328619a6eb255651d94a149cc7181","name":"hiraqs-macbook-air"},"finished":0,"holder":null,"holders":[],"installed_by":null,"keeps_running_after_logout":null,"live":0,"logout_linger_user":null,"pid":38064,"uptime_ms":29153,"version":"0.1.21"}}
+probe: connection survived (server.status id 99 answered) = true
+probe: ---- case 6: empty line
+probe: [a4.6 +10142ms] spawn: hc connect (env HC_SESSION=hfy-plain + isolated XDG)
+<- [a4.5 +10144ms] <EOF on stdout>
+!! [a4.5 +10144ms] <EOF on stderr>
+-> [a4.6 +10148ms] {"id":0,"jsonrpc":"2.0","method":"hello","params":{"generation":1}}
+<- [a4.6 +10177ms] {"id":0,"jsonrpc":"2.0","result":{"core":{"id":"fdf328619a6eb255651d94a149cc7181","name":"hiraqs-macbook-air"},"features":["framed","attach","events","status","shell","resize_notifications","automatic_input","restart_environment"],"framed":false,"generation":1,"keeps_running_after_logout":null,"login_session":{"gui":true,"id":100002,"user":501},"logout_linger_user":null,"methods":["hello","server.status","server.stop","server.restart","terminal.run","templates.list","terminal.list","terminal.get","terminal.kill","terminal.rm","terminal.keep","terminal.label","terminal.read","terminal.attach","terminal.send","terminal.wait","terminal.keys","terminal.interrupt","terminal.put","machine.exec","file.read","file.write","file.edit","doc.get","doc.set","events.subscribe","machine.add","machine.list","machine.connect","machine.rename","machine.rm","rpc.discover"],"version":"0.1.21"}}
+-> [a4.6 +10178ms] 
+probe: lines received within 2s after the case: 0
+-> [a4.6 +12181ms] {"id":99,"jsonrpc":"2.0","method":"server.status","params":{}}
+<- [a4.6 +12181ms] {"id":99,"jsonrpc":"2.0","result":{"core":{"id":"fdf328619a6eb255651d94a149cc7181","name":"hiraqs-macbook-air"},"finished":0,"holder":null,"holders":[],"installed_by":null,"keeps_running_after_logout":null,"live":0,"logout_linger_user":null,"pid":38064,"uptime_ms":31193,"version":"0.1.21"}}
+probe: connection survived (server.status id 99 answered) = true
+probe: ---- case 7: params as array
+probe: [a4.7 +12181ms] spawn: hc connect (env HC_SESSION=hfy-plain + isolated XDG)
+<- [a4.6 +12182ms] <EOF on stdout>
+!! [a4.6 +12182ms] <EOF on stderr>
+-> [a4.7 +12183ms] {"id":0,"jsonrpc":"2.0","method":"hello","params":{"generation":1}}
+<- [a4.7 +12201ms] {"id":0,"jsonrpc":"2.0","result":{"core":{"id":"fdf328619a6eb255651d94a149cc7181","name":"hiraqs-macbook-air"},"features":["framed","attach","events","status","shell","resize_notifications","automatic_input","restart_environment"],"framed":false,"generation":1,"keeps_running_after_logout":null,"login_session":{"gui":true,"id":100002,"user":501},"logout_linger_user":null,"methods":["hello","server.status","server.stop","server.restart","terminal.run","templates.list","terminal.list","terminal.get","terminal.kill","terminal.rm","terminal.keep","terminal.label","terminal.read","terminal.attach","terminal.send","terminal.wait","terminal.keys","terminal.interrupt","terminal.put","machine.exec","file.read","file.write","file.edit","doc.get","doc.set","events.subscribe","machine.add","machine.list","machine.connect","machine.rename","machine.rm","rpc.discover"],"version":"0.1.21"}}
+-> [a4.7 +12201ms] {"jsonrpc":"2.0","id":7,"method":"terminal.list","params":[]}
+<- [a4.7 +12201ms] {"id":7,"jsonrpc":"2.0","result":{"hidden_finished":0,"machines":[],"terminals":[]}}
+probe: lines received within 2s after the case: 1
+-> [a4.7 +14202ms] {"id":99,"jsonrpc":"2.0","method":"server.status","params":{}}
+<- [a4.7 +14203ms] {"id":99,"jsonrpc":"2.0","result":{"core":{"id":"fdf328619a6eb255651d94a149cc7181","name":"hiraqs-macbook-air"},"finished":0,"holder":null,"holders":[],"installed_by":null,"keeps_running_after_logout":null,"live":0,"logout_linger_user":null,"pid":38064,"uptime_ms":33215,"version":"0.1.21"}}
+probe: connection survived (server.status id 99 answered) = true
+probe: ---- case 8: string id
+probe: [a4.8 +14203ms] spawn: hc connect (env HC_SESSION=hfy-plain + isolated XDG)
+<- [a4.7 +14204ms] <EOF on stdout>
+!! [a4.7 +14204ms] <EOF on stderr>
+-> [a4.8 +14204ms] {"id":0,"jsonrpc":"2.0","method":"hello","params":{"generation":1}}
+<- [a4.8 +14221ms] {"id":0,"jsonrpc":"2.0","result":{"core":{"id":"fdf328619a6eb255651d94a149cc7181","name":"hiraqs-macbook-air"},"features":["framed","attach","events","status","shell","resize_notifications","automatic_input","restart_environment"],"framed":false,"generation":1,"keeps_running_after_logout":null,"login_session":{"gui":true,"id":100002,"user":501},"logout_linger_user":null,"methods":["hello","server.status","server.stop","server.restart","terminal.run","templates.list","terminal.list","terminal.get","terminal.kill","terminal.rm","terminal.keep","terminal.label","terminal.read","terminal.attach","terminal.send","terminal.wait","terminal.keys","terminal.interrupt","terminal.put","machine.exec","file.read","file.write","file.edit","doc.get","doc.set","events.subscribe","machine.add","machine.list","machine.connect","machine.rename","machine.rm","rpc.discover"],"version":"0.1.21"}}
+-> [a4.8 +14221ms] {"jsonrpc":"2.0","id":"abc","method":"terminal.list","params":{}}
+<- [a4.8 +14221ms] {"id":"abc","jsonrpc":"2.0","result":{"hidden_finished":0,"machines":[],"terminals":[]}}
+probe: lines received within 2s after the case: 1
+-> [a4.8 +16223ms] {"id":99,"jsonrpc":"2.0","method":"server.status","params":{}}
+<- [a4.8 +16224ms] {"id":99,"jsonrpc":"2.0","result":{"core":{"id":"fdf328619a6eb255651d94a149cc7181","name":"hiraqs-macbook-air"},"finished":0,"holder":null,"holders":[],"installed_by":null,"keeps_running_after_logout":null,"live":0,"logout_linger_user":null,"pid":38064,"uptime_ms":35236,"version":"0.1.21"}}
+probe: connection survived (server.status id 99 answered) = true
+probe: ---- case 9: null id
+probe: [a4.9 +16224ms] spawn: hc connect (env HC_SESSION=hfy-plain + isolated XDG)
+<- [a4.8 +16225ms] <EOF on stdout>
+!! [a4.8 +16225ms] <EOF on stderr>
+-> [a4.9 +16226ms] {"id":0,"jsonrpc":"2.0","method":"hello","params":{"generation":1}}
+<- [a4.9 +16243ms] {"id":0,"jsonrpc":"2.0","result":{"core":{"id":"fdf328619a6eb255651d94a149cc7181","name":"hiraqs-macbook-air"},"features":["framed","attach","events","status","shell","resize_notifications","automatic_input","restart_environment"],"framed":false,"generation":1,"keeps_running_after_logout":null,"login_session":{"gui":true,"id":100002,"user":501},"logout_linger_user":null,"methods":["hello","server.status","server.stop","server.restart","terminal.run","templates.list","terminal.list","terminal.get","terminal.kill","terminal.rm","terminal.keep","terminal.label","terminal.read","terminal.attach","terminal.send","terminal.wait","terminal.keys","terminal.interrupt","terminal.put","machine.exec","file.read","file.write","file.edit","doc.get","doc.set","events.subscribe","machine.add","machine.list","machine.connect","machine.rename","machine.rm","rpc.discover"],"version":"0.1.21"}}
+-> [a4.9 +16243ms] {"jsonrpc":"2.0","id":null,"method":"terminal.list","params":{}}
+<- [a4.9 +16243ms] {"id":null,"jsonrpc":"2.0","result":{"hidden_finished":0,"machines":[],"terminals":[]}}
+probe: lines received within 2s after the case: 1
+-> [a4.9 +18245ms] {"id":99,"jsonrpc":"2.0","method":"server.status","params":{}}
+<- [a4.9 +18246ms] {"id":99,"jsonrpc":"2.0","result":{"core":{"id":"fdf328619a6eb255651d94a149cc7181","name":"hiraqs-macbook-air"},"finished":0,"holder":null,"holders":[],"installed_by":null,"keeps_running_after_logout":null,"live":0,"logout_linger_user":null,"pid":38064,"uptime_ms":37258,"version":"0.1.21"}}
+probe: connection survived (server.status id 99 answered) = true
+probe: ---- case 10: no id (notification)
+probe: [a4.10 +18246ms] spawn: hc connect (env HC_SESSION=hfy-plain + isolated XDG)
+<- [a4.9 +18247ms] <EOF on stdout>
+!! [a4.9 +18247ms] <EOF on stderr>
+-> [a4.10 +18249ms] {"id":0,"jsonrpc":"2.0","method":"hello","params":{"generation":1}}
+<- [a4.10 +18275ms] {"id":0,"jsonrpc":"2.0","result":{"core":{"id":"fdf328619a6eb255651d94a149cc7181","name":"hiraqs-macbook-air"},"features":["framed","attach","events","status","shell","resize_notifications","automatic_input","restart_environment"],"framed":false,"generation":1,"keeps_running_after_logout":null,"login_session":{"gui":true,"id":100002,"user":501},"logout_linger_user":null,"methods":["hello","server.status","server.stop","server.restart","terminal.run","templates.list","terminal.list","terminal.get","terminal.kill","terminal.rm","terminal.keep","terminal.label","terminal.read","terminal.attach","terminal.send","terminal.wait","terminal.keys","terminal.interrupt","terminal.put","machine.exec","file.read","file.write","file.edit","doc.get","doc.set","events.subscribe","machine.add","machine.list","machine.connect","machine.rename","machine.rm","rpc.discover"],"version":"0.1.21"}}
+-> [a4.10 +18275ms] {"jsonrpc":"2.0","method":"terminal.list","params":{}}
+probe: lines received within 2s after the case: 0
+-> [a4.10 +20278ms] {"id":99,"jsonrpc":"2.0","method":"server.status","params":{}}
+<- [a4.10 +20278ms] {"id":99,"jsonrpc":"2.0","result":{"core":{"id":"fdf328619a6eb255651d94a149cc7181","name":"hiraqs-macbook-air"},"finished":0,"holder":null,"holders":[],"installed_by":null,"keeps_running_after_logout":null,"live":0,"logout_linger_user":null,"pid":38064,"uptime_ms":39291,"version":"0.1.21"}}
+probe: connection survived (server.status id 99 answered) = true
+probe: ---- case 11: extra: params omitted
+probe: [a4.11 +20278ms] spawn: hc connect (env HC_SESSION=hfy-plain + isolated XDG)
+<- [a4.10 +20279ms] <EOF on stdout>
+!! [a4.10 +20279ms] <EOF on stderr>
+-> [a4.11 +20279ms] {"id":0,"jsonrpc":"2.0","method":"hello","params":{"generation":1}}
+<- [a4.11 +20295ms] {"id":0,"jsonrpc":"2.0","result":{"core":{"id":"fdf328619a6eb255651d94a149cc7181","name":"hiraqs-macbook-air"},"features":["framed","attach","events","status","shell","resize_notifications","automatic_input","restart_environment"],"framed":false,"generation":1,"keeps_running_after_logout":null,"login_session":{"gui":true,"id":100002,"user":501},"logout_linger_user":null,"methods":["hello","server.status","server.stop","server.restart","terminal.run","templates.list","terminal.list","terminal.get","terminal.kill","terminal.rm","terminal.keep","terminal.label","terminal.read","terminal.attach","terminal.send","terminal.wait","terminal.keys","terminal.interrupt","terminal.put","machine.exec","file.read","file.write","file.edit","doc.get","doc.set","events.subscribe","machine.add","machine.list","machine.connect","machine.rename","machine.rm","rpc.discover"],"version":"0.1.21"}}
+-> [a4.11 +20295ms] {"jsonrpc":"2.0","id":11,"method":"terminal.list"}
+<- [a4.11 +20295ms] {"id":11,"jsonrpc":"2.0","result":{"hidden_finished":0,"machines":[],"terminals":[]}}
+probe: lines received within 2s after the case: 1
+-> [a4.11 +22298ms] {"id":99,"jsonrpc":"2.0","method":"server.status","params":{}}
+<- [a4.11 +22298ms] {"id":99,"jsonrpc":"2.0","result":{"core":{"id":"fdf328619a6eb255651d94a149cc7181","name":"hiraqs-macbook-air"},"finished":0,"holder":null,"holders":[],"installed_by":null,"keeps_running_after_logout":null,"live":0,"logout_linger_user":null,"pid":38064,"uptime_ms":41310,"version":"0.1.21"}}
+probe: connection survived (server.status id 99 answered) = true
+probe: ---- case 12: extra: jsonrpc member missing
+probe: [a4.12 +22298ms] spawn: hc connect (env HC_SESSION=hfy-plain + isolated XDG)
+<- [a4.11 +22299ms] <EOF on stdout>
+!! [a4.11 +22299ms] <EOF on stderr>
+-> [a4.12 +22300ms] {"id":0,"jsonrpc":"2.0","method":"hello","params":{"generation":1}}
+<- [a4.12 +22317ms] {"id":0,"jsonrpc":"2.0","result":{"core":{"id":"fdf328619a6eb255651d94a149cc7181","name":"hiraqs-macbook-air"},"features":["framed","attach","events","status","shell","resize_notifications","automatic_input","restart_environment"],"framed":false,"generation":1,"keeps_running_after_logout":null,"login_session":{"gui":true,"id":100002,"user":501},"logout_linger_user":null,"methods":["hello","server.status","server.stop","server.restart","terminal.run","templates.list","terminal.list","terminal.get","terminal.kill","terminal.rm","terminal.keep","terminal.label","terminal.read","terminal.attach","terminal.send","terminal.wait","terminal.keys","terminal.interrupt","terminal.put","machine.exec","file.read","file.write","file.edit","doc.get","doc.set","events.subscribe","machine.add","machine.list","machine.connect","machine.rename","machine.rm","rpc.discover"],"version":"0.1.21"}}
+-> [a4.12 +22317ms] {"id":12,"method":"terminal.list","params":{}}
+<- [a4.12 +22317ms] {"id":12,"jsonrpc":"2.0","result":{"hidden_finished":0,"machines":[],"terminals":[]}}
+probe: lines received within 2s after the case: 1
+-> [a4.12 +24319ms] {"id":99,"jsonrpc":"2.0","method":"server.status","params":{}}
+<- [a4.12 +24320ms] {"id":99,"jsonrpc":"2.0","result":{"core":{"id":"fdf328619a6eb255651d94a149cc7181","name":"hiraqs-macbook-air"},"finished":0,"holder":null,"holders":[],"installed_by":null,"keeps_running_after_logout":null,"live":0,"logout_linger_user":null,"pid":38064,"uptime_ms":43332,"version":"0.1.21"}}
+probe: connection survived (server.status id 99 answered) = true
+probe: ---- case 13: extra: unknown param key
+probe: [a4.13 +24320ms] spawn: hc connect (env HC_SESSION=hfy-plain + isolated XDG)
+<- [a4.12 +24320ms] <EOF on stdout>
+!! [a4.12 +24320ms] <EOF on stderr>
+-> [a4.13 +24322ms] {"id":0,"jsonrpc":"2.0","method":"hello","params":{"generation":1}}
+<- [a4.13 +24339ms] {"id":0,"jsonrpc":"2.0","result":{"core":{"id":"fdf328619a6eb255651d94a149cc7181","name":"hiraqs-macbook-air"},"features":["framed","attach","events","status","shell","resize_notifications","automatic_input","restart_environment"],"framed":false,"generation":1,"keeps_running_after_logout":null,"login_session":{"gui":true,"id":100002,"user":501},"logout_linger_user":null,"methods":["hello","server.status","server.stop","server.restart","terminal.run","templates.list","terminal.list","terminal.get","terminal.kill","terminal.rm","terminal.keep","terminal.label","terminal.read","terminal.attach","terminal.send","terminal.wait","terminal.keys","terminal.interrupt","terminal.put","machine.exec","file.read","file.write","file.edit","doc.get","doc.set","events.subscribe","machine.add","machine.list","machine.connect","machine.rename","machine.rm","rpc.discover"],"version":"0.1.21"}}
+-> [a4.13 +24339ms] {"jsonrpc":"2.0","id":13,"method":"terminal.list","params":{"bogus":1}}
+<- [a4.13 +24339ms] {"id":13,"jsonrpc":"2.0","result":{"hidden_finished":0,"machines":[],"terminals":[]}}
+probe: lines received within 2s after the case: 1
+-> [a4.13 +26341ms] {"id":99,"jsonrpc":"2.0","method":"server.status","params":{}}
+<- [a4.13 +26341ms] {"id":99,"jsonrpc":"2.0","result":{"core":{"id":"fdf328619a6eb255651d94a149cc7181","name":"hiraqs-macbook-air"},"finished":0,"holder":null,"holders":[],"installed_by":null,"keeps_running_after_logout":null,"live":0,"logout_linger_user":null,"pid":38064,"uptime_ms":45354,"version":"0.1.21"}}
+probe: connection survived (server.status id 99 answered) = true
+<- [a4.13 +26342ms] <EOF on stdout>
+!! [a4.13 +26342ms] <EOF on stderr>
+[exit 0]
+
+== A5 Concurrency in plain mode: terminal.wait id 10 then terminal.list id 11 on the same connection; which reply first
+$ cd evidence/probe-plain && HFY_D=/tmp/hfyvclde8 cargo run -q -- a5
+probe: [a5 +0ms] spawn: hc connect (env HC_SESSION=hfy-plain + isolated XDG)
+-> [a5 +1ms] {"id":0,"jsonrpc":"2.0","method":"hello","params":{"generation":1}}
+<- [a5 +20ms] {"id":0,"jsonrpc":"2.0","result":{"core":{"id":"fdf328619a6eb255651d94a149cc7181","name":"hiraqs-macbook-air"},"features":["framed","attach","events","status","shell","resize_notifications","automatic_input","restart_environment"],"framed":false,"generation":1,"keeps_running_after_logout":null,"login_session":{"gui":true,"id":100002,"user":501},"logout_linger_user":null,"methods":["hello","server.status","server.stop","server.restart","terminal.run","templates.list","terminal.list","terminal.get","terminal.kill","terminal.rm","terminal.keep","terminal.label","terminal.read","terminal.attach","terminal.send","terminal.wait","terminal.keys","terminal.interrupt","terminal.put","machine.exec","file.read","file.write","file.edit","doc.get","doc.set","events.subscribe","machine.add","machine.list","machine.connect","machine.rename","machine.rm","rpc.discover"],"version":"0.1.21"}}
+-> [a5 +20ms] {"id":1,"jsonrpc":"2.0","method":"terminal.run","params":{"argv":["sh","-c","sleep 3"]}}
+<- [a5 +393ms] {"id":1,"jsonrpc":"2.0","result":{"address":"t1","argv":["sh","-c","sleep 3"],"cols":200,"created_ms":1795355324084,"cwd":"/Users/hiraq/.herdr/worktrees/herdrify/herdrify-hc/.claudestacks/sdlc/2026-11-22-herdrify-hc/evidence/probe-plain","die_with_parent":false,"exit_code":null,"finished_ms":null,"identity":"ghostty","keep":false,"labels":{},"name":null,"notify":true,"parent":null,"pid":40525,"reason":null,"reported":false,"rm":false,"rows":120,"screen":"exact","signal":null,"state":"live","status":null,"status_ms":null,"template":null,"title":"","turn":0}}
+-> [a5 +394ms] {"id":10,"jsonrpc":"2.0","method":"terminal.wait","params":{"terminal":"t1","timeout":10}}
+-> [a5 +394ms] {"id":11,"jsonrpc":"2.0","method":"terminal.list","params":{}}
+<- [a5 +3412ms] {"id":10,"jsonrpc":"2.0","result":{"children":[],"ended":true,"exit_code":0,"reason":"exit","signal":null,"status":null,"terminal":"t1","turn":0}}
+<- [a5 +3418ms] {"id":11,"jsonrpc":"2.0","result":{"hidden_finished":1,"machines":[],"terminals":[]}}
+probe: reply order (id, +ms): [(Number(10), 3413), (Number(11), 3418)]
+-> [a5 +3418ms] {"id":12,"jsonrpc":"2.0","method":"terminal.rm","params":{"terminal":"t1"}}
+<- [a5 +3424ms] {"id":12,"jsonrpc":"2.0","result":{"removed":"t1"}}
+<- [a5 +3425ms] <EOF on stdout>
+!! [a5 +3426ms] <EOF on stderr>
+[exit 0]
+
+== A6 events.subscribe in plain mode: reply; notifications from a second connection's short terminal; heartbeat (wait >= 16 s); then a request on the subscribed connection
+$ cd evidence/probe-plain && HFY_D=/tmp/hfyvclde8 cargo run -q -- a6
+probe: [sub +0ms] spawn: hc connect (env HC_SESSION=hfy-plain + isolated XDG)
+-> [sub +2ms] {"id":0,"jsonrpc":"2.0","method":"hello","params":{"generation":1}}
+<- [sub +25ms] {"id":0,"jsonrpc":"2.0","result":{"core":{"id":"fdf328619a6eb255651d94a149cc7181","name":"hiraqs-macbook-air"},"features":["framed","attach","events","status","shell","resize_notifications","automatic_input","restart_environment"],"framed":false,"generation":1,"keeps_running_after_logout":null,"login_session":{"gui":true,"id":100002,"user":501},"logout_linger_user":null,"methods":["hello","server.status","server.stop","server.restart","terminal.run","templates.list","terminal.list","terminal.get","terminal.kill","terminal.rm","terminal.keep","terminal.label","terminal.read","terminal.attach","terminal.send","terminal.wait","terminal.keys","terminal.interrupt","terminal.put","machine.exec","file.read","file.write","file.edit","doc.get","doc.set","events.subscribe","machine.add","machine.list","machine.connect","machine.rename","machine.rm","rpc.discover"],"version":"0.1.21"}}
+-> [sub +25ms] {"id":1,"jsonrpc":"2.0","method":"events.subscribe","params":{}}
+<- [sub +25ms] {"id":1,"jsonrpc":"2.0","result":{"channel":null,"seq":4,"terminals":[]}}
+probe: [ctl +25ms] spawn: hc connect (env HC_SESSION=hfy-plain + isolated XDG)
+-> [ctl +28ms] {"id":0,"jsonrpc":"2.0","method":"hello","params":{"generation":1}}
+<- [ctl +47ms] {"id":0,"jsonrpc":"2.0","result":{"core":{"id":"fdf328619a6eb255651d94a149cc7181","name":"hiraqs-macbook-air"},"features":["framed","attach","events","status","shell","resize_notifications","automatic_input","restart_environment"],"framed":false,"generation":1,"keeps_running_after_logout":null,"login_session":{"gui":true,"id":100002,"user":501},"logout_linger_user":null,"methods":["hello","server.status","server.stop","server.restart","terminal.run","templates.list","terminal.list","terminal.get","terminal.kill","terminal.rm","terminal.keep","terminal.label","terminal.read","terminal.attach","terminal.send","terminal.wait","terminal.keys","terminal.interrupt","terminal.put","machine.exec","file.read","file.write","file.edit","doc.get","doc.set","events.subscribe","machine.add","machine.list","machine.connect","machine.rename","machine.rm","rpc.discover"],"version":"0.1.21"}}
+-> [ctl +47ms] {"id":1,"jsonrpc":"2.0","method":"terminal.run","params":{"argv":["sh","-c","echo ev; sleep 0.5"],"timeout":10,"wait":true}}
+<- [sub +52ms] {"jsonrpc":"2.0","method":"event","params":{"data":{"address":"t2","argv":["sh","-c","echo ev; sleep 0.5"],"cols":200,"created_ms":1795355337587,"cwd":"/Users/hiraq/.herdr/worktrees/herdrify/herdrify-hc/.claudestacks/sdlc/2026-11-22-herdrify-hc/evidence/probe-plain","die_with_parent":false,"exit_code":null,"finished_ms":null,"identity":"ghostty","keep":false,"labels":{},"name":null,"notify":true,"parent":null,"pid":40744,"reason":null,"reported":false,"rm":false,"rows":120,"screen":"exact","signal":null,"state":"live","status":null,"status_ms":null,"template":null,"title":"","turn":0},"seq":5,"terminal":"t2","type":"created"}}
+<- [sub +471ms] {"jsonrpc":"2.0","method":"event","params":{"data":{"argv":["sh","-c","echo ev; sleep 0.5"],"cwd":"/Users/hiraq/.herdr/worktrees/herdrify/herdrify-hc/.claudestacks/sdlc/2026-11-22-herdrify-hc/evidence/probe-plain","name":"bash","pid":40744},"seq":6,"terminal":"t2","type":"foreground"}}
+<- [sub +568ms] {"jsonrpc":"2.0","method":"event","params":{"data":{"exit_code":0,"finished_ms":1795355338108,"reason":"exited","signal":null},"seq":7,"terminal":"t2","type":"finished"}}
+<- [ctl +589ms] {"id":1,"jsonrpc":"2.0","result":{"address":"t2","argv":["sh","-c","echo ev; sleep 0.5"],"cols":200,"created_ms":1795355337587,"cwd":"/Users/hiraq/.herdr/worktrees/herdrify/herdrify-hc/.claudestacks/sdlc/2026-11-22-herdrify-hc/evidence/probe-plain","die_with_parent":false,"exit_code":null,"finished_ms":null,"identity":"ghostty","keep":false,"labels":{},"name":null,"notify":true,"output":"ev","parent":null,"pid":40744,"reason":null,"reported":false,"rm":false,"rows":120,"screen":"exact","signal":null,"state":"live","status":null,"status_ms":null,"template":null,"title":"","turn":0,"wait":{"children":[],"ended":true,"exit_code":0,"reason":"exit","signal":null,"status":null,"terminal":"t2","turn":0}}}
+-> [ctl +589ms] {"id":2,"jsonrpc":"2.0","method":"terminal.rm","params":{"terminal":"t2"}}
+<- [sub +590ms] {"jsonrpc":"2.0","method":"event","params":{"data":{},"seq":8,"terminal":"t2","type":"removed"}}
+<- [ctl +596ms] {"id":2,"jsonrpc":"2.0","result":{"removed":"t2"}}
+-> [ctl +596ms] {"id":3,"jsonrpc":"2.0","method":"doc.set","params":{"name":"probe-ev","value":{"n":1},"version":0}}
+<- [ctl +603ms] {"id":3,"jsonrpc":"2.0","result":{"version":1}}
+<- [sub +603ms] {"jsonrpc":"2.0","method":"event","params":{"data":{"name":"probe-ev","version":1},"seq":9,"type":"doc"}}
+probe: collecting notifications on sub for 2s
+probe: 5 lines on sub after ctl finished
+probe: waiting up to 20s for a heartbeat on sub
+<- [sub +15026ms] {"jsonrpc":"2.0","method":"heartbeat","params":{"seq":9}}
+probe: heartbeat seen = true
+probe: request on the subscribed connection
+-> [sub +15027ms] {"id":5,"jsonrpc":"2.0","method":"terminal.list","params":{}}
+probe: id 5 answered/refused (a line with id 5) = false; eof = false
+probe: sub child: Ok(None)
+probe: second request id 6 on subscribed connection
+-> [sub +20029ms] {"id":6,"jsonrpc":"2.0","method":"server.status","params":{}}
+probe: lines within 3s: 0; eof = false
+<- [ctl +23042ms] <EOF on stdout>
+!! [ctl +23042ms] <EOF on stderr>
+!! [sub +23043ms] <EOF on stderr>
+<- [sub +23043ms] <EOF on stdout>
+[exit 0]
+
+== A7 Raw replies: terminal.run/read/wait/get/rm, rm on live terminal, templates.list, server.status, machine.list, doc.get, doc.set and stale doc.set, file.read, machine.exec
+$ cd evidence/probe-plain && HFY_D=/tmp/hfyvclde8 cargo run -q -- a7
+probe: [a7 +0ms] spawn: hc connect (env HC_SESSION=hfy-plain + isolated XDG)
+-> [a7 +1ms] {"id":0,"jsonrpc":"2.0","method":"hello","params":{"generation":1}}
+<- [a7 +17ms] {"id":0,"jsonrpc":"2.0","result":{"core":{"id":"fdf328619a6eb255651d94a149cc7181","name":"hiraqs-macbook-air"},"features":["framed","attach","events","status","shell","resize_notifications","automatic_input","restart_environment"],"framed":false,"generation":1,"keeps_running_after_logout":null,"login_session":{"gui":true,"id":100002,"user":501},"logout_linger_user":null,"methods":["hello","server.status","server.stop","server.restart","terminal.run","templates.list","terminal.list","terminal.get","terminal.kill","terminal.rm","terminal.keep","terminal.label","terminal.read","terminal.attach","terminal.send","terminal.wait","terminal.keys","terminal.interrupt","terminal.put","machine.exec","file.read","file.write","file.edit","doc.get","doc.set","events.subscribe","machine.add","machine.list","machine.connect","machine.rename","machine.rm","rpc.discover"],"version":"0.1.21"}}
+-> [a7 +17ms] {"id":1,"jsonrpc":"2.0","method":"terminal.run","params":{"argv":["sh","-c","echo hi; sleep 1"]}}
+<- [a7 +52ms] {"id":1,"jsonrpc":"2.0","result":{"address":"t3","argv":["sh","-c","echo hi; sleep 1"],"cols":200,"created_ms":1795355361127,"cwd":"/Users/hiraq/.herdr/worktrees/herdrify/herdrify-hc/.claudestacks/sdlc/2026-11-22-herdrify-hc/evidence/probe-plain","die_with_parent":false,"exit_code":null,"finished_ms":null,"identity":"ghostty","keep":false,"labels":{},"name":null,"notify":true,"parent":null,"pid":41417,"reason":null,"reported":false,"rm":false,"rows":120,"screen":"exact","signal":null,"state":"live","status":null,"status_ms":null,"template":null,"title":"","turn":0}}
+-> [a7 +53ms] {"id":2,"jsonrpc":"2.0","method":"terminal.read","params":{"terminal":"t3"}}
+<- [a7 +53ms] {"id":2,"jsonrpc":"2.0","result":{"complete":true,"how":"screen","text":"hi"}}
+-> [a7 +53ms] {"id":3,"jsonrpc":"2.0","method":"terminal.wait","params":{"terminal":"t3","timeout":10}}
+<- [a7 +1078ms] {"id":3,"jsonrpc":"2.0","result":{"children":[],"ended":true,"exit_code":0,"reason":"exit","signal":null,"status":null,"terminal":"t3","turn":0}}
+-> [a7 +1079ms] {"id":4,"jsonrpc":"2.0","method":"terminal.get","params":{"terminal":"t3"}}
+<- [a7 +1084ms] {"id":4,"jsonrpc":"2.0","result":{"address":"t3","argv":["sh","-c","echo hi; sleep 1"],"cols":200,"created_ms":1795355361127,"cwd":"/Users/hiraq/.herdr/worktrees/herdrify/herdrify-hc/.claudestacks/sdlc/2026-11-22-herdrify-hc/evidence/probe-plain","die_with_parent":false,"exit_code":0,"finished_ms":1795355362172,"identity":"ghostty","keep":false,"labels":{},"name":null,"notify":true,"parent":null,"pid":41417,"reason":"exited","reported":false,"rm":false,"rows":120,"screen":"exact","signal":null,"state":"finished","status":null,"status_ms":null,"template":null,"title":"","turn":0}}
+-> [a7 +1084ms] {"id":5,"jsonrpc":"2.0","method":"terminal.read","params":{"terminal":"t3"}}
+<- [a7 +1085ms] {"id":5,"jsonrpc":"2.0","result":{"complete":true,"how":"screen","text":"hi"}}
+-> [a7 +1085ms] {"id":6,"jsonrpc":"2.0","method":"terminal.rm","params":{"terminal":"t3"}}
+<- [a7 +1092ms] {"id":6,"jsonrpc":"2.0","result":{"removed":"t3"}}
+probe: terminal.rm on a live terminal
+-> [a7 +1092ms] {"id":7,"jsonrpc":"2.0","method":"terminal.run","params":{"argv":["sh","-c","sleep 30"]}}
+<- [a7 +1104ms] {"id":7,"jsonrpc":"2.0","result":{"address":"t4","argv":["sh","-c","sleep 30"],"cols":200,"created_ms":1795355362201,"cwd":"/Users/hiraq/.herdr/worktrees/herdrify/herdrify-hc/.claudestacks/sdlc/2026-11-22-herdrify-hc/evidence/probe-plain","die_with_parent":false,"exit_code":null,"finished_ms":null,"identity":"ghostty","keep":false,"labels":{},"name":null,"notify":true,"parent":null,"pid":41471,"reason":null,"reported":false,"rm":false,"rows":120,"screen":"exact","signal":null,"state":"live","status":null,"status_ms":null,"template":null,"title":"","turn":0}}
+-> [a7 +1105ms] {"id":8,"jsonrpc":"2.0","method":"terminal.rm","params":{"terminal":"t4"}}
+<- [a7 +1105ms] {"error":{"code":-32000,"data":{"hint":"kill it first: hc kill t4","kind":"live"},"message":"t4 is still running"},"id":8,"jsonrpc":"2.0"}
+probe: cleanup: kill then rm
+-> [a7 +1105ms] {"id":9,"jsonrpc":"2.0","method":"terminal.kill","params":{"terminal":"t4"}}
+<- [a7 +1120ms] {"id":9,"jsonrpc":"2.0","result":{"address":"t4","argv":["sh","-c","sleep 30"],"cols":200,"created_ms":1795355362201,"cwd":"/Users/hiraq/.herdr/worktrees/herdrify/herdrify-hc/.claudestacks/sdlc/2026-11-22-herdrify-hc/evidence/probe-plain","die_with_parent":false,"exit_code":null,"finished_ms":1795355362214,"identity":"ghostty","keep":false,"labels":{},"name":null,"notify":true,"parent":null,"pid":41471,"reason":"killed","reported":false,"rm":false,"rows":120,"screen":"exact","signal":1,"state":"finished","status":null,"status_ms":null,"template":null,"title":"","turn":0}}
+-> [a7 +1121ms] {"id":10,"jsonrpc":"2.0","method":"terminal.rm","params":{"terminal":"t4"}}
+<- [a7 +1130ms] {"id":10,"jsonrpc":"2.0","result":{"removed":"t4"}}
+-> [a7 +1131ms] {"id":11,"jsonrpc":"2.0","method":"templates.list","params":{}}
+<- [a7 +1131ms] {"id":11,"jsonrpc":"2.0","result":{"templates":[]}}
+-> [a7 +1131ms] {"id":12,"jsonrpc":"2.0","method":"server.status","params":{}}
+<- [a7 +1131ms] {"id":12,"jsonrpc":"2.0","result":{"core":{"id":"fdf328619a6eb255651d94a149cc7181","name":"hiraqs-macbook-air"},"finished":0,"holder":{"current":true,"instance":"9b6cbb6734c7f255c459a31cd3ccda2e","pid":40442,"terminals":0},"holders":[{"current":true,"instance":"9b6cbb6734c7f255c459a31cd3ccda2e","pid":40442,"terminals":0}],"installed_by":null,"keeps_running_after_logout":null,"live":0,"logout_linger_user":null,"pid":38064,"uptime_ms":84458,"version":"0.1.21"}}
+-> [a7 +1131ms] {"id":13,"jsonrpc":"2.0","method":"machine.list","params":{}}
+<- [a7 +1131ms] {"id":13,"jsonrpc":"2.0","result":{"machines":[]}}
+-> [a7 +1131ms] {"id":14,"jsonrpc":"2.0","method":"doc.get","params":{"name":"probe"}}
+<- [a7 +1132ms] {"id":14,"jsonrpc":"2.0","result":{"value":null,"version":0}}
+-> [a7 +1132ms] {"id":15,"jsonrpc":"2.0","method":"doc.set","params":{"name":"probe","value":{"k":"v"},"version":0}}
+<- [a7 +1138ms] {"id":15,"jsonrpc":"2.0","result":{"version":1}}
+probe: stale doc.set with version 0 again
+-> [a7 +1138ms] {"id":16,"jsonrpc":"2.0","method":"doc.set","params":{"name":"probe","value":{"k":"w"},"version":0}}
+<- [a7 +1138ms] {"error":{"code":-32000,"data":{"hint":"read doc.get and retry with its version","kind":"conflict"},"message":"document \"probe\" is at version 1, not 0"},"id":16,"jsonrpc":"2.0"}
+-> [a7 +1138ms] {"id":17,"jsonrpc":"2.0","method":"doc.get","params":{"name":"probe"}}
+<- [a7 +1138ms] {"id":17,"jsonrpc":"2.0","result":{"value":{"k":"v"},"version":1}}
+probe: wrote 12 bytes "line1\nline2\n" to $HFY_D/probe-file.txt
+-> [a7 +1139ms] {"id":18,"jsonrpc":"2.0","method":"file.read","params":{"path":"/tmp/hfyvclde8/probe-file.txt"}}
+<- [a7 +1140ms] {"id":18,"jsonrpc":"2.0","result":{"first":1,"last":2,"lines":2,"text":"line1\nline2\n"}}
+-> [a7 +1140ms] {"id":19,"jsonrpc":"2.0","method":"machine.exec","params":{"argv":["echo","x"]}}
+<- [a7 +1162ms] {"id":19,"jsonrpc":"2.0","result":{"code":0,"ms":21,"signal":null,"stderr":"","stdout":"eAo=","timed_out":false,"truncated":false}}
+-> [a7 +1163ms] {"id":20,"jsonrpc":"2.0","method":"terminal.list","params":{"all":true}}
+<- [a7 +1163ms] {"id":20,"jsonrpc":"2.0","result":{"hidden_finished":0,"machines":[],"terminals":[]}}
+probe: captured results now 20 entries in $HFY_D/captured.json
+!! [a7 +1167ms] <EOF on stderr>
+<- [a7 +1167ms] <EOF on stdout>
+[exit 0]
+
+== A8 rpc.discover result vs hc schema output (serde_json::Value equality)
+$ cd evidence/probe-plain && HFY_D=/tmp/hfyvclde8 cargo run -q -- a8
+probe: [a8 +0ms] spawn: hc connect (env HC_SESSION=hfy-plain + isolated XDG)
+-> [a8 +2ms] {"id":0,"jsonrpc":"2.0","method":"hello","params":{"generation":1}}
+<- [a8 +20ms] {"id":0,"jsonrpc":"2.0","result":{"core":{"id":"fdf328619a6eb255651d94a149cc7181","name":"hiraqs-macbook-air"},"features":["framed","attach","events","status","shell","resize_notifications","automatic_input","restart_environment"],"framed":false,"generation":1,"keeps_running_after_logout":null,"login_session":{"gui":true,"id":100002,"user":501},"logout_linger_user":null,"methods":["hello","server.status","server.stop","server.restart","terminal.run","templates.list","terminal.list","terminal.get","terminal.kill","terminal.rm","terminal.keep","terminal.label","terminal.read","terminal.attach","terminal.send","terminal.wait","terminal.keys","terminal.interrupt","terminal.put","machine.exec","file.read","file.write","file.edit","doc.get","doc.set","events.subscribe","machine.add","machine.list","machine.connect","machine.rename","machine.rm","rpc.discover"],"version":"0.1.21"}}
+-> [a8 +20ms] {"id":1,"jsonrpc":"2.0","method":"rpc.discover","params":{}}
+<- [a8 +38ms] {"id":1,"jsonrpc":"2.0","result":{"components":{"schemas":{"AttachResult":{"properties":{"automatic_input":{"description":"The entire attach path accepts AUTOMATIC_INPUT (kind 6). Absent means use DATA.","type":"boolean"},"channel":{"description":"Stream channel: first paint, then live bytes. Send k...[probe: log line truncated, full length 69185 bytes]
+probe: $ hc schema (isolated env)
+probe: [+57ms] exit status: ExitStatus(unix_wait_status(0))
+probe: stdout (69152 bytes):
+{"components":{"schemas":{"AttachResult":{"properties":{"automatic_input":{"description":"The entire attach path accepts AUTOMATIC_INPUT (kind 6). Absent means use DATA.","type":"boolean"},"channel":{"description":"Stream channel: first paint, then live bytes. Send keys as DATA on it;\nRESIZE, FOCUS...[probe: log line truncated, full length 69152 bytes]
+probe: stderr (0 bytes):
+
+probe: hc schema stdout bytes = 69152, ends with newline = true, contains interior newlines (pretty) = false
+probe: rpc.discover result == hc schema (serde_json::Value) = true
+probe: rpc.discover result == evidence upstream-v0.1.21-schema-hc.openrpc.json = true
+probe: hc schema == evidence file = true
+probe: diff rpc.discover vs hc schema (first 40): []
+probe: re-serialized compact strings equal = true
+probe: methods in rpc.discover = 32
+<- [a8 +75ms] <EOF on stdout>
+!! [a8 +75ms] <EOF on stderr>
+[exit 0]
+
+== A9 Forward-compat: live results from A3 and A7 walked against the schema result types (extra keys, missing required keys)
+$ cd evidence/probe-plain && HFY_D=/tmp/hfyvclde8 cargo run -q -- a9
+probe: 20 live results captured by A3 and A7
+probe: checks: extra keys, missing required keys, JSON type, const/enum; formats not checked
+probe: [0] hello (result schema #/components/schemas/HelloResult): 0 finding(s)
+probe: [1] hello (result schema #/components/schemas/HelloResult): 0 finding(s)
+probe: [2] terminal.run (result schema #/components/schemas/RunResult): 0 finding(s)
+probe: [3] terminal.read (result schema #/components/schemas/ReadResult): 0 finding(s)
+probe: [4] terminal.wait (result schema #/components/schemas/WaitResult): 0 finding(s)
+probe: [5] terminal.get (result schema #/components/schemas/Terminal): 0 finding(s)
+probe: [6] terminal.read (result schema #/components/schemas/ReadResult): 0 finding(s)
+probe: [7] terminal.rm (result schema #/components/schemas/RemoveResult): 0 finding(s)
+probe: [8] terminal.run (result schema #/components/schemas/RunResult): 0 finding(s)
+probe: [9] terminal.kill (result schema #/components/schemas/Terminal): 0 finding(s)
+probe: [10] terminal.rm (result schema #/components/schemas/RemoveResult): 0 finding(s)
+probe: [11] templates.list (result schema #/components/schemas/TemplatesResult): 0 finding(s)
+probe: [12] server.status (result schema #/components/schemas/StatusResult): 0 finding(s)
+probe: [13] machine.list (result schema #/components/schemas/MachineListResult): 0 finding(s)
+probe: [14] doc.get (result schema #/components/schemas/DocGetResult): 0 finding(s)
+probe: [15] doc.set (result schema #/components/schemas/DocSetResult): 0 finding(s)
+probe: [16] doc.get (result schema #/components/schemas/DocGetResult): 0 finding(s)
+probe: [17] file.read (result schema #/components/schemas/FileReadResult): 0 finding(s)
+probe: [18] machine.exec (result schema #/components/schemas/ExecResult): 0 finding(s)
+probe: [19] terminal.list (result schema #/components/schemas/ListResult): 0 finding(s)
+probe: total findings: 0
+probe: walker control: hello result with an added key `zz_extra`, `version` removed, `generation` as string, features[0] as number
+probe: control findings (4; expected 4):
+probe:     /features/0: TYPE live integer vs schema ["string"]
+probe:     /generation: TYPE live string vs schema ["integer"]
+probe:     /zz_extra: EXTRA key not declared in schema (additionalProperties: absent)
+probe:     /version: MISSING required key
+[exit 0]
+
+== A10 Plain-mode framing: line terminator, compact vs pretty, can one reply span lines
+$ cd evidence/probe-plain && HFY_D=/tmp/hfyvclde8 cargo run -q -- a10
+probe: [a10 +0ms] spawn: hc connect (env HC_SESSION=hfy-plain + isolated XDG)
+-> [a10 +5ms] {"id":0,"jsonrpc":"2.0","method":"hello","params":{"generation":1}}
+-> [a10 +5ms] {"id":1,"jsonrpc":"2.0","method":"rpc.discover","params":{}}
+-> [a10 +5ms] {"id":2,"jsonrpc":"2.0","method":"terminal.list","params":{"all":true}}
+-> [a10 +5ms] {"id":3,"jsonrpc":"2.0","method":"terminal.get","params":{"terminal":"t999"}}
+-> [a10 +5ms] {"id":4,"jsonrpc":"2.0","method":"server.status","params":{}}
+-> [a10 +5ms] {"id":5,"jsonrpc":"2.0","method":"doc.set","params":{"name":"probe-nl","value":{"text":"a\nb\r\nc"},"version":0}}
+-> [a10 +5ms] {"id":6,"jsonrpc":"2.0","method":"doc.get","params":{"name":"probe-nl"}}
+<- [a10 +26ms] {"id":0,"jsonrpc":"2.0","result":{"core":{"id":"fdf328619a6eb255651d94a149cc7181","name":"hiraqs-macbook-air"},"features":["framed","attach","events","status","shell","resize_notifications","automatic_input","restart_environment"],"framed":false,"generation":1,"keeps_running_after_logout":null,"login_session":{"gui":true,"id":100002,"user":501},"logout_linger_user":null,"methods":["hello","server.status","server.stop","server.restart","terminal.run","templates.list","terminal.list","terminal.get","terminal.kill","terminal.rm","terminal.keep","terminal.label","terminal.read","terminal.attach","terminal.send","terminal.wait","terminal.keys","terminal.interrupt","terminal.put","machine.exec","file.read","file.write","file.edit","doc.get","doc.set","events.subscribe","machine.add","machine.list","machine.connect","machine.rename","machine.rm","rpc.discover"],"version":"0.1.21"}}
+<- [a10 +45ms] {"id":1,"jsonrpc":"2.0","result":{"components":{"schemas":{"AttachResult":{"properties":{"automatic_input":{"description":"The entire attach path accepts AUTOMATIC_INPUT (kind 6). Absent means use DATA.","type":"boolean"},"channel":{"description":"Stream channel: first paint, then live bytes. Send k...[probe: log line truncated, full length 69185 bytes]
+<- [a10 +45ms] {"id":2,"jsonrpc":"2.0","result":{"hidden_finished":0,"machines":[],"terminals":[]}}
+<- [a10 +45ms] {"error":{"code":-32000,"data":{"hint":"see `hc ls --all`","kind":"not_found"},"message":"no terminal \"t999\""},"id":3,"jsonrpc":"2.0"}
+<- [a10 +46ms] {"id":4,"jsonrpc":"2.0","result":{"core":{"id":"fdf328619a6eb255651d94a149cc7181","name":"hiraqs-macbook-air"},"finished":0,"holder":{"current":true,"instance":"9b6cbb6734c7f255c459a31cd3ccda2e","pid":40442,"terminals":0},"holders":[{"current":true,"instance":"9b6cbb6734c7f255c459a31cd3ccda2e","pid":40442,"terminals":0}],"installed_by":null,"keeps_running_after_logout":null,"live":0,"logout_linger_user":null,"pid":38064,"uptime_ms":94815,"version":"0.1.21"}}
+<- [a10 +63ms] {"id":5,"jsonrpc":"2.0","result":{"version":1}}
+<- [a10 +63ms] {"id":6,"jsonrpc":"2.0","result":{"value":{"text":"a\nb\r\nc"},"version":1}}
+probe: line 0: bytes=888 terminator=\n raw CR anywhere=false parses alone as one JSON value=true id=Some(Number(0)) whitespace bytes outside strings=0 last 3 bytes=[125, 125, 10]
+probe: line 1: bytes=69186 terminator=\n raw CR anywhere=false parses alone as one JSON value=true id=Some(Number(1)) whitespace bytes outside strings=0 last 3 bytes=[125, 125, 10]
+probe: line 2: bytes=85 terminator=\n raw CR anywhere=false parses alone as one JSON value=true id=Some(Number(2)) whitespace bytes outside strings=0 last 3 bytes=[125, 125, 10]
+probe: line 3: bytes=137 terminator=\n raw CR anywhere=false parses alone as one JSON value=true id=Some(Number(3)) whitespace bytes outside strings=0 last 3 bytes=[34, 125, 10]
+probe: line 4: bytes=463 terminator=\n raw CR anywhere=false parses alone as one JSON value=true id=Some(Number(4)) whitespace bytes outside strings=0 last 3 bytes=[125, 125, 10]
+probe: line 5: bytes=48 terminator=\n raw CR anywhere=false parses alone as one JSON value=true id=Some(Number(5)) whitespace bytes outside strings=0 last 3 bytes=[125, 125, 10]
+probe: line 6: bytes=77 terminator=\n raw CR anywhere=false parses alone as one JSON value=true id=Some(Number(6)) whitespace bytes outside strings=0 last 3 bytes=[125, 125, 10]
+probe: ids in reply order: [Number(0), Number(1), Number(2), Number(3), Number(4), Number(5), Number(6)]
+probe: 7 requests sent, 7 lines received
+<- [a10 +4033ms] <EOF on stdout>
+!! [a10 +4033ms] <EOF on stderr>
+[exit 0]
+
+== A11 Lifecycle: close the child's stdin; does hc connect exit, exit status, how fast, what arrives on stdout/stderr
+$ cd evidence/probe-plain && HFY_D=/tmp/hfyvclde8 cargo run -q -- a11
+probe: variant 1, after hello, idle, close stdin
+probe: [a11.1 +0ms] spawn: hc connect (env HC_SESSION=hfy-plain + isolated XDG)
+-> [a11.1 +1ms] {"id":0,"jsonrpc":"2.0","method":"hello","params":{"generation":1}}
+<- [a11.1 +18ms] {"id":0,"jsonrpc":"2.0","result":{"core":{"id":"fdf328619a6eb255651d94a149cc7181","name":"hiraqs-macbook-air"},"features":["framed","attach","events","status","shell","resize_notifications","automatic_input","restart_environment"],"framed":false,"generation":1,"keeps_running_after_logout":null,"login_session":{"gui":true,"id":100002,"user":501},"logout_linger_user":null,"methods":["hello","server.status","server.stop","server.restart","terminal.run","templates.list","terminal.list","terminal.get","terminal.kill","terminal.rm","terminal.keep","terminal.label","terminal.read","terminal.attach","terminal.send","terminal.wait","terminal.keys","terminal.interrupt","terminal.put","machine.exec","file.read","file.write","file.edit","doc.get","doc.set","events.subscribe","machine.add","machine.list","machine.connect","machine.rename","machine.rm","rpc.discover"],"version":"0.1.21"}}
+probe: [a11.1 +19ms] closing child stdin
+<- [a11.1 +19ms] <EOF on stdout>
+!! [a11.1 +19ms] <EOF on stderr>
+probe: exited at +19ms with ExitStatus(unix_wait_status(0)); closed at +19ms
+probe: variant 2, no bytes sent at all, close stdin
+probe: [a11.2 +19ms] spawn: hc connect (env HC_SESSION=hfy-plain + isolated XDG)
+probe: [a11.2 +322ms] closing child stdin
+<- [a11.2 +322ms] <EOF on stdout>
+!! [a11.2 +322ms] <EOF on stderr>
+probe: exited at +322ms with ExitStatus(unix_wait_status(0)); closed at +322ms
+probe: variant 3, terminal.wait in flight (program sleeps 2s), close stdin right after sending it
+probe: [a11.3 +322ms] spawn: hc connect (env HC_SESSION=hfy-plain + isolated XDG)
+-> [a11.3 +323ms] {"id":0,"jsonrpc":"2.0","method":"hello","params":{"generation":1}}
+<- [a11.3 +341ms] {"id":0,"jsonrpc":"2.0","result":{"core":{"id":"fdf328619a6eb255651d94a149cc7181","name":"hiraqs-macbook-air"},"features":["framed","attach","events","status","shell","resize_notifications","automatic_input","restart_environment"],"framed":false,"generation":1,"keeps_running_after_logout":null,"login_session":{"gui":true,"id":100002,"user":501},"logout_linger_user":null,"methods":["hello","server.status","server.stop","server.restart","terminal.run","templates.list","terminal.list","terminal.get","terminal.kill","terminal.rm","terminal.keep","terminal.label","terminal.read","terminal.attach","terminal.send","terminal.wait","terminal.keys","terminal.interrupt","terminal.put","machine.exec","file.read","file.write","file.edit","doc.get","doc.set","events.subscribe","machine.add","machine.list","machine.connect","machine.rename","machine.rm","rpc.discover"],"version":"0.1.21"}}
+-> [a11.3 +341ms] {"id":1,"jsonrpc":"2.0","method":"terminal.run","params":{"argv":["sh","-c","sleep 2"]}}
+<- [a11.3 +384ms] {"id":1,"jsonrpc":"2.0","result":{"address":"t5","argv":["sh","-c","sleep 2"],"cols":200,"created_ms":1795355378044,"cwd":"/Users/hiraq/.herdr/worktrees/herdrify/herdrify-hc/.claudestacks/sdlc/2026-11-22-herdrify-hc/evidence/probe-plain","die_with_parent":false,"exit_code":null,"finished_ms":null,"identity":"ghostty","keep":false,"labels":{},"name":null,"notify":true,"parent":null,"pid":42640,"reason":null,"reported":false,"rm":false,"rows":120,"screen":"exact","signal":null,"state":"live","status":null,"status_ms":null,"template":null,"title":"","turn":0}}
+-> [a11.3 +384ms] {"id":2,"jsonrpc":"2.0","method":"terminal.wait","params":{"terminal":"t5","timeout":10}}
+probe: [a11.3 +384ms] closing child stdin
+<- [a11.3 +2415ms] {"id":2,"jsonrpc":"2.0","result":{"children":[],"ended":true,"exit_code":0,"reason":"exit","signal":null,"status":null,"terminal":"t5","turn":0}}
+<- [a11.3 +2418ms] <EOF on stdout>
+!! [a11.3 +2418ms] <EOF on stderr>
+probe: exited at +2418ms with ExitStatus(unix_wait_status(0)); closed at +384ms
+probe: cleanup rm of t5 on a new connection
+probe: [a11.cleanup +2420ms] spawn: hc connect (env HC_SESSION=hfy-plain + isolated XDG)
+-> [a11.cleanup +2431ms] {"id":0,"jsonrpc":"2.0","method":"hello","params":{"generation":1}}
+<- [a11.cleanup +2465ms] {"id":0,"jsonrpc":"2.0","result":{"core":{"id":"fdf328619a6eb255651d94a149cc7181","name":"hiraqs-macbook-air"},"features":["framed","attach","events","status","shell","resize_notifications","automatic_input","restart_environment"],"framed":false,"generation":1,"keeps_running_after_logout":null,"login_session":{"gui":true,"id":100002,"user":501},"logout_linger_user":null,"methods":["hello","server.status","server.stop","server.restart","terminal.run","templates.list","terminal.list","terminal.get","terminal.kill","terminal.rm","terminal.keep","terminal.label","terminal.read","terminal.attach","terminal.send","terminal.wait","terminal.keys","terminal.interrupt","terminal.put","machine.exec","file.read","file.write","file.edit","doc.get","doc.set","events.subscribe","machine.add","machine.list","machine.connect","machine.rename","machine.rm","rpc.discover"],"version":"0.1.21"}}
+-> [a11.cleanup +2465ms] {"id":1,"jsonrpc":"2.0","method":"terminal.wait","params":{"terminal":"t5","timeout":10}}
+<- [a11.cleanup +2465ms] {"id":1,"jsonrpc":"2.0","result":{"children":[],"ended":true,"exit_code":0,"reason":"exit","signal":null,"status":null,"terminal":"t5","turn":0}}
+-> [a11.cleanup +2465ms] {"id":2,"jsonrpc":"2.0","method":"terminal.rm","params":{"terminal":"t5"}}
+<- [a11.cleanup +2472ms] {"id":2,"jsonrpc":"2.0","result":{"removed":"t5"}}
+<- [a11.cleanup +2473ms] <EOF on stdout>
+!! [a11.cleanup +2473ms] <EOF on stderr>
+[exit 0]
+
+== TEARDOWN stop the isolated core (isolated env only), confirm, remove $D
+$ ls /tmp/hfyvclde8/run/herdr-core/
+hfy-plain.holder.9a1896b6.sock
+hfy-plain.sock
+$ env -u HC_SCOPE -u HC_TERMINAL_ID -u HC_TERMINAL_SOCKET HC_SESSION=hfy-plain XDG_STATE_HOME=/tmp/hfyvclde8/state XDG_CONFIG_HOME=/tmp/hfyvclde8/config XDG_RUNTIME_DIR=/tmp/hfyvclde8/run hc server status --json | jq '{pid, holders: [.holders[].pid]}'
+{"pid":38064,"holders":[40442]}
+$ env -u HC_SCOPE -u HC_TERMINAL_ID -u HC_TERMINAL_SOCKET HC_SESSION=hfy-plain XDG_STATE_HOME=/tmp/hfyvclde8/state XDG_CONFIG_HOME=/tmp/hfyvclde8/config XDG_RUNTIME_DIR=/tmp/hfyvclde8/run hc server stop
+{"stopped":true}
+[exit 0]
+$ ls -A /tmp/hfyvclde8/run/herdr-core/   (no hc status here: it would auto-start the core, see A1 step 5)
+$ ps -p 38064,40442 -o pid,comm   (isolated core and holder pids)
+  PID COMM
+[exit 1]
+$ rm -rf /tmp/hfyvclde8 && ls -d /tmp/hfyvclde8
+ls: /tmp/hfyvclde8: No such file or directory
+$ hc server status --json | jq .pid   (default core, untouched; only pid shown)
+73079

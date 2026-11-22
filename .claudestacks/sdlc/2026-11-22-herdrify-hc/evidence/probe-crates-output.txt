@@ -1,0 +1,1694 @@
+herdrify-hc design evidence: probe crate outputs (raw, verbatim). Generated 2026-11-22.
+All commands run under the repo tree so rust-toolchain.toml (1.94) applies.
+
+== C1 latest versions, rust-version, licence; cargo deny check; build on 1.94
+$ (cwd: /Users/hiraq/.herdr/worktrees/herdrify/herdrify-hc/.claudestacks/sdlc/2026-11-22-herdrify-hc/evidence/probe-crates/c1-deps) rustc -V; cargo -V; cargo deny --version
+rustc 1.94.1 (e408947bf 2026-03-25)
+cargo 1.94.1 (29ea6fb6a 2026-03-24)
+cargo-deny 0.20.2
+[exit status: 0]
+$ (cwd: /Users/hiraq/.herdr/worktrees/herdrify/herdrify-hc/.claudestacks/sdlc/2026-11-22-herdrify-hc/evidence/probe-crates/c1-deps) cargo info tokio 2>&1 | grep -E '^(version|license|rust-version):'
+version: 1.54.1
+license: MIT
+rust-version: 1.85
+[exit status: 0]
+$ (cwd: /Users/hiraq/.herdr/worktrees/herdrify/herdrify-hc/.claudestacks/sdlc/2026-11-22-herdrify-hc/evidence/probe-crates/c1-deps) cargo info serde 2>&1 | grep -E '^(version|license|rust-version):'
+version: 1.0.229
+license: MIT OR Apache-2.0
+rust-version: 1.56
+[exit status: 0]
+$ (cwd: /Users/hiraq/.herdr/worktrees/herdrify/herdrify-hc/.claudestacks/sdlc/2026-11-22-herdrify-hc/evidence/probe-crates/c1-deps) cargo info serde_json 2>&1 | grep -E '^(version|license|rust-version):'
+version: 1.0.154
+license: MIT OR Apache-2.0
+rust-version: 1.71
+[exit status: 0]
+$ (cwd: /Users/hiraq/.herdr/worktrees/herdrify/herdrify-hc/.claudestacks/sdlc/2026-11-22-herdrify-hc/evidence/probe-crates/c1-deps) cargo info thiserror 2>&1 | grep -E '^(version|license|rust-version):'
+version: 2.0.21
+license: MIT OR Apache-2.0
+rust-version: 1.77
+[exit status: 0]
+$ (cwd: /Users/hiraq/.herdr/worktrees/herdrify/herdrify-hc/.claudestacks/sdlc/2026-11-22-herdrify-hc/evidence/probe-crates/c1-deps) cargo info bytes 2>&1 | grep -E '^(version|license|rust-version):'
+version: 1.12.2
+license: MIT
+rust-version: 1.57
+[exit status: 0]
+$ (cwd: /Users/hiraq/.herdr/worktrees/herdrify/herdrify-hc/.claudestacks/sdlc/2026-11-22-herdrify-hc/evidence/probe-crates/c1-deps) cat Cargo.toml
+[package]
+name = "c1-deps"
+version = "0.0.0"
+edition = "2024"
+rust-version = "1.94"
+license = "Apache-2.0"
+publish = false
+
+[workspace]
+
+[dependencies]
+tokio = { version = "1.54.1", features = ["process", "io-util", "rt", "macros", "sync", "time"] }
+serde = { version = "1.0.229", features = ["derive"] }
+serde_json = { version = "1.0.154", features = ["raw_value"] }
+thiserror = "2.0.21"
+bytes = "1.12.2"
+[exit status: 0]
+$ (cwd: /Users/hiraq/.herdr/worktrees/herdrify/herdrify-hc/.claudestacks/sdlc/2026-11-22-herdrify-hc/evidence/probe-crates/c1-deps) cargo build
+ Downloading crates ...
+  Downloaded mio v1.2.5
+   Compiling proc-macro2 v1.0.107
+   Compiling quote v1.0.47
+   Compiling unicode-ident v1.0.27
+   Compiling libc v0.2.191
+   Compiling serde_core v1.0.229
+   Compiling zmij v1.0.23
+   Compiling serde_json v1.0.154
+   Compiling thiserror v2.0.21
+   Compiling serde v1.0.229
+   Compiling bytes v1.12.2
+   Compiling memchr v2.8.3
+   Compiling pin-project-lite v0.2.18
+   Compiling itoa v1.0.19
+   Compiling syn v3.0.10
+   Compiling errno v0.3.15
+   Compiling mio v1.2.5
+   Compiling signal-hook-registry v1.4.8
+   Compiling tokio-macros v2.7.2
+   Compiling serde_derive v1.0.229
+   Compiling thiserror-impl v2.0.21
+   Compiling tokio v1.54.1
+   Compiling c1-deps v0.0.0 (/Users/hiraq/.herdr/worktrees/herdrify/herdrify-hc/.claudestacks/sdlc/2026-11-22-herdrify-hc/evidence/probe-crates/c1-deps)
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 9.39s
+[exit status: 0]
+$ (cwd: /Users/hiraq/.herdr/worktrees/herdrify/herdrify-hc/.claudestacks/sdlc/2026-11-22-herdrify-hc/evidence/probe-crates/c1-deps) cargo run -q
+got Some(1) status exit status: 0
+[exit status: 0]
+$ (cwd: /Users/hiraq/.herdr/worktrees/herdrify/herdrify-hc/.claudestacks/sdlc/2026-11-22-herdrify-hc/evidence/probe-crates/c1-deps) cargo deny check
+error[rejected]: failed to satisfy license requirements
+   ┌─ /Users/hiraq/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/bytes-1.12.2/Cargo.toml:48:12
+   │
+48 │ license = "MIT"
+   │            ━━━
+   │            │
+   │            rejected: license is not explicitly allowed
+   │
+   ├ MIT - MIT License:
+   ├   - OSI approved
+   ├   - FSF Free/Libre
+   ├ bytes v1.12.2
+     ├── c1-deps v0.0.0
+     └── tokio v1.54.1
+         └── c1-deps v0.0.0 (*)
+
+error[rejected]: failed to satisfy license requirements
+   ┌─ /Users/hiraq/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/memchr-2.8.3/Cargo.toml:48:12
+   │
+48 │ license = "Unlicense OR MIT"
+   │            ━━━━━━━━━────━━━
+   │            │            │
+   │            │            rejected: license is not explicitly allowed
+   │            rejected: license is not explicitly allowed
+   │
+   ├ Unlicense - The Unlicense:
+   ├   - OSI approved
+   ├   - FSF Free/Libre
+   ├ MIT - MIT License:
+   ├   - OSI approved
+   ├   - FSF Free/Libre
+   ├ memchr v2.8.3
+     └── serde_json v1.0.154
+         └── c1-deps v0.0.0
+
+error[rejected]: failed to satisfy license requirements
+   ┌─ /Users/hiraq/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/mio-1.2.5/Cargo.toml:45:12
+   │
+45 │ license = "MIT"
+   │            ━━━
+   │            │
+   │            rejected: license is not explicitly allowed
+   │
+   ├ MIT - MIT License:
+   ├   - OSI approved
+   ├   - FSF Free/Libre
+   ├ mio v1.2.5
+     └── tokio v1.54.1
+         └── c1-deps v0.0.0
+
+error[rejected]: failed to satisfy license requirements
+   ┌─ /Users/hiraq/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/tokio-1.54.1/Cargo.toml:40:12
+   │
+40 │ license = "MIT"
+   │            ━━━
+   │            │
+   │            rejected: license is not explicitly allowed
+   │
+   ├ MIT - MIT License:
+   ├   - OSI approved
+   ├   - FSF Free/Libre
+   ├ tokio v1.54.1
+     └── c1-deps v0.0.0
+
+error[rejected]: failed to satisfy license requirements
+   ┌─ /Users/hiraq/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/tokio-macros-2.7.2/Cargo.toml:30:12
+   │
+30 │ license = "MIT"
+   │            ━━━
+   │            │
+   │            rejected: license is not explicitly allowed
+   │
+   ├ MIT - MIT License:
+   ├   - OSI approved
+   ├   - FSF Free/Libre
+   ├ tokio-macros v2.7.2
+     └── tokio v1.54.1
+         └── c1-deps v0.0.0
+
+error[rejected]: failed to satisfy license requirements
+   ┌─ /Users/hiraq/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/unicode-ident-1.0.27/Cargo.toml:36:13
+   │
+36 │ license = "(MIT OR Apache-2.0) AND Unicode-3.0"
+   │            ─━━━────────────────────━━━━━━━━━━━
+   │             │                      │
+   │             │                      rejected: license is not explicitly allowed
+   │             rejected: license is not explicitly allowed
+   │
+   ├ MIT - MIT License:
+   ├   - OSI approved
+   ├   - FSF Free/Libre
+   ├ Unicode-3.0 - Unicode License v3:
+   ├   - OSI approved
+   ├ unicode-ident v1.0.27
+     ├── proc-macro2 v1.0.107
+     │   ├── quote v1.0.47
+     │   │   ├── serde_derive v1.0.229
+     │   │   │   └── serde v1.0.229
+     │   │   │       └── c1-deps v0.0.0
+     │   │   ├── syn v3.0.10
+     │   │   │   ├── serde_derive v1.0.229 (*)
+     │   │   │   ├── thiserror-impl v2.0.21
+     │   │   │   │   └── thiserror v2.0.21
+     │   │   │   │       └── c1-deps v0.0.0 (*)
+     │   │   │   └── tokio-macros v2.7.2
+     │   │   │       └── tokio v1.54.1
+     │   │   │           └── c1-deps v0.0.0 (*)
+     │   │   ├── thiserror-impl v2.0.21 (*)
+     │   │   └── tokio-macros v2.7.2 (*)
+     │   ├── serde_derive v1.0.229 (*)
+     │   ├── syn v3.0.10 (*)
+     │   ├── thiserror-impl v2.0.21 (*)
+     │   └── tokio-macros v2.7.2 (*)
+     └── syn v3.0.10 (*)
+
+error[rejected]: failed to satisfy license requirements
+   ┌─ /Users/hiraq/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/zmij-1.0.23/Cargo.toml:34:12
+   │
+34 │ license = "MIT"
+   │            ━━━
+   │            │
+   │            rejected: license is not explicitly allowed
+   │
+   ├ MIT - MIT License:
+   ├   - OSI approved
+   ├   - FSF Free/Libre
+   ├ zmij v1.0.23
+     └── serde_json v1.0.154
+         └── c1-deps v0.0.0
+
+advisories ok, bans ok, licenses FAILED, sources ok
+[exit status: 4]
+$ (cwd: /Users/hiraq/.herdr/worktrees/herdrify/herdrify-hc/.claudestacks/sdlc/2026-11-22-herdrify-hc/evidence/probe-crates/c1-deps) grep -A2 "^name = " Cargo.lock
+name = "bytes"
+version = "1.12.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+--
+name = "c1-deps"
+version = "0.0.0"
+dependencies = [
+--
+name = "errno"
+version = "0.3.15"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+--
+name = "itoa"
+version = "1.0.19"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+--
+name = "libc"
+version = "0.2.191"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+--
+name = "memchr"
+version = "2.8.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+--
+name = "mio"
+version = "1.2.5"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+--
+name = "pin-project-lite"
+version = "0.2.18"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+--
+name = "proc-macro2"
+version = "1.0.107"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+--
+name = "quote"
+version = "1.0.47"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+--
+name = "serde"
+version = "1.0.229"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+--
+name = "serde_core"
+version = "1.0.229"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+--
+name = "serde_derive"
+version = "1.0.229"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+--
+name = "serde_json"
+version = "1.0.154"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+--
+name = "signal-hook-registry"
+version = "1.4.8"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+--
+name = "syn"
+version = "3.0.10"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+--
+name = "thiserror"
+version = "2.0.21"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+--
+name = "thiserror-impl"
+version = "2.0.21"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+--
+name = "tokio"
+version = "1.54.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+--
+name = "tokio-macros"
+version = "2.7.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+--
+name = "unicode-ident"
+version = "1.0.27"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+--
+name = "wasi"
+version = "0.11.1+wasi-snapshot-preview1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+--
+name = "windows-link"
+version = "0.2.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+--
+name = "windows-sys"
+version = "0.61.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+--
+name = "zmij"
+version = "1.0.23"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+[exit status: 0]
+$ (cwd: /Users/hiraq/.herdr/worktrees/herdrify/herdrify-hc/.claudestacks/sdlc/2026-11-22-herdrify-hc/evidence/probe-crates/c1-deps) cargo deny list
+Apache-2.0 (19): c1-deps@0.0.0, errno@0.3.15, itoa@1.0.19, libc@0.2.191, pin-project-lite@0.2.18, proc-macro2@1.0.107, quote@1.0.47, serde@1.0.229, serde_core@1.0.229, serde_derive@1.0.229, serde_json@1.0.154, signal-hook-registry@1.4.8, syn@3.0.10, thiserror@2.0.21, thiserror-impl@2.0.21, unicode-ident@1.0.27, wasi@0.11.1+wasi-snapshot-preview1, windows-link@0.2.1, windows-sys@0.61.2
+Apache-2.0 WITH LLVM-exception (1): wasi@0.11.1+wasi-snapshot-preview1
+MIT (24): bytes@1.12.2, errno@0.3.15, itoa@1.0.19, libc@0.2.191, memchr@2.8.3, mio@1.2.5, pin-project-lite@0.2.18, proc-macro2@1.0.107, quote@1.0.47, serde@1.0.229, serde_core@1.0.229, serde_derive@1.0.229, serde_json@1.0.154, signal-hook-registry@1.4.8, syn@3.0.10, thiserror@2.0.21, thiserror-impl@2.0.21, tokio@1.54.1, tokio-macros@2.7.2, unicode-ident@1.0.27, wasi@0.11.1+wasi-snapshot-preview1, windows-link@0.2.1, windows-sys@0.61.2, zmij@1.0.23
+Unicode-3.0 (1): unicode-ident@1.0.27
+Unlicense (1): memchr@2.8.3
+[exit status: 0]
+$ (cwd: /Users/hiraq/.herdr/worktrees/herdrify/herdrify-hc/.claudestacks/sdlc/2026-11-22-herdrify-hc/evidence/probe-crates/c1-deps) diff deny.toml deny.variant-mit-unicode.toml
+8c8
+< allow = ["Apache-2.0"]
+---
+> allow = ["Apache-2.0", "MIT", "Unicode-3.0"]
+[exit status: 1]
+$ (cwd: /Users/hiraq/.herdr/worktrees/herdrify/herdrify-hc/.claudestacks/sdlc/2026-11-22-herdrify-hc/evidence/probe-crates/c1-deps) cargo deny --log-level error check --config deny.variant-mit-unicode.toml
+error: unexpected argument '--config' found
+
+  tip: to pass '--config' as a value, use '-- --config'
+
+Usage: cargo-deny check [OPTIONS] [WHICH]...
+
+For more information, try '--help'.
+[exit status: 2]
+(note: the previous attempt used the wrong flag position; --config is a top-level cargo-deny option)
+$ (cwd: /Users/hiraq/.herdr/worktrees/herdrify/herdrify-hc/.claudestacks/sdlc/2026-11-22-herdrify-hc/evidence/probe-crates/c1-deps) cargo deny --config deny.variant-mit-unicode.toml check
+advisories ok, bans ok, licenses ok, sources ok
+[exit status: 0]
+
+== C2 typify: generate types from the 36 components.schemas; compile under repo lints
+$ (cwd: /Users/hiraq/.herdr/worktrees/herdrify/herdrify-hc/.claudestacks/sdlc/2026-11-22-herdrify-hc/evidence/probe-crates/c2-typify-gen) which cargo-typify || echo "cargo-typify: not installed -> using the typify crate (library API) from a small Rust program"
+cargo-typify: not installed -> using the typify crate (library API) from a small Rust program
+[exit status: 0]
+$ (cwd: /Users/hiraq/.herdr/worktrees/herdrify/herdrify-hc/.claudestacks/sdlc/2026-11-22-herdrify-hc/evidence/probe-crates/c2-typify-gen) rustc -V
+rustc 1.94.1 (e408947bf 2026-03-25)
+[exit status: 0]
+$ (cwd: /Users/hiraq/.herdr/worktrees/herdrify/herdrify-hc/.claudestacks/sdlc/2026-11-22-herdrify-hc/evidence/probe-crates/c2-typify-gen) cargo info typify 2>&1 | grep -E "^(version|license|rust-version):"
+version: 0.10.1
+license: Apache-2.0
+rust-version: unknown
+[exit status: 0]
+$ (cwd: /Users/hiraq/.herdr/worktrees/herdrify/herdrify-hc/.claudestacks/sdlc/2026-11-22-herdrify-hc/evidence/probe-crates/c2-typify-gen) cat Cargo.toml
+[package]
+name = "c2-typify-gen"
+version = "0.0.0"
+edition = "2024"
+publish = false
+
+[workspace]
+
+[dependencies]
+typify = { version = "=0.10.1", default-features = false }
+schemars = "0.8.22"
+serde_json = "1"
+[exit status: 0]
+$ (cwd: /Users/hiraq/.herdr/worktrees/herdrify/herdrify-hc/.claudestacks/sdlc/2026-11-22-herdrify-hc/evidence/probe-crates/c2-typify-gen) cargo build
+error: rustc 1.94.1 is not supported by the following package:
+  typespace@0.1.3 requires rustc 1.97
+Either upgrade rustc or select compatible dependency versions with
+`cargo update <name>@<current-ver> --precise <compatible-ver>`
+where `<compatible-ver>` is the latest version supporting rustc 1.94.1
+
+[exit status: 101]
+$ (cwd: /Users/hiraq/.herdr/worktrees/herdrify/herdrify-hc/.claudestacks/sdlc/2026-11-22-herdrify-hc/evidence/probe-crates/c2-typify-gen) cargo info typespace@0.1.3 2>&1 | grep -E "^(version|license|rust-version):"; cargo info typespace@0.1.2 2>&1 | grep -E "^(version|license|rust-version):"
+version: 0.1.3
+license: Apache-2.0
+rust-version: 1.97
+version: 0.1.2 (latest 0.1.3)
+license: Apache-2.0
+rust-version: 1.97
+[exit status: 0]
+$ (cwd: /Users/hiraq/.herdr/worktrees/herdrify/herdrify-hc/.claudestacks/sdlc/2026-11-22-herdrify-hc/evidence/probe-crates/c2-typify-gen) cargo update typespace@0.1.3 --precise 0.1.2
+    Updating crates.io index
+ Downgrading typespace v0.1.3 -> v0.1.2 (requires Rust 1.97)
+note: pass `--verbose` to see 1 unchanged dependencies behind latest
+[exit status: 0]
+$ (cwd: /Users/hiraq/.herdr/worktrees/herdrify/herdrify-hc/.claudestacks/sdlc/2026-11-22-herdrify-hc/evidence/probe-crates/c2-typify-gen) cargo build 2>&1 | tail -15
+error: rustc 1.94.1 is not supported by the following package:
+  typespace@0.1.2 requires rustc 1.97
+Either upgrade rustc or select compatible dependency versions with
+`cargo update <name>@<current-ver> --precise <compatible-ver>`
+where `<compatible-ver>` is the latest version supporting rustc 1.94.1
+
+[exit status: 0]
+(finding: every typespace release 0.1.0..0.1.3 declares rust-version 1.97, and typify-impl 0.10.x depends on typespace, so typify 0.10.x cannot build on the pinned 1.94 toolchain. Two routes recorded below: (A) latest typify 0.10.1 run as a generator under the installed stable toolchain; (B) typify 0.8.0, the newest release without typespace, run under 1.94. The GENERATED code is then compiled under 1.94 in every case.)
+$ (cwd: /Users/hiraq/.herdr/worktrees/herdrify/herdrify-hc/.claudestacks/sdlc/2026-11-22-herdrify-hc/evidence/probe-crates/c2-typify-gen) rustup toolchain list
+stable-aarch64-apple-darwin (default)
+nightly-aarch64-apple-darwin
+1.85-aarch64-apple-darwin
+1.91-aarch64-apple-darwin
+1.91.1-aarch64-apple-darwin
+1.94-aarch64-apple-darwin (active)
+1.94.1-aarch64-apple-darwin
+1.99.0-aarch64-apple-darwin
+1.100.0-aarch64-apple-darwin
+[exit status: 0]
+$ (cwd: /Users/hiraq/.herdr/worktrees/herdrify/herdrify-hc/.claudestacks/sdlc/2026-11-22-herdrify-hc/evidence/probe-crates/c2-typify-gen) cargo +stable -V; rustc +stable -V
+cargo 1.99.0 (5f94df478 2026-08-27)
+rustc 1.99.0 (b940084d7 2026-09-28)
+[exit status: 0]
+$ (cwd: /Users/hiraq/.herdr/worktrees/herdrify/herdrify-hc/.claudestacks/sdlc/2026-11-22-herdrify-hc/evidence/probe-crates/c2-typify-gen) cargo +stable update typespace --precise 0.1.3
+    Updating crates.io index
+    Updating typespace v0.1.2 -> v0.1.3
+note: pass `--verbose` to see 1 unchanged dependencies behind latest
+[exit status: 0]
+$ (cwd: /Users/hiraq/.herdr/worktrees/herdrify/herdrify-hc/.claudestacks/sdlc/2026-11-22-herdrify-hc/evidence/probe-crates/c2-typify-gen) cargo +stable build 2>&1 | tail -4
+            which is required by `Result<proc_macro2::TokenStream, typify::Error>: ToString`
+
+For more information about this error, try `rustc --explain E0599`.
+error: could not compile `c2-typify-gen` (bin "c2-typify-gen") due to 3 previous errors
+[exit status: 0]
+$ (cwd: /Users/hiraq/.herdr/worktrees/herdrify/herdrify-hc/.claudestacks/sdlc/2026-11-22-herdrify-hc/evidence/probe-crates/c2-typify-gen) cargo +stable run -q -- ../../upstream-v0.1.21-schema-hc.openrpc.json components ../typify-generated.raw.rs
+error[E0599]: no method named `with_struct_builder` found for struct `TypeSpaceSettings` in the current scope
+  --> src/main.rs:67:62
+   |
+67 |     let mut ts = TypeSpace::new(TypeSpaceSettings::default().with_struct_builder(false));
+   |                                                              ^^^^^^^^^^^^^^^^^^^ method not found in `TypeSpaceSettings`
+
+error[E0599]: no method named `iter_types` found for struct `TypeSpace` in the current scope
+  --> src/main.rs:72:53
+   |
+72 |     eprintln!("typify generated type count: {}", ts.iter_types().count());
+   |                                                     ^^^^^^^^^^ method not found in `TypeSpace`
+
+error[E0599]: `Result<proc_macro2::TokenStream, typify::Error>` doesn't implement `std::fmt::Display`
+   --> src/main.rs:73:31
+    |
+ 73 |     let code = ts.to_stream().to_string();
+    |                               ^^^^^^^^^ method cannot be called on `Result<proc_macro2::TokenStream, typify::Error>` due to unsatisfied trait bounds
+    |
+   ::: /Users/hiraq/.rustup/toolchains/stable-aarch64-apple-darwin/lib/rustlib/src/rust/library/core/src/result.rs:558:1
+    |
+558 | pub enum Result<T, E> {
+    | --------------------- doesn't satisfy `_: Display` or `_: ToString`
+    |
+    = note: the following trait bounds were not satisfied:
+            `Result<proc_macro2::TokenStream, typify::Error>: std::fmt::Display`
+            which is required by `Result<proc_macro2::TokenStream, typify::Error>: ToString`
+
+For more information about this error, try `rustc --explain E0599`.
+error: could not compile `c2-typify-gen` (bin "c2-typify-gen") due to 3 previous errors
+[exit status: 101]
+(the build above failed on API drift: typify 0.10 removed with_struct_builder/iter_types and to_stream now returns Result. Source adjusted; route A source = c2-typify-gen/src/main.rs, route B source = c2-typify-gen-0.8/src/main.rs)
+$ (cwd: /Users/hiraq/.herdr/worktrees/herdrify/herdrify-hc/.claudestacks/sdlc/2026-11-22-herdrify-hc/evidence/probe-crates/c2-typify-gen) cargo +stable build 2>&1 | tail -3
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 0.15s
+[exit status: 0]
+$ (cwd: /Users/hiraq/.herdr/worktrees/herdrify/herdrify-hc/.claudestacks/sdlc/2026-11-22-herdrify-hc/evidence/probe-crates/c2-typify-gen) grep -n -A3 "^name = \"typify\|^name = \"typespace\|^name = \"schemars\"" Cargo.lock
+85:name = "schemars"
+86-version = "0.8.22"
+87-source = "registry+https://github.com/rust-lang/crates.io-index"
+88-checksum = "3fbf2ae1b8bc8e02df939598064d22402220cd5bbcca1c76f7d6a310974d5615"
+--
+238:name = "typespace"
+239-version = "0.1.3"
+240-source = "registry+https://github.com/rust-lang/crates.io-index"
+241-checksum = "7f85ea45c92b262c35a6e8e563e27951b86275e8c3e3aa03ba4cf9addeaf5ef7"
+--
+257:name = "typify"
+258-version = "0.10.1"
+259-source = "registry+https://github.com/rust-lang/crates.io-index"
+260-checksum = "19f174e99e1652ac0b6110431a2f9312cbfb6c618c74f3f235821e3ff0f63e9c"
+--
+266:name = "typify-impl"
+267-version = "0.10.1"
+268-source = "registry+https://github.com/rust-lang/crates.io-index"
+269-checksum = "82ce9c7f17c54101c576f7cee9b10390d690146a1dfa56da2deb4a4dfd8828c4"
+[exit status: 0]
+$ (cwd: /Users/hiraq/.herdr/worktrees/herdrify/herdrify-hc/.claudestacks/sdlc/2026-11-22-herdrify-hc/evidence/probe-crates/c2-typify-gen) cargo +stable run -q -- ../../upstream-v0.1.21-schema-hc.openrpc.json components ../typify-generated.rs
+components.schemas count: 36
+ref rewrite: replaced 22 occurrences of "#/components/schemas/ with "#/definitions/
+RootSchema.definitions: 36
+wrote ../typify-generated.rs (unformatted token stream; run rustfmt on it)
+[exit status: 0]
+$ (cwd: /Users/hiraq/.herdr/worktrees/herdrify/herdrify-hc/.claudestacks/sdlc/2026-11-22-herdrify-hc/evidence/probe-crates/c2-typify-gen) rustfmt +stable --edition 2024 ../typify-generated.rs && wc -l ../typify-generated.rs
+     684 ../typify-generated.rs
+[exit status: 0]
+$ (cwd: /Users/hiraq/.herdr/worktrees/herdrify/herdrify-hc/.claudestacks/sdlc/2026-11-22-herdrify-hc/evidence/probe-crates/c2-typify-gen) cargo +stable run -q -- ../../upstream-v0.1.21-schema-hc.openrpc.json whole-doc
+RootSchema.definitions: 0
+[exit status: 0]
+$ (cwd: /Users/hiraq/.herdr/worktrees/herdrify/herdrify-hc/.claudestacks/sdlc/2026-11-22-herdrify-hc/evidence/probe-crates/c2-typify-gen) cargo +stable run -q -- ../../upstream-v0.1.21-schema-hc.openrpc.json with-params ../typify-generated-with-params.rs
+ref rewrite: replaced 22 occurrences of "#/components/schemas/ with "#/definitions/
+ref rewrite: replaced 0 occurrences of "#/components/schemas/ with "#/definitions/
+ref rewrite: replaced 1 occurrences of "#/components/schemas/ with "#/definitions/
+ref rewrite: replaced 0 occurrences of "#/components/schemas/ with "#/definitions/
+ref rewrite: replaced 0 occurrences of "#/components/schemas/ with "#/definitions/
+ref rewrite: replaced 0 occurrences of "#/components/schemas/ with "#/definitions/
+ref rewrite: replaced 0 occurrences of "#/components/schemas/ with "#/definitions/
+ref rewrite: replaced 0 occurrences of "#/components/schemas/ with "#/definitions/
+ref rewrite: replaced 0 occurrences of "#/components/schemas/ with "#/definitions/
+ref rewrite: replaced 0 occurrences of "#/components/schemas/ with "#/definitions/
+ref rewrite: replaced 0 occurrences of "#/components/schemas/ with "#/definitions/
+ref rewrite: replaced 1 occurrences of "#/components/schemas/ with "#/definitions/
+ref rewrite: replaced 0 occurrences of "#/components/schemas/ with "#/definitions/
+ref rewrite: replaced 0 occurrences of "#/components/schemas/ with "#/definitions/
+ref rewrite: replaced 0 occurrences of "#/components/schemas/ with "#/definitions/
+ref rewrite: replaced 0 occurrences of "#/components/schemas/ with "#/definitions/
+ref rewrite: replaced 0 occurrences of "#/components/schemas/ with "#/definitions/
+ref rewrite: replaced 0 occurrences of "#/components/schemas/ with "#/definitions/
+ref rewrite: replaced 0 occurrences of "#/components/schemas/ with "#/definitions/
+ref rewrite: replaced 0 occurrences of "#/components/schemas/ with "#/definitions/
+ref rewrite: replaced 0 occurrences of "#/components/schemas/ with "#/definitions/
+ref rewrite: replaced 0 occurrences of "#/components/schemas/ with "#/definitions/
+ref rewrite: replaced 0 occurrences of "#/components/schemas/ with "#/definitions/
+ref rewrite: replaced 1 occurrences of "#/components/schemas/ with "#/definitions/
+ref rewrite: replaced 0 occurrences of "#/components/schemas/ with "#/definitions/
+ref rewrite: replaced 0 occurrences of "#/components/schemas/ with "#/definitions/
+ref rewrite: replaced 0 occurrences of "#/components/schemas/ with "#/definitions/
+ref rewrite: replaced 0 occurrences of "#/components/schemas/ with "#/definitions/
+ref rewrite: replaced 0 occurrences of "#/components/schemas/ with "#/definitions/
+ref rewrite: replaced 0 occurrences of "#/components/schemas/ with "#/definitions/
+ref rewrite: replaced 0 occurrences of "#/components/schemas/ with "#/definitions/
+ref rewrite: replaced 0 occurrences of "#/components/schemas/ with "#/definitions/
+ref rewrite: replaced 0 occurrences of "#/components/schemas/ with "#/definitions/
+ref rewrite: replaced 0 occurrences of "#/components/schemas/ with "#/definitions/
+ref rewrite: replaced 0 occurrences of "#/components/schemas/ with "#/definitions/
+ref rewrite: replaced 0 occurrences of "#/components/schemas/ with "#/definitions/
+ref rewrite: replaced 0 occurrences of "#/components/schemas/ with "#/definitions/
+ref rewrite: replaced 0 occurrences of "#/components/schemas/ with "#/definitions/
+ref rewrite: replaced 0 occurrences of "#/components/schemas/ with "#/definitions/
+ref rewrite: replaced 0 occurrences of "#/components/schemas/ with "#/definitions/
+ref rewrite: replaced 0 occurrences of "#/components/schemas/ with "#/definitions/
+ref rewrite: replaced 0 occurrences of "#/components/schemas/ with "#/definitions/
+ref rewrite: replaced 0 occurrences of "#/components/schemas/ with "#/definitions/
+ref rewrite: replaced 1 occurrences of "#/components/schemas/ with "#/definitions/
+ref rewrite: replaced 0 occurrences of "#/components/schemas/ with "#/definitions/
+ref rewrite: replaced 0 occurrences of "#/components/schemas/ with "#/definitions/
+ref rewrite: replaced 0 occurrences of "#/components/schemas/ with "#/definitions/
+ref rewrite: replaced 0 occurrences of "#/components/schemas/ with "#/definitions/
+ref rewrite: replaced 0 occurrences of "#/components/schemas/ with "#/definitions/
+ref rewrite: replaced 0 occurrences of "#/components/schemas/ with "#/definitions/
+ref rewrite: replaced 0 occurrences of "#/components/schemas/ with "#/definitions/
+ref rewrite: replaced 0 occurrences of "#/components/schemas/ with "#/definitions/
+ref rewrite: replaced 1 occurrences of "#/components/schemas/ with "#/definitions/
+ref rewrite: replaced 0 occurrences of "#/components/schemas/ with "#/definitions/
+ref rewrite: replaced 0 occurrences of "#/components/schemas/ with "#/definitions/
+ref rewrite: replaced 0 occurrences of "#/components/schemas/ with "#/definitions/
+ref rewrite: replaced 0 occurrences of "#/components/schemas/ with "#/definitions/
+ref rewrite: replaced 0 occurrences of "#/components/schemas/ with "#/definitions/
+ref rewrite: replaced 1 occurrences of "#/components/schemas/ with "#/definitions/
+ref rewrite: replaced 0 occurrences of "#/components/schemas/ with "#/definitions/
+ref rewrite: replaced 0 occurrences of "#/components/schemas/ with "#/definitions/
+ref rewrite: replaced 0 occurrences of "#/components/schemas/ with "#/definitions/
+ref rewrite: replaced 0 occurrences of "#/components/schemas/ with "#/definitions/
+ref rewrite: replaced 0 occurrences of "#/components/schemas/ with "#/definitions/
+ref rewrite: replaced 0 occurrences of "#/components/schemas/ with "#/definitions/
+ref rewrite: replaced 0 occurrences of "#/components/schemas/ with "#/definitions/
+ref rewrite: replaced 0 occurrences of "#/components/schemas/ with "#/definitions/
+ref rewrite: replaced 0 occurrences of "#/components/schemas/ with "#/definitions/
+ref rewrite: replaced 0 occurrences of "#/components/schemas/ with "#/definitions/
+ref rewrite: replaced 0 occurrences of "#/components/schemas/ with "#/definitions/
+ref rewrite: replaced 0 occurrences of "#/components/schemas/ with "#/definitions/
+ref rewrite: replaced 0 occurrences of "#/components/schemas/ with "#/definitions/
+ref rewrite: replaced 0 occurrences of "#/components/schemas/ with "#/definitions/
+ref rewrite: replaced 0 occurrences of "#/components/schemas/ with "#/definitions/
+ref rewrite: replaced 0 occurrences of "#/components/schemas/ with "#/definitions/
+ref rewrite: replaced 0 occurrences of "#/components/schemas/ with "#/definitions/
+ref rewrite: replaced 0 occurrences of "#/components/schemas/ with "#/definitions/
+ref rewrite: replaced 0 occurrences of "#/components/schemas/ with "#/definitions/
+ref rewrite: replaced 0 occurrences of "#/components/schemas/ with "#/definitions/
+ref rewrite: replaced 0 occurrences of "#/components/schemas/ with "#/definitions/
+ref rewrite: replaced 0 occurrences of "#/components/schemas/ with "#/definitions/
+ref rewrite: replaced 0 occurrences of "#/components/schemas/ with "#/definitions/
+ref rewrite: replaced 0 occurrences of "#/components/schemas/ with "#/definitions/
+ref rewrite: replaced 0 occurrences of "#/components/schemas/ with "#/definitions/
+ref rewrite: replaced 0 occurrences of "#/components/schemas/ with "#/definitions/
+ref rewrite: replaced 0 occurrences of "#/components/schemas/ with "#/definitions/
+ref rewrite: replaced 0 occurrences of "#/components/schemas/ with "#/definitions/
+ref rewrite: replaced 1 occurrences of "#/components/schemas/ with "#/definitions/
+ref rewrite: replaced 0 occurrences of "#/components/schemas/ with "#/definitions/
+ref rewrite: replaced 0 occurrences of "#/components/schemas/ with "#/definitions/
+ref rewrite: replaced 0 occurrences of "#/components/schemas/ with "#/definitions/
+ref rewrite: replaced 0 occurrences of "#/components/schemas/ with "#/definitions/
+ref rewrite: replaced 0 occurrences of "#/components/schemas/ with "#/definitions/
+ref rewrite: replaced 0 occurrences of "#/components/schemas/ with "#/definitions/
+ref rewrite: replaced 0 occurrences of "#/components/schemas/ with "#/definitions/
+ref rewrite: replaced 0 occurrences of "#/components/schemas/ with "#/definitions/
+ref rewrite: replaced 0 occurrences of "#/components/schemas/ with "#/definitions/
+ref rewrite: replaced 0 occurrences of "#/components/schemas/ with "#/definitions/
+ref rewrite: replaced 0 occurrences of "#/components/schemas/ with "#/definitions/
+ref rewrite: replaced 0 occurrences of "#/components/schemas/ with "#/definitions/
+ref rewrite: replaced 0 occurrences of "#/components/schemas/ with "#/definitions/
+ref rewrite: replaced 0 occurrences of "#/components/schemas/ with "#/definitions/
+ref rewrite: replaced 0 occurrences of "#/components/schemas/ with "#/definitions/
+ref rewrite: replaced 0 occurrences of "#/components/schemas/ with "#/definitions/
+ref rewrite: replaced 0 occurrences of "#/components/schemas/ with "#/definitions/
+ref rewrite: replaced 0 occurrences of "#/components/schemas/ with "#/definitions/
+ref rewrite: replaced 0 occurrences of "#/components/schemas/ with "#/definitions/
+ref rewrite: replaced 0 occurrences of "#/components/schemas/ with "#/definitions/
+definitions after assembling params: 68
+RootSchema.definitions: 68
+wrote ../typify-generated-with-params.rs (unformatted token stream; run rustfmt on it)
+[exit status: 0]
+$ (cwd: /Users/hiraq/.herdr/worktrees/herdrify/herdrify-hc/.claudestacks/sdlc/2026-11-22-herdrify-hc/evidence/probe-crates/c2-typify-gen-0.8) rustc -V; cargo build 2>&1 | tail -3
+rustc 1.94.1 (e408947bf 2026-03-25)
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 0.04s
+[exit status: 0]
+$ (cwd: /Users/hiraq/.herdr/worktrees/herdrify/herdrify-hc/.claudestacks/sdlc/2026-11-22-herdrify-hc/evidence/probe-crates/c2-typify-gen-0.8) grep -n -A1 "^name = \"typify\|^name = \"schemars\"" Cargo.lock
+72:name = "schemars"
+73-version = "0.8.22"
+--
+198:name = "typify"
+199-version = "0.8.0"
+--
+207:name = "typify-impl"
+208-version = "0.8.0"
+[exit status: 0]
+$ (cwd: /Users/hiraq/.herdr/worktrees/herdrify/herdrify-hc/.claudestacks/sdlc/2026-11-22-herdrify-hc/evidence/probe-crates/c2-typify-gen-0.8) cargo run -q -- ../../upstream-v0.1.21-schema-hc.openrpc.json components ../typify-0.8-generated.rs
+components.schemas count: 36
+ref rewrite: replaced 22 occurrences of "#/components/schemas/ with "#/definitions/
+RootSchema.definitions: 36
+typify generated type count: 67
+wrote ../typify-0.8-generated.rs (unformatted token stream; run rustfmt on it)
+[exit status: 0]
+$ (cwd: /Users/hiraq/.herdr/worktrees/herdrify/herdrify-hc/.claudestacks/sdlc/2026-11-22-herdrify-hc/evidence/probe-crates/c2-typify-gen-0.8) rustfmt --edition 2024 ../typify-0.8-generated.rs && wc -l ../typify-0.8-generated.rs
+     690 ../typify-0.8-generated.rs
+[exit status: 0]
+-- C2 compile of typify 0.10.1 output (typify-generated.rs) on 1.94 under the repo [workspace.lints] copied verbatim --
+$ (cwd: /Users/hiraq/.herdr/worktrees/herdrify/herdrify-hc/.claudestacks/sdlc/2026-11-22-herdrify-hc/evidence/probe-crates/c2-typify-compile) rustc -V
+rustc 1.94.1 (e408947bf 2026-03-25)
+[exit status: 0]
+$ (cwd: /Users/hiraq/.herdr/worktrees/herdrify/herdrify-hc/.claudestacks/sdlc/2026-11-22-herdrify-hc/evidence/probe-crates/c2-typify-compile) cat Cargo.toml src/lib.rs
+[package]
+name = "c2-typify-compile"
+version = "0.0.0"
+edition = "2024"
+rust-version = "1.94"
+publish = false
+
+[dependencies]
+serde = { version = "1.0.229", features = ["derive"] }
+serde_json = "1.0.154"
+
+[lints]
+workspace = true
+
+[workspace]
+
+[workspace.lints.rust]
+unsafe_code     = "forbid"
+missing_docs    = "warn"
+unreachable_pub = "warn"
+unused_must_use = "deny"
+
+[workspace.lints.clippy]
+pedantic           = { level = "warn", priority = -1 }
+nursery            = { level = "warn", priority = -1 }
+unwrap_used        = "deny"
+expect_used        = "warn"
+panic              = "deny"
+todo               = "warn"
+dbg_macro          = "deny"
+missing_errors_doc = "warn"
+missing_panics_doc = "warn"
+//! C2 probe: compile typify output (probe-crates/typify-generated.rs) under the repo lints.
+#[path = "../../typify-generated.rs"]
+pub mod generated;
+[exit status: 0]
+$ (cwd: /Users/hiraq/.herdr/worktrees/herdrify/herdrify-hc/.claudestacks/sdlc/2026-11-22-herdrify-hc/evidence/probe-crates/c2-typify-compile) cargo build 2>&1 | tail -3
+
+warning: `c2-typify-compile` (lib) generated 78 warnings
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 2.06s
+[exit status: 0]
+$ (cwd: /Users/hiraq/.herdr/worktrees/herdrify/herdrify-hc/.claudestacks/sdlc/2026-11-22-herdrify-hc/evidence/probe-crates/c2-typify-compile) cargo clippy --all-targets -- -D warnings 2>&1 | tail -4
+
+error: could not compile `c2-typify-compile` (lib) due to 95 previous errors
+warning: build failed, waiting for other jobs to finish...
+error: could not compile `c2-typify-compile` (lib test) due to 95 previous errors
+[exit status: 0]
+$ (cwd: /Users/hiraq/.herdr/worktrees/herdrify/herdrify-hc/.claudestacks/sdlc/2026-11-22-herdrify-hc/evidence/probe-crates/c2-typify-compile) touch src/lib.rs; cargo clippy --lib --message-format=json 2>/dev/null | jq -r "select(.reason==\"compiler-message\" and .message.level==\"warning\" and .message.code!=null) | .message.code.code" | sort | uniq -c | sort -rn
+  78 missing_docs
+  14 clippy::doc_markdown
+   2 clippy::struct_excessive_bools
+   1 clippy::use_self
+[exit status: 0]
+$ (cwd: /Users/hiraq/.herdr/worktrees/herdrify/herdrify-hc/.claudestacks/sdlc/2026-11-22-herdrify-hc/evidence/probe-crates/c2-typify-compile) touch src/lib.rs; cargo clippy --lib --message-format=json 2>/dev/null | jq -r "select(.reason==\"compiler-message\" and .message.level==\"warning\" and .message.code!=null) | .message.code.code" | wc -l
+      95
+[exit status: 0]
+$ (cwd: /Users/hiraq/.herdr/worktrees/herdrify/herdrify-hc/.claudestacks/sdlc/2026-11-22-herdrify-hc/evidence/probe-crates/c2-typify-compile) touch src/lib.rs; cargo clippy --lib --message-format=short 2>&1 | grep -E "^(src|\.\.)" | sort | uniq | head -40
+src/../../typify-generated.rs:10:5: warning: missing documentation for a struct field
+src/../../typify-generated.rs:102:5: warning: missing documentation for a struct field
+src/../../typify-generated.rs:131:5: warning: missing documentation for a struct field
+src/../../typify-generated.rs:140:5: warning: missing documentation for a struct field
+src/../../typify-generated.rs:150:5: warning: missing documentation for a struct field
+src/../../typify-generated.rs:161:5: warning: missing documentation for a struct field
+src/../../typify-generated.rs:172:5: warning: missing documentation for a struct field
+src/../../typify-generated.rs:173:5: warning: missing documentation for a struct field
+src/../../typify-generated.rs:174:5: warning: missing documentation for a struct field
+src/../../typify-generated.rs:175:5: warning: missing documentation for a struct field
+src/../../typify-generated.rs:185:5: warning: missing documentation for a struct field
+src/../../typify-generated.rs:186:5: warning: missing documentation for a struct field
+src/../../typify-generated.rs:193:5: warning: missing documentation for a struct field
+src/../../typify-generated.rs:194:5: warning: missing documentation for a struct field
+src/../../typify-generated.rs:213:5: warning: missing documentation for a variant
+src/../../typify-generated.rs:215:5: warning: missing documentation for a variant
+src/../../typify-generated.rs:262:79: warning: item in documentation is missing backticks
+src/../../typify-generated.rs:269:5: warning: missing documentation for a struct field
+src/../../typify-generated.rs:27:5: warning: missing documentation for a variant
+src/../../typify-generated.rs:270:5: warning: missing documentation for a struct field
+src/../../typify-generated.rs:288:5: warning: missing documentation for a struct field
+src/../../typify-generated.rs:289:5: warning: missing documentation for a struct field
+src/../../typify-generated.rs:29:5: warning: missing documentation for a variant
+src/../../typify-generated.rs:323:5: warning: missing documentation for a struct field
+src/../../typify-generated.rs:346:37: warning: item in documentation is missing backticks
+src/../../typify-generated.rs:359:5: warning: missing documentation for a struct field
+src/../../typify-generated.rs:364:5: warning: missing documentation for a struct field
+src/../../typify-generated.rs:375:5: warning: missing documentation for a struct field
+src/../../typify-generated.rs:383:5: warning: missing documentation for a struct field
+src/../../typify-generated.rs:387:1: warning: more than 3 bools in a struct
+src/../../typify-generated.rs:390:5: warning: missing documentation for a struct field
+src/../../typify-generated.rs:391:5: warning: missing documentation for a struct field
+src/../../typify-generated.rs:392:5: warning: missing documentation for a struct field
+src/../../typify-generated.rs:393:5: warning: missing documentation for a struct field
+src/../../typify-generated.rs:395:5: warning: missing documentation for a struct field
+src/../../typify-generated.rs:397:5: warning: missing documentation for a struct field
+src/../../typify-generated.rs:399:5: warning: missing documentation for a struct field
+src/../../typify-generated.rs:4:45: warning: item in documentation is missing backticks
+src/../../typify-generated.rs:406:62: warning: item in documentation is missing backticks
+src/../../typify-generated.rs:412:5: warning: missing documentation for a struct field
+[exit status: 0]
+(the "[exit status: 0]" after a "| tail" above is tail's status; real clippy status follows)
+$ (cwd: /Users/hiraq/.herdr/worktrees/herdrify/herdrify-hc/.claudestacks/sdlc/2026-11-22-herdrify-hc/evidence/probe-crates/c2-typify-compile) touch src/lib.rs; cargo clippy --all-targets -- -D warnings >/dev/null 2>&1; echo "cargo clippy --all-targets -- -D warnings exit status: $?"
+cargo clippy --all-targets -- -D warnings exit status: 101
+[exit status: 0]
+$ (cwd: /Users/hiraq/.herdr/worktrees/herdrify/herdrify-hc/.claudestacks/sdlc/2026-11-22-herdrify-hc/evidence/probe-crates/c2-typify-compile) grep -c "deny_unknown_fields" ../typify-generated.rs; grep -c "serde(default" ../typify-generated.rs; grep -n "NonZero\|HashMap<\|\[u32; 2usize\]\|pub progress\|pub code" ../typify-generated.rs
+0
+22
+79:    pub cell: ::std::option::Option<[u32; 2usize]>,
+111:    pub code: ::std::option::Option<i32>,
+253:    pub cols: ::std::num::NonZeroU16,
+255:    pub rows: ::std::num::NonZeroU16,
+412:    pub labels: ::std::collections::HashMap<::std::string::String, ::std::string::String>,
+433:    pub records: ::std::collections::HashMap<::std::string::String, Status>,
+497:    pub progress: ::std::option::Option<u8>,
+585:    pub labels: ::std::collections::HashMap<::std::string::String, ::std::string::String>,
+603:    pub records: ::std::collections::HashMap<::std::string::String, Status>,
+[exit status: 0]
+-- same compile for typify 0.8.0 output (typify-0.8-generated.rs), for comparison --
+$ (cwd: /Users/hiraq/.herdr/worktrees/herdrify/herdrify-hc/.claudestacks/sdlc/2026-11-22-herdrify-hc/evidence/probe-crates/c2-typify-compile-0.8) cargo clippy --all-targets -- -D warnings >/dev/null 2>&1; echo "cargo clippy --all-targets -- -D warnings exit status: $?"
+cargo clippy --all-targets -- -D warnings exit status: 101
+[exit status: 0]
+$ (cwd: /Users/hiraq/.herdr/worktrees/herdrify/herdrify-hc/.claudestacks/sdlc/2026-11-22-herdrify-hc/evidence/probe-crates/c2-typify-compile-0.8) touch src/lib.rs; cargo clippy --lib --message-format=json 2>/dev/null | jq -r "select(.reason==\"compiler-message\" and .message.level==\"warning\" and .message.code!=null) | .message.code.code" | sort | uniq -c | sort -rn
+  78 missing_docs
+  14 clippy::doc_markdown
+   2 clippy::struct_excessive_bools
+   1 clippy::use_self
+[exit status: 0]
+$ (cwd: /Users/hiraq/.herdr/worktrees/herdrify/herdrify-hc/.claudestacks/sdlc/2026-11-22-herdrify-hc/evidence/probe-crates/c2-typify-compile-0.8) diff <(grep -v "^\s*#\[doc" ../typify-generated.rs) <(grep -v "^\s*#\[doc" ../typify-0.8-generated.rs) | head -60
+328c328,331
+<     #[serde(default, skip_serializing_if = "::std::collections::HashMap::is_empty")]
+---
+>     #[serde(
+>         default,
+>         skip_serializing_if = ":: std :: collections :: HashMap::is_empty"
+>     )]
+455c458,461
+<     #[serde(default, skip_serializing_if = "::std::collections::HashMap::is_empty")]
+---
+>     #[serde(
+>         default,
+>         skip_serializing_if = ":: std :: collections :: HashMap::is_empty"
+>     )]
+[exit status: 0]
+-- C2 runtime behaviour of the generated types (stderr dropped: it repeats the 78 missing_docs warnings of the path dependency already counted above) --
+$ (cwd: /Users/hiraq/.herdr/worktrees/herdrify/herdrify-hc/.claudestacks/sdlc/2026-11-22-herdrify-hc/evidence/probe-crates/c2-typify-behaviour) cat src/main.rs
+//! C2 probe: runtime behaviour of the typify-generated types.
+use c2_typify_compile::generated::*;
+use serde::de::DeserializeOwned;
+use std::fmt::Debug;
+
+fn try_parse<T: DeserializeOwned + Debug>(label: &str, json: &str) {
+    match serde_json::from_str::<T>(json) {
+        Ok(v) => println!("{label}: Ok({v:?})"),
+        Err(e) => println!("{label}: Err({e})"),
+    }
+}
+
+const TERM_MIN: &str = r#""address":"a","argv":[],"cwd":"/","state":"live","created_ms":1,"screen":"s","cols":80,"rows":24"#;
+
+fn main() {
+    // unknown fields
+    try_parse::<CoreInfo>("1 CoreInfo + unknown field", r#"{"id":"i","name":"n","zzz":1}"#);
+    // anyOf [X, null] and default: null
+    try_parse::<Terminal>("2a Terminal status absent", &format!("{{{TERM_MIN},\"labels\":{{}}}}"));
+    try_parse::<Terminal>("2b Terminal status null", &format!("{{{TERM_MIN},\"labels\":{{}},\"status\":null}}"));
+    try_parse::<Terminal>("2c Terminal labels absent (required map)", &format!("{{{TERM_MIN}}}"));
+    try_parse::<Terminal>("2d Terminal title null (type string, default \"\")", &format!("{{{TERM_MIN},\"labels\":{{}},\"title\":null}}"));
+    // type: [integer, null]
+    try_parse::<ExecResult>("3a ExecResult code null", r#"{"ms":1,"stderr":"","stdout":"","timed_out":false,"truncated":false,"code":null}"#);
+    try_parse::<ExecResult>("3b ExecResult code absent", r#"{"ms":1,"stderr":"","stdout":"","timed_out":false,"truncated":false}"#);
+    let e: ExecResult = serde_json::from_str(r#"{"ms":1,"stderr":"","stdout":"","timed_out":false,"truncated":false,"code":null}"#).unwrap();
+    println!("3c ExecResult code None serializes as: {}", serde_json::to_string(&e).unwrap());
+    // formats
+    try_parse::<AttachResult>("4a AttachResult channel -1 (uint32)", r#"{"channel":-1,"automatic_input":true,"resize_notifications":true,"terminal":{}}"#);
+    try_parse::<InitialSize>("4b InitialSize cols 0 (uint16, minimum 1)", r#"{"cols":0,"rows":1}"#);
+    try_parse::<InitialSize>("4c InitialSize cols 65536", r#"{"cols":65536,"rows":1}"#);
+    try_parse::<Status>("4d Status progress 300 (uint8)", r#"{"state":"x","progress":300}"#);
+    try_parse::<DocSetResult>("4e DocSetResult version 18446744073709551615 (uint64 max)", r#"{"version":18446744073709551615}"#);
+    // string enum
+    try_parse::<Children>("5a Children \"all\"", r#""all""#);
+    try_parse::<Children>("5b Children \"some\"", r#""some""#);
+    // Display.cell fixed array
+    try_parse::<Display>("6a Display cell [1,2,3]", r#"{"cell":[1,2,3]}"#);
+}
+[exit status: 0]
+$ (cwd: /Users/hiraq/.herdr/worktrees/herdrify/herdrify-hc/.claudestacks/sdlc/2026-11-22-herdrify-hc/evidence/probe-crates/c2-typify-behaviour) cargo run -q 2>/dev/null
+1 CoreInfo + unknown field: Ok(CoreInfo { id: "i", name: "n" })
+2a Terminal status absent: Ok(Terminal { address: "a", argv: [], cols: 80, created_ms: 1, cwd: "/", die_with_parent: false, exit_code: None, finished_ms: None, first_message: None, foreground: None, identity: "", keep: false, labels: {}, name: None, notify: false, parent: None, paste_gap_ms: None, pid: None, reason: None, records: {}, reported: false, rm: false, rows: 24, screen: "s", signal: None, state: "live", status: None, status_ms: None, stop: None, submit: None, template: None, title: "", turn: 0 })
+2b Terminal status null: Ok(Terminal { address: "a", argv: [], cols: 80, created_ms: 1, cwd: "/", die_with_parent: false, exit_code: None, finished_ms: None, first_message: None, foreground: None, identity: "", keep: false, labels: {}, name: None, notify: false, parent: None, paste_gap_ms: None, pid: None, reason: None, records: {}, reported: false, rm: false, rows: 24, screen: "s", signal: None, state: "live", status: None, status_ms: None, stop: None, submit: None, template: None, title: "", turn: 0 })
+2c Terminal labels absent (required map): Err(missing field `labels` at line 1 column 98)
+2d Terminal title null (type string, default ""): Err(invalid type: null, expected a string at line 1 column 122)
+3a ExecResult code null: Ok(ExecResult { code: None, ms: 1, signal: None, stderr: "", stdout: "", timed_out: false, truncated: false })
+3b ExecResult code absent: Ok(ExecResult { code: None, ms: 1, signal: None, stderr: "", stdout: "", timed_out: false, truncated: false })
+3c ExecResult code None serializes as: {"ms":1,"stderr":"","stdout":"","timed_out":false,"truncated":false}
+4a AttachResult channel -1 (uint32): Err(invalid value: integer `-1`, expected u32 at line 1 column 13)
+4b InitialSize cols 0 (uint16, minimum 1): Err(invalid value: integer `0`, expected a nonzero u16 at line 1 column 9)
+4c InitialSize cols 65536: Err(invalid value: integer `65536`, expected a nonzero u16 at line 1 column 13)
+4d Status progress 300 (uint8): Err(invalid value: integer `300`, expected u8 at line 1 column 27)
+4e DocSetResult version 18446744073709551615 (uint64 max): Ok(DocSetResult { version: 18446744073709551615 })
+5a Children "all": Ok(All)
+5b Children "some": Err(unknown variant `some`, expected `any` or `all` at line 1 column 6)
+6a Display cell [1,2,3]: Err(trailing characters at line 1 column 14)
+[exit status: 0]
+-- C2 schema fragments behind the rendering notes (jq used only to locate/print the source schema; behaviour is proven by the Rust runs above) --
+$ (cwd: /Users/hiraq/.herdr/worktrees/herdrify/herdrify-hc/.claudestacks/sdlc/2026-11-22-herdrify-hc/evidence/probe-crates/c2-typify-behaviour) jq -c '.components.schemas | {ExecResult_code: .ExecResult.properties.code, Terminal_status: .Terminal.properties.status, Terminal_labels: .Terminal.properties.labels, Terminal_title: .Terminal.properties.title, InitialSize_cols: .InitialSize.properties.cols, Status_progress: .Status.properties.progress, Display_cell: .Display.properties.cell, Children: .Children}' ../../upstream-v0.1.21-schema-hc.openrpc.json
+{"ExecResult_code":{"description":"Its exit code; null when a signal ended it.","format":"int32","type":["integer","null"]},"Terminal_status":{"anyOf":[{"$ref":"#/components/schemas/Status"},{"type":"null"}],"default":null,"description":"The program's own word for what it's doing (OSC 7501 root record);\nnull if it never said, or after it exited."},"Terminal_labels":{"additionalProperties":{"type":"string"},"type":"object"},"Terminal_title":{"default":"","type":"string"},"InitialSize_cols":{"description":"Initial terminal width in columns (at least 1).","format":"uint16","maximum":65535,"minimum":1,"type":"integer"},"Status_progress":{"description":"0..100 (working or blocked, when the program said).","format":"uint8","maximum":255,"minimum":0,"type":["integer","null"]},"Display_cell":{"description":"Cell size in pixels: `[width, height]`.","items":{"format":"uint32","minimum":0,"type":"integer"},"maxItems":2,"minItems":2,"type":["array","null"]},"Children":{"enum":["any","all"],"type":"string"}}
+[exit status: 0]
+$ (cwd: /Users/hiraq/.herdr/worktrees/herdrify/herdrify-hc/.claudestacks/sdlc/2026-11-22-herdrify-hc/evidence/probe-crates/c2-typify-behaviour) jq -c '[.methods[] | {name, params: [.params[] | .name]}] | .[0:5]' ../../upstream-v0.1.21-schema-hc.openrpc.json
+[{"name":"hello","params":["calls_you","core","features","framed","generation"]},{"name":"server.status","params":[]},{"name":"server.stop","params":[]},{"name":"server.restart","params":["environment"]},{"name":"terminal.run","params":["argv","caller","cwd","die_with_parent","display","env","keep","labels","line","name","no_notify","no_parent","on","outlive_parent","parent","rm","size","timeout","wait"]}]
+[exit status: 0]
+$ (cwd: /Users/hiraq/.herdr/worktrees/herdrify/herdrify-hc/.claudestacks/sdlc/2026-11-22-herdrify-hc/evidence/probe-crates/c2-typify-behaviour) jq '[.methods[].params | length] | add' ../../upstream-v0.1.21-schema-hc.openrpc.json
+107
+[exit status: 0]
+$ (cwd: /Users/hiraq/.herdr/worktrees/herdrify/herdrify-hc/.claudestacks/sdlc/2026-11-22-herdrify-hc/evidence/probe-crates/c2-typify-gen) grep -c "^pub struct\|^pub enum" ../typify-generated-with-params.rs; grep -o "pub struct [A-Za-z]*Params" ../typify-generated-with-params.rs | head -40 | tr "\n" " "; echo
+0
+pub struct DocGetParams pub struct DocSetParams pub struct EventsSubscribeParams pub struct FileEditParams pub struct FileReadParams pub struct FileWriteParams pub struct HelloParams pub struct MachineAddParams pub struct MachineConnectParams pub struct MachineExecParams pub struct MachineListParams pub struct MachineRenameParams pub struct MachineRmParams pub struct RpcDiscoverParams pub struct ServerRestartParams pub struct ServerStatusParams pub struct ServerStopParams pub struct TemplatesListParams pub struct TerminalAttachParams pub struct TerminalGetParams pub struct TerminalInterruptParams pub struct TerminalKeepParams pub struct TerminalKeysParams pub struct TerminalKillParams pub struct TerminalLabelParams pub struct TerminalListParams pub struct TerminalPutParams pub struct TerminalReadParams pub struct TerminalRmParams pub struct TerminalRunParams pub struct TerminalSendParams pub struct TerminalWaitParams 
+[exit status: 0]
+-- C2 compile of the params-assembled output (typify 0.10.1, mode with-params) on 1.94, same lints --
+$ (cwd: /Users/hiraq/.herdr/worktrees/herdrify/herdrify-hc/.claudestacks/sdlc/2026-11-22-herdrify-hc/evidence/probe-crates/c2-typify-compile-params) rustfmt --edition 2024 ../typify-generated-with-params.rs; grep -c "^pub struct\|^pub enum" ../typify-generated-with-params.rs
+68
+[exit status: 0]
+$ (cwd: /Users/hiraq/.herdr/worktrees/herdrify/herdrify-hc/.claudestacks/sdlc/2026-11-22-herdrify-hc/evidence/probe-crates/c2-typify-compile-params) cargo build 2>&1 | grep -E "^(error|warning: .c2)|Finished"
+warning: `c2-typify-compile-params` (lib) generated 83 warnings
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 5.27s
+[exit status: 0]
+$ (cwd: /Users/hiraq/.herdr/worktrees/herdrify/herdrify-hc/.claudestacks/sdlc/2026-11-22-herdrify-hc/evidence/probe-crates/c2-typify-compile-params) touch src/lib.rs; cargo clippy --lib --message-format=json 2>/dev/null | jq -r "select(.reason==\"compiler-message\" and .message.level==\"warning\" and .message.code!=null) | .message.code.code" | sort | uniq -c | sort -rn
+  83 missing_docs
+  15 clippy::doc_markdown
+   3 clippy::struct_excessive_bools
+   1 clippy::use_self
+   1 clippy::missing_const_for_fn
+[exit status: 0]
+$ (cwd: /Users/hiraq/.herdr/worktrees/herdrify/herdrify-hc/.claudestacks/sdlc/2026-11-22-herdrify-hc/evidence/probe-crates/c2-typify-compile-params) grep -n -B1 -A3 "f64\|NonZeroU64\|NonZeroU32" ../typify-generated-with-params.rs | grep -v "#\[doc" | head -30
+465-    #[serde(skip_serializing_if = "::std::option::Option::is_none")]
+466:    pub timeout: ::std::option::Option<f64>,
+467-}
+469-#[derive(:: serde :: Deserialize, :: serde :: Serialize, Clone, Debug)]
+--
+970-    #[serde(skip_serializing_if = "::std::option::Option::is_none")]
+971:    pub timeout: ::std::option::Option<f64>,
+972-}
+974-#[derive(:: serde :: Deserialize, :: serde :: Serialize, Clone, Debug)]
+--
+1103-    #[serde(skip_serializing_if = "::std::option::Option::is_none")]
+1104:    pub timeout: ::std::option::Option<f64>,
+1106-    #[serde(default)]
+1107-    pub wait: bool,
+--
+1126-    #[serde(skip_serializing_if = "::std::option::Option::is_none")]
+1127:    pub timeout: ::std::option::Option<f64>,
+1129-    #[serde(default)]
+1130-    pub wait: bool,
+--
+1148-    #[serde(skip_serializing_if = "::std::option::Option::is_none")]
+1149:    pub timeout: ::std::option::Option<f64>,
+1150-}
+1152-#[derive(:: serde :: Deserialize, :: serde :: Serialize, Clone, Debug)]
+[exit status: 0]
+$ (cwd: /Users/hiraq/.herdr/worktrees/herdrify/herdrify-hc/.claudestacks/sdlc/2026-11-22-herdrify-hc/evidence/probe-crates/c2-typify-compile) jq -c '.components.schemas.FileReadResult.properties.first, .components.schemas.HelloResult.properties.generation, .components.schemas.Foreground.properties.pid' ../../upstream-v0.1.21-schema-hc.openrpc.json; grep -n 'pub first\|pub generation\|pub pid: i32' ../typify-generated.rs
+{"description":"The first and last line given (last < first: none).","format":"uint","minimum":0,"type":"integer"}
+{"format":"uint32","minimum":0,"type":"integer"}
+{"description":"The foreground process group's leader.","format":"int32","type":"integer"}
+130:    pub first: u32,
+167:    pub pid: i32,
+175:    pub generation: u32,
+402:    pub first_message: ::std::option::Option<FirstMessage>,
+575:    pub first_message: ::std::option::Option<FirstMessage>,
+[exit status: 0]
+$ (cwd: /Users/hiraq/.herdr/worktrees/herdrify/herdrify-hc/.claudestacks/sdlc/2026-11-22-herdrify-hc/evidence/probe-crates/c2-typify-compile) jq -c '.components.schemas.FileReadResult.properties.first, .components.schemas.FileResult.properties.bytes' ../../upstream-v0.1.21-schema-hc.openrpc.json; grep -n -A6 '^pub struct FileReadResult\|^pub struct FileResult' ../typify-generated.rs | grep -v '#\[doc'
+{"description":"The first and last line given (last < first: none).","format":"uint","minimum":0,"type":"integer"}
+{"format":"uint","minimum":0,"type":"integer"}
+128:pub struct FileReadResult {
+130-    pub first: u32,
+131-    pub last: u32,
+133-    pub lines: u32,
+--
+139:pub struct FileResult {
+140-    pub bytes: u32,
+142-    pub path: ::std::string::String,
+143-}
+145-#[derive(:: serde :: Deserialize, :: serde :: Serialize, Clone, Debug)]
+[exit status: 0]
+
+== C3 herdr-protocol on crates.io: metadata, cargo add 0.2.3 + cargo check on 1.94
+$ (cwd: /Users/hiraq/.herdr/worktrees/herdrify/herdrify-hc/.claudestacks/sdlc/2026-11-22-herdrify-hc/evidence/probe-crates/c3-herdr-protocol) rustc -V
+rustc 1.94.1 (e408947bf 2026-03-25)
+[exit status: 0]
+$ (cwd: /Users/hiraq/.herdr/worktrees/herdrify/herdrify-hc/.claudestacks/sdlc/2026-11-22-herdrify-hc/evidence/probe-crates/c3-herdr-protocol) cargo info -v herdr-protocol
+    Updating crates.io index
+herdr-protocol #herdr #terminal #protocol #codec
+Transport-neutral legacy Herdr and herdr-core framing, typed APIs, events, and desktop documents
+version: 0.2.3
+license: MIT
+rust-version: 1.100
+documentation: https://docs.rs/herdr-protocol
+repository: https://github.com/kosumic/whip
+crates.io: https://crates.io/crates/herdr-protocol/0.2.3
+dependencies:
+ +serde@1
+ +serde_json@1
+ +thiserror@2
+[exit status: 0]
+$ (cwd: /Users/hiraq/.herdr/worktrees/herdrify/herdrify-hc/.claudestacks/sdlc/2026-11-22-herdrify-hc/evidence/probe-crates/c3-herdr-protocol) cargo add herdr-protocol@0.2.3
+    Updating crates.io index
+      Adding herdr-protocol v0.2.3 to dependencies
+    Updating crates.io index
+     Locking 14 packages to latest Rust 1.94.1 compatible versions
+      Adding herdr-protocol v0.2.3 (requires Rust 1.100)
+      Adding itoa v1.0.19
+      Adding memchr v2.8.3
+      Adding proc-macro2 v1.0.107
+      Adding quote v1.0.47
+      Adding serde v1.0.229
+      Adding serde_core v1.0.229
+      Adding serde_derive v1.0.229
+      Adding serde_json v1.0.154
+      Adding syn v3.0.10
+      Adding thiserror v2.0.21
+      Adding thiserror-impl v2.0.21
+      Adding unicode-ident v1.0.27
+      Adding zmij v1.0.23
+[exit status: 0]
+$ (cwd: /Users/hiraq/.herdr/worktrees/herdrify/herdrify-hc/.claudestacks/sdlc/2026-11-22-herdrify-hc/evidence/probe-crates/c3-herdr-protocol) cat Cargo.toml
+[package]
+name = "c3-herdr-protocol"
+version = "0.0.0"
+edition = "2024"
+publish = false
+
+[workspace]
+
+[dependencies]
+herdr-protocol = "0.2.3"
+[exit status: 0]
+$ (cwd: /Users/hiraq/.herdr/worktrees/herdrify/herdrify-hc/.claudestacks/sdlc/2026-11-22-herdrify-hc/evidence/probe-crates/c3-herdr-protocol) cargo check
+error: rustc 1.94.1 is not supported by the following package:
+  herdr-protocol@0.2.3 requires rustc 1.100
+Either upgrade rustc or select compatible dependency versions with
+`cargo update <name>@<current-ver> --precise <compatible-ver>`
+where `<compatible-ver>` is the latest version supporting rustc 1.94.1
+
+[exit status: 101]
+(note: cargo info -v printed no "features:" block, i.e. herdr-protocol 0.2.3 declares no features; full metadata saved to evidence/herdr-protocol-cargo-info.txt)
+$ (cwd: /Users/hiraq/.herdr/worktrees/herdrify/herdrify-hc/.claudestacks/sdlc/2026-11-22-herdrify-hc/evidence/probe-crates/c3-herdr-protocol) cargo check --ignore-rust-version 2>&1 | tail -25
+   Compiling proc-macro2 v1.0.107
+   Compiling unicode-ident v1.0.27
+   Compiling quote v1.0.47
+   Compiling serde_core v1.0.229
+   Compiling zmij v1.0.23
+   Compiling serde_json v1.0.154
+   Compiling serde v1.0.229
+   Compiling thiserror v2.0.21
+    Checking itoa v1.0.19
+    Checking memchr v2.8.3
+   Compiling syn v3.0.10
+   Compiling serde_derive v1.0.229
+   Compiling thiserror-impl v2.0.21
+    Checking herdr-protocol v0.2.3
+    Checking c3-herdr-protocol v0.0.0 (/Users/hiraq/.herdr/worktrees/herdrify/herdrify-hc/.claudestacks/sdlc/2026-11-22-herdrify-hc/evidence/probe-crates/c3-herdr-protocol)
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 5.92s
+[exit status: 0]
+$ (cwd: /Users/hiraq/.herdr/worktrees/herdrify/herdrify-hc/.claudestacks/sdlc/2026-11-22-herdrify-hc/evidence/probe-crates/c3-herdr-protocol) cargo +1.100.0 -V; cargo +1.100.0 check 2>&1 | tail -5
+cargo 1.100.0 (3acc79c0c 2026-11-05)
+   |
+   = note: `cargo::unused_dependencies` is set to `warn` by default
+help: consider removing the dependency on `herdr-protocol`
+warning: `c3-herdr-protocol` (manifest) generated 1 warning
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 8.20s
+[exit status: 0]
+
+== C4 publish readiness: cargo publish --dry-run -p herdrify-hc in a copy of the workspace
+$ (cwd: /Users/hiraq/.herdr/worktrees/herdrify/herdrify-hc) rsync -a --exclude target --exclude .git --exclude .claudestacks ./ /private/tmp/claude-501/-Users-hiraq--herdr-worktrees-herdrify-herdrify-hc/8e0a05d6-5d82-4b7b-a783-cba25785c589/scratchpad/c4-ws/ && ls -A /private/tmp/claude-501/-Users-hiraq--herdr-worktrees-herdrify-herdrify-hc/8e0a05d6-5d82-4b7b-a783-cba25785c589/scratchpad/c4-ws
+.claude
+.github
+.gitignore
+Cargo.lock
+Cargo.toml
+CLAUDE.md
+crates
+deny.toml
+docs
+LICENSE
+Makefile.toml
+README.md
+rust-toolchain.toml
+[exit status: 0]
+$ (cwd: /private/tmp/claude-501/-Users-hiraq--herdr-worktrees-herdrify-herdrify-hc/8e0a05d6-5d82-4b7b-a783-cba25785c589/scratchpad/c4-ws) rustc -V; cargo -V
+rustc 1.94.1 (e408947bf 2026-03-25)
+cargo 1.94.1 (29ea6fb6a 2026-03-24)
+[exit status: 0]
+$ (cwd: /private/tmp/claude-501/-Users-hiraq--herdr-worktrees-herdrify-herdrify-hc/8e0a05d6-5d82-4b7b-a783-cba25785c589/scratchpad/c4-ws) git init -q && git add -A && git -c user.name=probe -c user.email=probe@example.invalid commit -q -m "copy of workspace" && git log --oneline
+8e6f2ea copy of workspace
+[exit status: 0]
+$ (cwd: /private/tmp/claude-501/-Users-hiraq--herdr-worktrees-herdrify-herdrify-hc/8e0a05d6-5d82-4b7b-a783-cba25785c589/scratchpad/c4-ws) git diff
+diff --git a/Cargo.toml b/Cargo.toml
+index 67b6142..59cc612 100644
+--- a/Cargo.toml
++++ b/Cargo.toml
+@@ -18,6 +18,7 @@ herdrify-herdr   = { path = "crates/herdrify-herdr", version = "0.0.0" }
+ herdrify-store   = { path = "crates/herdrify-store", version = "0.0.0" }
+ herdrify-git     = { path = "crates/herdrify-git", version = "0.0.0" }
+ herdrify-testkit = { path = "crates/herdrify-testkit", version = "0.0.0" }
++tokio            = { version = "1.54.1", features = ["process", "io-util", "rt", "macros", "sync", "time"] }
+ 
+ [workspace.lints.rust]
+ unsafe_code     = "forbid"
+diff --git a/crates/herdrify-hc/Cargo.toml b/crates/herdrify-hc/Cargo.toml
+index b1b6597..06059f6 100644
+--- a/crates/herdrify-hc/Cargo.toml
++++ b/crates/herdrify-hc/Cargo.toml
+@@ -1,7 +1,7 @@
+ [package]
+ name        = "herdrify-hc"
+ description = "Async client for herdr-core: JSON-RPC over hc connect."
+-version     = "0.0.0"
++version     = "0.1.0"
+ readme      = "README.md"
+ 
+ edition.workspace      = true
+@@ -12,3 +12,6 @@ authors.workspace      = true
+ 
+ [lints]
+ workspace = true
++
++[dependencies]
++tokio = { workspace = true }
+[exit status: 0]
+-- step 1: uncommitted edits, root entry herdrify-hc still version "0.0.0", no --allow-dirty --
+$ (cwd: /private/tmp/claude-501/-Users-hiraq--herdr-worktrees-herdrify-herdrify-hc/8e0a05d6-5d82-4b7b-a783-cba25785c589/scratchpad/c4-ws) cargo publish --dry-run -p herdrify-hc
+    Updating crates.io index
+    Blocking waiting for file lock on package cache
+    Blocking waiting for file lock on package cache
+    Updating crates.io index
+error: failed to select a version for the requirement `herdrify-hc = "^0.0.0"`
+candidate versions found which didn't match: 0.1.0
+location searched: /private/tmp/claude-501/-Users-hiraq--herdr-worktrees-herdrify-herdrify-hc/8e0a05d6-5d82-4b7b-a783-cba25785c589/scratchpad/c4-ws/crates/herdrify-hc
+required by package `herdrify-herdr v0.0.0 (/private/tmp/claude-501/-Users-hiraq--herdr-worktrees-herdrify-herdrify-hc/8e0a05d6-5d82-4b7b-a783-cba25785c589/scratchpad/c4-ws/crates/herdrify-herdr)`
+[exit status: 101]
+-- step 2: same, but committed (clean tree) to separate the VCS check from the version conflict --
+$ (cwd: /private/tmp/claude-501/-Users-hiraq--herdr-worktrees-herdrify-herdrify-hc/8e0a05d6-5d82-4b7b-a783-cba25785c589/scratchpad/c4-ws) git -c user.name=probe -c user.email=probe@example.invalid commit -qam "hc 0.1.0 + tokio" && git status --short | wc -l
+       0
+[exit status: 0]
+$ (cwd: /private/tmp/claude-501/-Users-hiraq--herdr-worktrees-herdrify-herdrify-hc/8e0a05d6-5d82-4b7b-a783-cba25785c589/scratchpad/c4-ws) cargo publish --dry-run -p herdrify-hc
+    Updating crates.io index
+    Updating crates.io index
+error: failed to select a version for the requirement `herdrify-hc = "^0.0.0"`
+candidate versions found which didn't match: 0.1.0
+location searched: /private/tmp/claude-501/-Users-hiraq--herdr-worktrees-herdrify-herdrify-hc/8e0a05d6-5d82-4b7b-a783-cba25785c589/scratchpad/c4-ws/crates/herdrify-hc
+required by package `herdrify-herdr v0.0.0 (/private/tmp/claude-501/-Users-hiraq--herdr-worktrees-herdrify-herdrify-hc/8e0a05d6-5d82-4b7b-a783-cba25785c589/scratchpad/c4-ws/crates/herdrify-herdr)`
+[exit status: 101]
+$ (cwd: /private/tmp/claude-501/-Users-hiraq--herdr-worktrees-herdrify-herdrify-hc/8e0a05d6-5d82-4b7b-a783-cba25785c589/scratchpad/c4-ws) cargo metadata --format-version 1 >/dev/null
+    Updating crates.io index
+error: failed to select a version for the requirement `herdrify-hc = "^0.0.0"`
+candidate versions found which didn't match: 0.1.0
+location searched: /private/tmp/claude-501/-Users-hiraq--herdr-worktrees-herdrify-herdrify-hc/8e0a05d6-5d82-4b7b-a783-cba25785c589/scratchpad/c4-ws/crates/herdrify-hc
+required by package `herdrify-herdr v0.0.0 (/private/tmp/claude-501/-Users-hiraq--herdr-worktrees-herdrify-herdrify-hc/8e0a05d6-5d82-4b7b-a783-cba25785c589/scratchpad/c4-ws/crates/herdrify-herdr)`
+[exit status: 101]
+-- step 3: root [workspace.dependencies] herdrify-hc version updated to "0.1.0", left uncommitted, no --allow-dirty --
+$ (cwd: /private/tmp/claude-501/-Users-hiraq--herdr-worktrees-herdrify-herdrify-hc/8e0a05d6-5d82-4b7b-a783-cba25785c589/scratchpad/c4-ws) git diff
+diff --git a/Cargo.toml b/Cargo.toml
+index 59cc612..9253061 100644
+--- a/Cargo.toml
++++ b/Cargo.toml
+@@ -11,7 +11,7 @@ authors      = ["rstlix0x0 <rstlix.dev@gmail.com>"]
+ 
+ [workspace.dependencies]
+ herdrify-core    = { path = "crates/herdrify-core", version = "0.0.0" }
+-herdrify-hc      = { path = "crates/herdrify-hc", version = "0.0.0" }
++herdrify-hc      = { path = "crates/herdrify-hc", version = "0.1.0" }
+ herdrify-app     = { path = "crates/herdrify-app", version = "0.0.0" }
+ herdrify-lua     = { path = "crates/herdrify-lua", version = "0.0.0" }
+ herdrify-herdr   = { path = "crates/herdrify-herdr", version = "0.0.0" }
+[exit status: 0]
+$ (cwd: /private/tmp/claude-501/-Users-hiraq--herdr-worktrees-herdrify-herdrify-hc/8e0a05d6-5d82-4b7b-a783-cba25785c589/scratchpad/c4-ws) cargo publish --dry-run -p herdrify-hc
+    Updating crates.io index
+    Updating crates.io index
+     Locking 15 packages to latest Rust 1.94 compatible versions
+      Adding bytes v1.12.2
+      Adding errno v0.3.15
+      Adding libc v0.2.191
+      Adding mio v1.2.5
+      Adding pin-project-lite v0.2.18
+      Adding proc-macro2 v1.0.107
+      Adding quote v1.0.47
+      Adding signal-hook-registry v1.4.8
+      Adding syn v3.0.10
+      Adding tokio v1.54.1
+      Adding tokio-macros v2.7.2
+      Adding unicode-ident v1.0.27
+      Adding wasi v0.11.1+wasi-snapshot-preview1
+      Adding windows-link v0.2.1
+      Adding windows-sys v0.61.2
+error: 1 files in the working directory contain changes that were not yet committed into git:
+
+Cargo.toml
+
+to proceed despite this and include the uncommitted changes, pass the `--allow-dirty` flag
+[exit status: 101]
+-- step 4: committed, clean tree --
+$ (cwd: /private/tmp/claude-501/-Users-hiraq--herdr-worktrees-herdrify-herdrify-hc/8e0a05d6-5d82-4b7b-a783-cba25785c589/scratchpad/c4-ws) git -c user.name=probe -c user.email=probe@example.invalid commit -qam "root dep 0.1.0" && git status --short | wc -l
+       0
+[exit status: 0]
+$ (cwd: /private/tmp/claude-501/-Users-hiraq--herdr-worktrees-herdrify-herdrify-hc/8e0a05d6-5d82-4b7b-a783-cba25785c589/scratchpad/c4-ws) cargo publish --dry-run -p herdrify-hc
+    Updating crates.io index
+   Packaging herdrify-hc v0.1.0 (/private/tmp/claude-501/-Users-hiraq--herdr-worktrees-herdrify-herdrify-hc/8e0a05d6-5d82-4b7b-a783-cba25785c589/scratchpad/c4-ws/crates/herdrify-hc)
+    Updating crates.io index
+    Packaged 6 files, 6.0KiB (2.5KiB compressed)
+   Verifying herdrify-hc v0.1.0 (/private/tmp/claude-501/-Users-hiraq--herdr-worktrees-herdrify-herdrify-hc/8e0a05d6-5d82-4b7b-a783-cba25785c589/scratchpad/c4-ws/crates/herdrify-hc)
+   Compiling proc-macro2 v1.0.107
+   Compiling libc v0.2.191
+   Compiling quote v1.0.47
+   Compiling unicode-ident v1.0.27
+   Compiling bytes v1.12.2
+   Compiling pin-project-lite v0.2.18
+   Compiling syn v3.0.10
+   Compiling errno v0.3.15
+   Compiling mio v1.2.5
+   Compiling signal-hook-registry v1.4.8
+   Compiling tokio-macros v2.7.2
+   Compiling tokio v1.54.1
+   Compiling herdrify-hc v0.1.0 (/private/tmp/claude-501/-Users-hiraq--herdr-worktrees-herdrify-herdrify-hc/8e0a05d6-5d82-4b7b-a783-cba25785c589/scratchpad/c4-ws/target/package/herdrify-hc-0.1.0)
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 5.19s
+   Uploading herdrify-hc v0.1.0 (/private/tmp/claude-501/-Users-hiraq--herdr-worktrees-herdrify-herdrify-hc/8e0a05d6-5d82-4b7b-a783-cba25785c589/scratchpad/c4-ws/crates/herdrify-hc)
+warning: aborting upload due to dry run
+[exit status: 0]
+$ (cwd: /private/tmp/claude-501/-Users-hiraq--herdr-worktrees-herdrify-herdrify-hc/8e0a05d6-5d82-4b7b-a783-cba25785c589/scratchpad/c4-ws) cargo package -p herdrify-hc --list
+.cargo_vcs_info.json
+Cargo.lock
+Cargo.toml
+Cargo.toml.orig
+README.md
+src/lib.rs
+[exit status: 0]
+$ (cwd: /private/tmp/claude-501/-Users-hiraq--herdr-worktrees-herdrify-herdrify-hc/8e0a05d6-5d82-4b7b-a783-cba25785c589/scratchpad/c4-ws) cargo package -p herdrify-hc --list --allow-dirty >/dev/null; tar -xzOf target/package/herdrify-hc-0.1.0.crate herdrify-hc-0.1.0/Cargo.toml
+tar: Error opening archive: Failed to open 'target/package/herdrify-hc-0.1.0.crate'
+[exit status: 1]
+$ (cwd: /private/tmp/claude-501/-Users-hiraq--herdr-worktrees-herdrify-herdrify-hc/8e0a05d6-5d82-4b7b-a783-cba25785c589/scratchpad/c4-ws) ls target/package/ 2>&1; cargo package -p herdrify-hc --no-verify 2>&1 | tail -2; tar -xzOf target/package/herdrify-hc-0.1.0.crate herdrify-hc-0.1.0/Cargo.toml
+herdrify-hc-0.1.0
+tmp-crate
+    Updating crates.io index
+    Packaged 6 files, 6.0KiB (2.5KiB compressed)
+# THIS FILE IS AUTOMATICALLY GENERATED BY CARGO
+#
+# When uploading crates to the registry Cargo will automatically
+# "normalize" Cargo.toml files for maximal compatibility
+# with all versions of Cargo and also rewrite `path` dependencies
+# to registry (e.g., crates.io) dependencies.
+#
+# If you are reading this file be aware that the original Cargo.toml
+# will likely look very different (and much more reasonable).
+# See Cargo.toml.orig for the original contents.
+
+[package]
+edition = "2024"
+rust-version = "1.94"
+name = "herdrify-hc"
+version = "0.1.0"
+authors = ["rstlix0x0 <rstlix.dev@gmail.com>"]
+build = false
+autolib = false
+autobins = false
+autoexamples = false
+autotests = false
+autobenches = false
+description = "Async client for herdr-core: JSON-RPC over hc connect."
+readme = "README.md"
+license = "Apache-2.0"
+repository = "https://github.com/rstlix0x0/herdrify"
+
+[lib]
+name = "herdrify_hc"
+path = "src/lib.rs"
+
+[dependencies.tokio]
+version = "1.54.1"
+features = [
+    "process",
+    "io-util",
+    "rt",
+    "macros",
+    "sync",
+    "time",
+]
+
+[lints.clippy]
+dbg_macro = "deny"
+expect_used = "warn"
+missing_errors_doc = "warn"
+missing_panics_doc = "warn"
+panic = "deny"
+todo = "warn"
+unwrap_used = "deny"
+
+[lints.clippy.nursery]
+level = "warn"
+priority = -1
+
+[lints.clippy.pedantic]
+level = "warn"
+priority = -1
+
+[lints.rust]
+missing_docs = "warn"
+unreachable_pub = "warn"
+unsafe_code = "forbid"
+unused_must_use = "deny"
+[exit status: 0]
+$ (cwd: /private/tmp/claude-501/-Users-hiraq--herdr-worktrees-herdrify-herdrify-hc/8e0a05d6-5d82-4b7b-a783-cba25785c589/scratchpad/c4-ws) tar -tzf target/package/herdrify-hc-0.1.0.crate; ls LICENSE crates/herdrify-hc/
+herdrify-hc-0.1.0/.cargo_vcs_info.json
+herdrify-hc-0.1.0/Cargo.lock
+herdrify-hc-0.1.0/Cargo.toml
+herdrify-hc-0.1.0/Cargo.toml.orig
+herdrify-hc-0.1.0/README.md
+herdrify-hc-0.1.0/src/lib.rs
+LICENSE
+
+crates/herdrify-hc/:
+Cargo.toml
+README.md
+src
+[exit status: 0]
+-- step 5: VCS question: same final tree copied WITHOUT .git (no repository at all), no --allow-dirty --
+$ (cwd: /private/tmp/claude-501/-Users-hiraq--herdr-worktrees-herdrify-herdrify-hc/8e0a05d6-5d82-4b7b-a783-cba25785c589/scratchpad/c4-nogit) git rev-parse --show-toplevel 2>&1 | head -1
+fatal: not a git repository (or any of the parent directories): .git
+[exit status: 0]
+$ (cwd: /private/tmp/claude-501/-Users-hiraq--herdr-worktrees-herdrify-herdrify-hc/8e0a05d6-5d82-4b7b-a783-cba25785c589/scratchpad/c4-nogit) cargo publish --dry-run -p herdrify-hc 2>&1 | grep -v "^   Compiling"
+    Updating crates.io index
+   Packaging herdrify-hc v0.1.0 (/private/tmp/claude-501/-Users-hiraq--herdr-worktrees-herdrify-herdrify-hc/8e0a05d6-5d82-4b7b-a783-cba25785c589/scratchpad/c4-nogit/crates/herdrify-hc)
+    Updating crates.io index
+    Packaged 5 files, 5.9KiB (2.4KiB compressed)
+   Verifying herdrify-hc v0.1.0 (/private/tmp/claude-501/-Users-hiraq--herdr-worktrees-herdrify-herdrify-hc/8e0a05d6-5d82-4b7b-a783-cba25785c589/scratchpad/c4-nogit/crates/herdrify-hc)
+    Finished `dev` profile [unoptimized + debuginfo] target(s) in 5.20s
+   Uploading herdrify-hc v0.1.0 (/private/tmp/claude-501/-Users-hiraq--herdr-worktrees-herdrify-herdrify-hc/8e0a05d6-5d82-4b7b-a783-cba25785c589/scratchpad/c4-nogit/crates/herdrify-hc)
+warning: aborting upload due to dry run
+[exit status: 0]
+$ (cwd: /private/tmp/claude-501/-Users-hiraq--herdr-worktrees-herdrify-herdrify-hc/8e0a05d6-5d82-4b7b-a783-cba25785c589/scratchpad/c4-nogit) cargo package -p herdrify-hc --list
+Cargo.lock
+Cargo.toml
+Cargo.toml.orig
+README.md
+src/lib.rs
+[exit status: 0]
+
+== C5 libtest: is a passing test's stderr printed, and does the CI warning grep match?
+$ (cwd: /Users/hiraq/.herdr/worktrees/herdrify/herdrify-hc/.claudestacks/sdlc/2026-11-22-herdrify-hc/evidence/probe-crates/c5-libtest) rustc -V; cat tests/live.rs
+rustc 1.94.1 (e408947bf 2026-03-25)
+//! C5 probe: what a passing, early-returning test prints.
+
+#[test]
+fn live_test_skips_when_hc_missing() {
+    if std::env::var_os("C5_HC_PRESENT").is_none() {
+        eprintln!("hc not installed; live test skipped");
+        return;
+    }
+    unreachable!("never reached in this probe");
+}
+
+#[test]
+fn passing_test_prints_warning_prefix() {
+    eprintln!("warning: stderr line from a passing test");
+    println!("warning: stdout line from a passing test");
+}
+[exit status: 0]
+$ (cwd: /Users/hiraq/.herdr/worktrees/herdrify/herdrify-hc/.claudestacks/sdlc/2026-11-22-herdrify-hc/evidence/probe-crates/c5-libtest) CARGO_TERM_COLOR=always cargo test > ../../c5-test.log 2>&1; echo "cargo test exit: $?"; cat ../../c5-test.log
+cargo test exit: 0
+[1m[92m   Compiling[0m c5-libtest v0.0.0 (/Users/hiraq/.herdr/worktrees/herdrify/herdrify-hc/.claudestacks/sdlc/2026-11-22-herdrify-hc/evidence/probe-crates/c5-libtest)
+[1m[92m    Finished[0m ]8;;https://doc.rust-lang.org/cargo/reference/profiles.html#default-profiles\`test` profile [unoptimized + debuginfo]]8;;\ target(s) in 0.63s
+[1m[92m     Running[0m unittests src/lib.rs (target/debug/deps/c5_libtest-fec3a50aa243a428)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+[1m[92m     Running[0m tests/live.rs (target/debug/deps/live-e2bfb8f5dd01f064)
+
+running 2 tests
+test live_test_skips_when_hc_missing ... ok
+test passing_test_prints_warning_prefix ... ok
+
+test result: ok. 2 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+[1m[92m   Doc-tests[0m c5_libtest
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+[exit status: 0]
+$ (cwd: /Users/hiraq/.herdr/worktrees/herdrify/herdrify-hc/.claudestacks/sdlc/2026-11-22-herdrify-hc/evidence/probe-crates/c5-libtest) grep -c "hc not installed\|warning: st" ../../c5-test.log
+0
+[exit status: 1]
+$ (cwd: /Users/hiraq/.herdr/worktrees/herdrify/herdrify-hc/.claudestacks/sdlc/2026-11-22-herdrify-hc/evidence/probe-crates/c5-libtest) sed $'s/\x1b\\[[0-9;]*m//g' ../../c5-test.log | grep -E '^ *(warning|error)'; echo "grep exit: $? (1 = no match)"
+grep exit: 1 (1 = no match)
+[exit status: 0]
+-- contrast: same tests with --nocapture (output NOT captured) --
+$ (cwd: /Users/hiraq/.herdr/worktrees/herdrify/herdrify-hc/.claudestacks/sdlc/2026-11-22-herdrify-hc/evidence/probe-crates/c5-libtest) CARGO_TERM_COLOR=always cargo test -- --nocapture > ../../c5-test-nocapture.log 2>&1; echo "cargo test exit: $?"
+cargo test exit: 0
+[exit status: 0]
+$ (cwd: /Users/hiraq/.herdr/worktrees/herdrify/herdrify-hc/.claudestacks/sdlc/2026-11-22-herdrify-hc/evidence/probe-crates/c5-libtest) sed $'s/\x1b\\[[0-9;]*m//g' ../../c5-test-nocapture.log | grep -E '^ *(warning|error)'; echo "grep exit: $? (0 = matched)"
+warning: stderr line from a passing test
+warning: stdout line from a passing test
+grep exit: 0 (0 = matched)
+[exit status: 0]
+
+== C6 tokio::process: missing program, kill_on_drop, lines after exit, write to exited child's stdin
+$ (cwd: /Users/hiraq/.herdr/worktrees/herdrify/herdrify-hc/.claudestacks/sdlc/2026-11-22-herdrify-hc/evidence/probe-crates/c6-tokio-process) rustc -V; uname -sr; grep -A1 "^name = \"tokio\"" Cargo.lock
+rustc 1.94.1 (e408947bf 2026-03-25)
+Darwin 25.3.0
+name = "tokio"
+version = "1.54.1"
+[exit status: 0]
+$ (cwd: /Users/hiraq/.herdr/worktrees/herdrify/herdrify-hc/.claudestacks/sdlc/2026-11-22-herdrify-hc/evidence/probe-crates/c6-tokio-process) cat src/main.rs
+//! C6 probe: tokio::process behaviour the hc transport relies on.
+use std::process::Stdio;
+use std::time::Duration;
+use tokio::io::{AsyncBufReadExt, AsyncWriteExt, BufReader};
+use tokio::process::Command;
+
+fn probe_pid(label: &str, pid: u32) {
+    let k = std::process::Command::new("kill").args(["-0", &pid.to_string()]).output().unwrap();
+    let ps = std::process::Command::new("ps").args(["-o", "pid=,stat=,comm=", "-p", &pid.to_string()]).output().unwrap();
+    println!(
+        "  {label}: kill -0 {pid} -> exit {:?} stderr={:?}; ps -> exit {:?} out={:?}",
+        k.status.code(),
+        String::from_utf8_lossy(&k.stderr).trim(),
+        ps.status.code(),
+        String::from_utf8_lossy(&ps.stdout).trim()
+    );
+}
+
+#[tokio::main(flavor = "current_thread")]
+async fn main() {
+    println!("(a) spawn a program that does not exist");
+    for prog in ["herdrify-no-such-program-c6", "/nonexistent/dir/hc"] {
+        match Command::new(prog).spawn() {
+            Ok(_) => println!("  {prog}: unexpectedly spawned"),
+            Err(e) => println!(
+                "  {prog}: kind={:?} raw_os_error={:?} Display=\"{e}\" Debug={e:?}",
+                e.kind(),
+                e.raw_os_error()
+            ),
+        }
+    }
+
+    println!("(b) kill_on_drop(true) on `sleep 30`, then drop");
+    let child = Command::new("sleep").arg("30").kill_on_drop(true).spawn().unwrap();
+    let pid = child.id().unwrap();
+    probe_pid("before drop", pid);
+    drop(child);
+    probe_pid("immediately after drop", pid);
+    tokio::time::sleep(Duration::from_millis(200)).await;
+    probe_pid("after 200ms", pid);
+    // another child operation drives tokio's orphan reaping
+    let _ = Command::new("true").status().await.unwrap();
+    tokio::time::sleep(Duration::from_millis(200)).await;
+    probe_pid("after spawning+awaiting another child and 200ms more", pid);
+
+    println!("(b2) control: kill_on_drop(false) (default) on `sleep 30`, then drop");
+    let child = Command::new("sleep").arg("30").spawn().unwrap();
+    let pid2 = child.id().unwrap();
+    drop(child);
+    tokio::time::sleep(Duration::from_millis(200)).await;
+    probe_pid("after drop + 200ms", pid2);
+    let _ = std::process::Command::new("kill").arg(pid2.to_string()).status();
+
+    println!("(c) read stdout lines after the child has exited");
+    let mut child = Command::new("printf").arg("a\\nb\\n").stdout(Stdio::piped()).spawn().unwrap();
+    let stdout = child.stdout.take().unwrap();
+    let status = child.wait().await.unwrap();
+    println!("  child exited: {status}");
+    let mut lines = BufReader::new(stdout).lines();
+    for i in 0..4 {
+        println!("  next_line #{i}: {:?}", lines.next_line().await);
+    }
+
+    println!("(d) write to stdin of an exited child");
+    let mut child = Command::new("true").stdin(Stdio::piped()).spawn().unwrap();
+    let mut stdin = child.stdin.take().unwrap();
+    let status = child.wait().await.unwrap();
+    println!("  child exited: {status}");
+    let w = stdin.write_all(b"{\"jsonrpc\":\"2.0\"}\n").await;
+    match &w {
+        Ok(()) => println!("  write_all: Ok(())"),
+        Err(e) => println!("  write_all: kind={:?} raw_os_error={:?} Display=\"{e}\"", e.kind(), e.raw_os_error()),
+    }
+    match stdin.flush().await {
+        Ok(()) => println!("  flush: Ok(())"),
+        Err(e) => println!("  flush: kind={:?} Display=\"{e}\"", e.kind()),
+    }
+}
+[exit status: 0]
+$ (cwd: /Users/hiraq/.herdr/worktrees/herdrify/herdrify-hc/.claudestacks/sdlc/2026-11-22-herdrify-hc/evidence/probe-crates/c6-tokio-process) cargo run -q
+(a) spawn a program that does not exist
+  herdrify-no-such-program-c6: kind=NotFound raw_os_error=Some(2) Display="No such file or directory (os error 2)" Debug=Os { code: 2, kind: NotFound, message: "No such file or directory" }
+  /nonexistent/dir/hc: kind=NotFound raw_os_error=Some(2) Display="No such file or directory (os error 2)" Debug=Os { code: 2, kind: NotFound, message: "No such file or directory" }
+(b) kill_on_drop(true) on `sleep 30`, then drop
+  before drop: kill -0 44743 -> exit Some(0) stderr=""; ps -> exit Some(0) out="44743 S    sleep"
+  immediately after drop: kill -0 44743 -> exit Some(0) stderr=""; ps -> exit Some(0) out="44743 Z    <defunct>"
+  after 200ms: kill -0 44743 -> exit Some(1) stderr="kill: 44743: No such process"; ps -> exit Some(1) out=""
+  after spawning+awaiting another child and 200ms more: kill -0 44743 -> exit Some(1) stderr="kill: 44743: No such process"; ps -> exit Some(1) out=""
+(b2) control: kill_on_drop(false) (default) on `sleep 30`, then drop
+  after drop + 200ms: kill -0 45010 -> exit Some(0) stderr=""; ps -> exit Some(0) out="45010 S    sleep"
+(c) read stdout lines after the child has exited
+  child exited: exit status: 0
+  next_line #0: Ok(Some("a"))
+  next_line #1: Ok(Some("b"))
+  next_line #2: Ok(None)
+  next_line #3: Ok(None)
+(d) write to stdin of an exited child
+  child exited: exit status: 0
+  write_all: kind=BrokenPipe raw_os_error=Some(32) Display="Broken pipe (os error 32)"
+  flush: Ok(())
+[exit status: 0]
+
+== C7 serde/serde_json behaviour (serde 1.0.229, serde_json 1.0.154 + raw_value)
+$ (cwd: /Users/hiraq/.herdr/worktrees/herdrify/herdrify-hc/.claudestacks/sdlc/2026-11-22-herdrify-hc/evidence/probe-crates/c7-serde) rustc -V; grep -A1 "^name = \"serde\"\|^name = \"serde_json\"" Cargo.lock
+rustc 1.94.1 (e408947bf 2026-03-25)
+name = "serde"
+version = "1.0.229"
+--
+name = "serde_json"
+version = "1.0.154"
+[exit status: 0]
+$ (cwd: /Users/hiraq/.herdr/worktrees/herdrify/herdrify-hc/.claudestacks/sdlc/2026-11-22-herdrify-hc/evidence/probe-crates/c7-serde) cat Cargo.toml src/main.rs
+[package]
+name = "c7-serde"
+version = "0.0.0"
+edition = "2024"
+rust-version = "1.94"
+publish = false
+
+[workspace]
+
+[dependencies]
+serde = { version = "1.0.229", features = ["derive"] }
+serde_json = { version = "1.0.154", features = ["raw_value"] }
+//! C7 probe: serde / serde_json behaviour for JSON-RPC message types.
+#![allow(dead_code)]
+use serde::{Deserialize, Serialize};
+use serde_json::value::RawValue;
+use serde_json::{Map, Value};
+
+#[derive(Debug, Deserialize)]
+struct Plain {
+    id: u32,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(deny_unknown_fields)]
+struct Strict {
+    id: u32,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+struct WithExtra {
+    id: u32,
+    #[serde(flatten)]
+    extra: Map<String, Value>,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+struct Opt {
+    #[serde(default)]
+    name: Option<String>,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+struct OptNoDefault {
+    name: Option<String>,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+struct OptSkip {
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    name: Option<String>,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+struct Request {
+    jsonrpc: String,
+    id: Value,
+    method: String,
+}
+
+#[derive(Debug, Deserialize)]
+struct Response<'a> {
+    #[allow(dead_code)]
+    jsonrpc: String,
+    id: Value,
+    #[serde(borrow, default)]
+    result: Option<&'a RawValue>,
+    #[serde(default)]
+    error: Option<Value>,
+}
+
+#[derive(Debug, Deserialize)]
+struct ResponseOwned {
+    id: Value,
+    result: Option<Box<RawValue>>,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(untagged)]
+enum Incoming {
+    Response { id: Value, result: Box<RawValue> },
+    Error { id: Value, error: Value },
+    Notification { method: String, params: Option<Box<RawValue>> },
+}
+
+#[derive(Debug, Deserialize)]
+struct ResponseRequiredRaw {
+    result: Box<RawValue>,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(untagged)]
+enum IncomingValue {
+    Response { id: Value, result: Value },
+    Error { id: Value, error: Value },
+    Notification { method: String, params: Option<Value> },
+}
+
+#[derive(Debug, Deserialize)]
+struct Hello {
+    version: String,
+}
+
+fn show<T: std::fmt::Debug>(label: &str, r: Result<T, serde_json::Error>) {
+    match r {
+        Ok(v) => println!("{label}: Ok({v:?})"),
+        Err(e) => println!("{label}: Err(\"{e}\") classify={:?} line={} column={}", e.classify(), e.line(), e.column()),
+    }
+}
+
+fn main() {
+    println!("--- (a) unknown field");
+    show("a1 Plain {id:1, zzz:2}", serde_json::from_str::<Plain>(r#"{"id":1,"zzz":2}"#));
+    show("a2 Strict(deny_unknown_fields) {id:1, zzz:2}", serde_json::from_str::<Strict>(r#"{"id":1,"zzz":2}"#));
+
+    println!("--- (b) flatten extra Map captures unknown fields");
+    let w: WithExtra = serde_json::from_str(r#"{"id":1,"zzz":2,"nested":{"k":[1,null]},"s":"x"}"#).unwrap();
+    println!("b1 parsed: {w:?}");
+    let back = serde_json::to_string(&w).unwrap();
+    println!("b2 serialized back: {back}");
+    show("b3 WithExtra id \"1\" (string)", serde_json::from_str::<WithExtra>(r#"{"id":"1"}"#));
+    show("b4 WithExtra id -1 (u32 under flatten)", serde_json::from_str::<WithExtra>(r#"{"id":-1}"#));
+
+    println!("--- (c) u32 out of range");
+    show("c1 u32 -1", serde_json::from_str::<Plain>(r#"{"id":-1}"#));
+    show("c2 u32 4294967296", serde_json::from_str::<Plain>(r#"{"id":4294967296}"#));
+    show("c3 u32 1.0", serde_json::from_str::<Plain>(r#"{"id":1.0}"#));
+    show("c4 u32 4294967295", serde_json::from_str::<Plain>(r#"{"id":4294967295}"#));
+
+    println!("--- (d) Option<String>: null vs absent; skip_serializing_if");
+    show("d1 Opt(default) null", serde_json::from_str::<Opt>(r#"{"name":null}"#));
+    show("d2 Opt(default) absent", serde_json::from_str::<Opt>(r#"{}"#));
+    show("d3 OptNoDefault null", serde_json::from_str::<OptNoDefault>(r#"{"name":null}"#));
+    show("d4 OptNoDefault absent", serde_json::from_str::<OptNoDefault>(r#"{}"#));
+    println!("d5 Opt(default) None serializes: {}", serde_json::to_string(&Opt { name: None }).unwrap());
+    println!("d6 OptSkip None serializes: {}", serde_json::to_string(&OptSkip { name: None }).unwrap());
+    println!("d7 OptSkip Some serializes: {}", serde_json::to_string(&OptSkip { name: Some("x".into()) }).unwrap());
+
+    println!("--- (e) serde_json::Value as JSON-RPC id");
+    for raw in [r#"1"#, r#""abc""#, r#"null"#, r#"18446744073709551615"#, r#"-7"#, r#"1.5"#, r#""1""#] {
+        let s = format!(r#"{{"jsonrpc":"2.0","id":{raw},"method":"hello"}}"#);
+        let r: Request = serde_json::from_str(&s).unwrap();
+        let back = serde_json::to_string(&r).unwrap();
+        println!(
+            "e id {raw:>22} -> {:?} is_u64={} is_string={} roundtrip={} equal_to_Value(1)={}",
+            r.id,
+            r.id.is_u64(),
+            r.id.is_string(),
+            back,
+            r.id == Value::from(1u64)
+        );
+    }
+    println!("e id 1 vs \"1\" equal? {}", Value::from(1) == Value::from("1"));
+
+    println!("--- (f) RawValue keeps result unparsed");
+    let text = r#"{"jsonrpc":"2.0","id":7,"result":{"version":"0.1.21",  "extra":[1,2]}}"#;
+    let resp: Response = serde_json::from_str(text).unwrap();
+    println!("f1 id={:?} raw result text={:?} error={:?}", resp.id, resp.result.map(RawValue::get), resp.error);
+    let hello: Hello = serde_json::from_str(resp.result.unwrap().get()).unwrap();
+    println!("f2 later typed parse of raw result: {hello:?}");
+    let owned: ResponseOwned = serde_json::from_str(text).unwrap();
+    println!("f3 Box<RawValue> owned: id={:?} result={:?}", owned.id, owned.result.as_deref().map(RawValue::get));
+    let null_result: ResponseOwned = serde_json::from_str(r#"{"jsonrpc":"2.0","id":8,"result":null}"#).unwrap();
+    println!("f4 result:null with Option<Box<RawValue>>: {:?}", null_result.result.as_deref().map(RawValue::get));
+    show("f5 untagged Incoming response", serde_json::from_str::<Incoming>(text));
+    show("f6 untagged Incoming error", serde_json::from_str::<Incoming>(r#"{"jsonrpc":"2.0","id":9,"error":{"code":-32601,"message":"Method not found"}}"#));
+    show("f7 untagged Incoming notification", serde_json::from_str::<Incoming>(r#"{"jsonrpc":"2.0","method":"event","params":{"seq":1}}"#));
+    show("f8 untagged Incoming garbage", serde_json::from_str::<Incoming>(r#"{"jsonrpc":"2.0"}"#));
+    let v: Value = serde_json::from_str(text).unwrap();
+    let raw_from_value = serde_json::value::to_raw_value(&v["result"]).unwrap();
+    println!("f9 to_raw_value from Value (re-serialized, whitespace not kept): {}", raw_from_value.get());
+    let req_null: ResponseRequiredRaw = serde_json::from_str(r#"{"jsonrpc":"2.0","id":8,"result":null}"#).unwrap();
+    println!("f10 result:null with non-Option Box<RawValue>: {:?}", req_null.result.get());
+    show("f11 untagged IncomingValue (Value fields) response", serde_json::from_str::<IncomingValue>(text));
+    show("f12 untagged IncomingValue notification", serde_json::from_str::<IncomingValue>(r#"{"jsonrpc":"2.0","method":"event","params":{"seq":1}}"#));
+}
+[exit status: 0]
+$ (cwd: /Users/hiraq/.herdr/worktrees/herdrify/herdrify-hc/.claudestacks/sdlc/2026-11-22-herdrify-hc/evidence/probe-crates/c7-serde) cargo run -q
+--- (a) unknown field
+a1 Plain {id:1, zzz:2}: Ok(Plain { id: 1 })
+a2 Strict(deny_unknown_fields) {id:1, zzz:2}: Err("unknown field `zzz`, expected `id` at line 1 column 13") classify=Data line=1 column=13
+--- (b) flatten extra Map captures unknown fields
+b1 parsed: WithExtra { id: 1, extra: {"nested": Object {"k": Array [Number(1), Null]}, "s": String("x"), "zzz": Number(2)} }
+b2 serialized back: {"id":1,"nested":{"k":[1,null]},"s":"x","zzz":2}
+b3 WithExtra id "1" (string): Err("invalid type: string "1", expected u32 at line 1 column 9") classify=Data line=1 column=9
+b4 WithExtra id -1 (u32 under flatten): Err("invalid value: integer `-1`, expected u32 at line 1 column 8") classify=Data line=1 column=8
+--- (c) u32 out of range
+c1 u32 -1: Err("invalid value: integer `-1`, expected u32 at line 1 column 8") classify=Data line=1 column=8
+c2 u32 4294967296: Err("invalid value: integer `4294967296`, expected u32 at line 1 column 16") classify=Data line=1 column=16
+c3 u32 1.0: Err("invalid type: floating point `1.0`, expected u32 at line 1 column 9") classify=Data line=1 column=9
+c4 u32 4294967295: Ok(Plain { id: 4294967295 })
+--- (d) Option<String>: null vs absent; skip_serializing_if
+d1 Opt(default) null: Ok(Opt { name: None })
+d2 Opt(default) absent: Ok(Opt { name: None })
+d3 OptNoDefault null: Ok(OptNoDefault { name: None })
+d4 OptNoDefault absent: Ok(OptNoDefault { name: None })
+d5 Opt(default) None serializes: {"name":null}
+d6 OptSkip None serializes: {}
+d7 OptSkip Some serializes: {"name":"x"}
+--- (e) serde_json::Value as JSON-RPC id
+e id                      1 -> Number(1) is_u64=true is_string=false roundtrip={"jsonrpc":"2.0","id":1,"method":"hello"} equal_to_Value(1)=true
+e id                  "abc" -> String("abc") is_u64=false is_string=true roundtrip={"jsonrpc":"2.0","id":"abc","method":"hello"} equal_to_Value(1)=false
+e id                   null -> Null is_u64=false is_string=false roundtrip={"jsonrpc":"2.0","id":null,"method":"hello"} equal_to_Value(1)=false
+e id   18446744073709551615 -> Number(18446744073709551615) is_u64=true is_string=false roundtrip={"jsonrpc":"2.0","id":18446744073709551615,"method":"hello"} equal_to_Value(1)=false
+e id                     -7 -> Number(-7) is_u64=false is_string=false roundtrip={"jsonrpc":"2.0","id":-7,"method":"hello"} equal_to_Value(1)=false
+e id                    1.5 -> Number(1.5) is_u64=false is_string=false roundtrip={"jsonrpc":"2.0","id":1.5,"method":"hello"} equal_to_Value(1)=false
+e id                    "1" -> String("1") is_u64=false is_string=true roundtrip={"jsonrpc":"2.0","id":"1","method":"hello"} equal_to_Value(1)=false
+e id 1 vs "1" equal? false
+--- (f) RawValue keeps result unparsed
+f1 id=Number(7) raw result text=Some("{\"version\":\"0.1.21\",  \"extra\":[1,2]}") error=None
+f2 later typed parse of raw result: Hello { version: "0.1.21" }
+f3 Box<RawValue> owned: id=Number(7) result=Some("{\"version\":\"0.1.21\",  \"extra\":[1,2]}")
+f4 result:null with Option<Box<RawValue>>: None
+f5 untagged Incoming response: Err("data did not match any variant of untagged enum Incoming") classify=Data line=0 column=0
+f6 untagged Incoming error: Ok(Error { id: Number(9), error: Object {"code": Number(-32601), "message": String("Method not found")} })
+f7 untagged Incoming notification: Err("data did not match any variant of untagged enum Incoming") classify=Data line=0 column=0
+f8 untagged Incoming garbage: Err("data did not match any variant of untagged enum Incoming") classify=Data line=0 column=0
+f9 to_raw_value from Value (re-serialized, whitespace not kept): {"extra":[1,2],"version":"0.1.21"}
+f10 result:null with non-Option Box<RawValue>: "null"
+f11 untagged IncomingValue (Value fields) response: Ok(Response { id: Number(7), result: Object {"extra": Array [Number(1), Number(2)], "version": String("0.1.21")} })
+f12 untagged IncomingValue notification: Ok(Notification { method: "event", params: Some(Object {"seq": Number(1)}) })
+[exit status: 0]
+
+== C8 cargo tree -d for the C1 probe (duplicate versions)
+$ (cwd: /Users/hiraq/.herdr/worktrees/herdrify/herdrify-hc/.claudestacks/sdlc/2026-11-22-herdrify-hc/evidence/probe-crates/c1-deps) cargo tree -d
+warning: nothing to print.
+
+To find dependencies that require specific target platforms, try to use option `--target all` first, and then narrow your search scope accordingly.
+[exit status: 0]
+$ (cwd: /Users/hiraq/.herdr/worktrees/herdrify/herdrify-hc/.claudestacks/sdlc/2026-11-22-herdrify-hc/evidence/probe-crates/c1-deps) cargo tree -d --target all
+warning: nothing to print.
+
+To find dependencies that require specific target platforms, try to use option `--target all` first, and then narrow your search scope accordingly.
+[exit status: 0]
+$ (cwd: /Users/hiraq/.herdr/worktrees/herdrify/herdrify-hc/.claudestacks/sdlc/2026-11-22-herdrify-hc/evidence/probe-crates/c1-deps) cargo tree -d -e features --target all | head -5
+error: the `-e features` flag does not support `--duplicates`
+[exit status: 0]

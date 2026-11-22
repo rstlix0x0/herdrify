@@ -1,0 +1,31 @@
+$ rustc -V
+rustc 1.94.1 (e408947bf 2026-03-25)
+$ diff <repo deny.toml> deny.toml
+8c8
+< allow = ["Apache-2.0"]
+---
+> allow = ["Apache-2.0", "MIT", "Unicode-3.0"]
+$ cargo check -q --all-targets
+exit: 0
+$ cargo deny check
+advisories ok, bans ok, licenses ok, sources ok
+exit: 0
+$ cargo tree -d --target all
+warning: nothing to print.
+
+To find dependencies that require specific target platforms, try to use option `--target all` first, and then narrow your search scope accordingly.
+$ resolved versions
+name = "base64"
+version = "0.23.1"
+--
+name = "serde"
+version = "1.0.229"
+--
+name = "serde_json"
+version = "1.0.154"
+--
+name = "thiserror"
+version = "2.0.21"
+--
+name = "tokio"
+version = "1.54.1"
