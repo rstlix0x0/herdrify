@@ -1,5 +1,5 @@
 ---
-status: approved
+status: done
 created: 2026-11-22
 depends-on: [01, 02]
 built-on: 38eeb1508131
@@ -73,3 +73,22 @@ Makefile.toml   — create: the dod/fmt/deny tasks, byte-identical to evidence/p
 - `cargo make dod` exits 0 with zero `warning` or `error` lines on the committed tree, and runs exactly the five commands in order.
 - `cargo make deny` exits 0.
 - `Makefile.toml` is byte-identical to the probe copy.
+
+## Review findings
+
+Reviewer verdict: COMPLIANT, `blocking: none` (code 0🔴 1🟡 1🔵 · plan 0). No fix round was needed.
+
+- 🟡 open (not actionable here, the probe bytes are fixed): nothing guards `[tasks.doc.env] RUSTDOCFLAGS` (`Makefile.toml:33`). If it were removed, `cargo make dod` would still pass on rustdoc warnings. Today the only guard is the diff against the probe file. The plan accepts this in its Risks.
+- 🔵 open (not actionable): the `dod` description says "zero warnings" (`Makefile.toml:17`), but cargo-make checks exit codes only. Zero warnings comes from `-D warnings`, `RUSTDOCFLAGS` and the separate log check.
+
+Verification on the tree (orchestrator run, 2026-11-22):
+- Red state (coder, before the copy): `cargo make dod` → `Task "dod" not found` … `[cargo-make] WARN - Build Failed.`
+- `cargo clean` (coder) → `Removed 793 files, 14.9MiB total`. Then `(set -o pipefail; mkdir -p target && cargo make dod 2>&1 | tee target/dod.log)` → exit 0.
+- The orchestrator re-ran `cargo make dod` → rc=0. `sed $'s/\x1b\\[[0-9;]*m//g' target/dod.log | grep -E '^ *(warning|error)'` → no output, grep rc=1 (clean).
+- `Execute Command` lines, in order: `"cargo" "fmt" "--all" "--" "--check"`, `"cargo" "clippy" "--workspace" "--all-targets" "--all-features" "--" "-D" "warnings"`, `"cargo" "doc" "--workspace" "--all-features" "--no-deps"`, `"cargo" "test" "--workspace" "--all-targets" "--all-features"`, `"cargo" "test" "--workspace" "--all-features" "--doc"`.
+- `cargo make deny` → rc=0, `advisories ok, bans ok, licenses ok, sources ok`.
+- `diff <probe>/Makefile.toml Makefile.toml` → no output, rc=0.
+
+## Deviations
+
+- 2026-11-22: Not committed. The execute instruction did not say to commit, so the commit `build(workspace): add the cargo-make Definition-of-Done gate` is left to the author.
