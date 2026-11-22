@@ -1,0 +1,18 @@
+$ cargo clippy --version
+clippy 0.1.94 (e408947bfd 2026-03-25)
+$ cargo clippy --all-targets -- -D warnings
+    Checking probe-inception v0.0.0 (/Users/hiraq/.herdr/worktrees/herdrify/herdrify-hc/.claudestacks/sdlc/2026-11-22-herdrify-hc/evidence/probe-inception)
+error: module has the same name as its containing module
+ --> src/client/mod.rs:2:1
+  |
+2 | mod client;
+  | ^^^^^^^^^^^
+  |
+  = help: for further information visit https://rust-lang.github.io/rust-clippy/rust-1.94.0/index.html#module_inception
+  = note: `-D clippy::module-inception` implied by `-D warnings`
+  = help: to override `-D warnings` add `#[allow(clippy::module_inception)]`
+
+error: could not compile `probe-inception` (lib) due to 1 previous error
+warning: build failed, waiting for other jobs to finish...
+error: could not compile `probe-inception` (lib test) due to 1 previous error
+exit=101

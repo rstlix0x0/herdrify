@@ -1,0 +1,12 @@
+[package]
+name = "probe-exec"
+version = "0.0.0"
+edition = "2024"
+publish = false
+license = "Apache-2.0"
+
+# Own workspace: this throwaway probe sits inside the herdrify workspace tree.
+[workspace]
+
+[dependencies]
+serde_json = "=1.0.154"

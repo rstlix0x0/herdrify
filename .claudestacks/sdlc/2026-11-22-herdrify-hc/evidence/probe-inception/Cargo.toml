@@ -1,0 +1,13 @@
+[package]
+name = "probe-inception"
+version = "0.0.0"
+edition = "2024"
+publish = false
+license = "Apache-2.0"
+
+# Own workspace: this throwaway probe sits inside the herdrify workspace tree.
+[workspace]
+
+[lints.clippy]
+pedantic = { level = "warn", priority = -1 }
+nursery  = { level = "warn", priority = -1 }

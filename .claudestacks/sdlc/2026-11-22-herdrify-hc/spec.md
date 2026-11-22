@@ -24,6 +24,30 @@ Rust probe sources, and `probe-*-output.txt` files hold their raw output. Labels
 against an isolated core (its own `HC_SESSION` and scratch XDG directories). The author's default
 core was only read, for its pid.
 
+This draft replaces `spec-superseded-2026-11-22-2.md`, which replaced
+`spec-superseded-2026-11-22.md`. The second plan-set review found further gaps, settled here:
+- the application layer is named `connection`, not `client` (§2)
+- the schema-instance rule for recursive schemas (§9.2) and the per-variant Params check (§9.3)
+- the `MachineTarget` shape (§4.8)
+- the `PeerClosed` message and a hello reply with `id:null` (§6.5, §8.1)
+- every bad line on an event stream (§6.3)
+- a stream call dropped before its reply (§6.2, §6.5)
+- the `CloseReason::Ended` shape (§6.4)
+- how `None` serializes (§4.9)
+- the spawn error kind (§7.2)
+- a recorded `machine.exec` success (§9.5)
+
+The first redesign settled:
+- stream-channel opening and stream handles
+- credit per DATA frame, and cancel safety
+- the CLOSE rule and the closed-by-core flag
+- attach write refusals (`Error::StreamClosed`)
+- the payload cap on every outgoing frame
+- end of stream mid-message
+- send-only Params
+- `call_raw` on stream methods
+- empty `Environment` names
+
 ## 1. Premises
 
 **Versions.**
@@ -71,13 +95,13 @@ unless asked … Tests need their own `HC_SESSION` and scratch XDG paths"
 
 ## 2. Architecture
 
-The author approved this section on its own before the spec was written.
+The author approved this section on its own before the first spec was written. This redesign changes it (the layer is renamed `connection`, files are added to the tree), and the changed section is presented to the author again for approval.
 
 It applies clean architecture with ports and adapters inside the crate. The layers, from inside
 out:
 - `protocol` is the domain: pure and sans-IO
 - `port` is the seam the application owns
-- `client` is the application: the use cases
+- `connection` is the application: the use cases
 - `adapter` is the I/O
 
 ```
@@ -87,27 +111,32 @@ crates/herdrify-hc/
 │  ├─ lib.rs                    table of contents: //! docs, pub mod, pub use
 │  ├─ protocol/                 DOMAIN (serde, serde_json, thiserror, base64; no tokio, no I/O)
 │  │  ├─ mod.rs
-│  │  ├─ frame.rs               Frame, FrameKind, Channel; header encode/decode; 16 MiB cap
+│  │  ├─ frame.rs               Frame, FrameKind, Channel, Focus; header encode/decode; 16 MiB cap
 │  │  ├─ frame_decoder.rs       bytes → Frames across partial reads
 │  │  ├─ frame_error.rs         FrameError
 │  │  ├─ line.rs                Line; LineDecoder (hands leftover bytes to the FrameDecoder)
 │  │  ├─ ndjson.rs              stream bytes → complete JSON lines
-│  │  ├─ envelope.rs            Request, Response, Notification, RequestId, Incoming
+│  │  ├─ envelope.rs            Request, RequestId, Incoming (its Response and Notification variants)
 │  │  ├─ hello.rs               HelloParams, HelloResult, Generation, CoreVersion, floor check
 │  │  ├─ rpc_error.rs           RpcError, ErrorKind
 │  │  ├─ protocol_error.rs      ProtocolError
 │  │  ├─ empty_value_error.rs   EmptyValueError
 │  │  ├─ identifiers.rs         the identifier newtypes of §4.7
 │  │  ├─ notification.rs        Notification, Event, EventKind
+│  │  ├─ base64_bytes.rs        serde with-module: bytes as standard padded base64 (crate-private)
 │  │  ├─ method.rs              trait Method
 │  │  ├─ methods/               one file per group: server, terminal, templates, machine, file,
-│  │  │                         doc, events, rpc: the 32 Params types and their Method impls
-│  │  └─ types/                 the 36 component schemas, one file per concept
+│  │  │                         doc, events, rpc: the 31 non-hello Params types and their Method
+│  │  │                         impls; terminal.rs also holds Command, Keep, LabelChange(s) and
+│  │  │                         WaitTarget, machine.rs holds ExecCommand and MachineTarget; plus
+│  │  │                         argv.rs (Argv) and seconds.rs (Duration as seconds)
+│  │  └─ types/                 one file per type, named after it: 35 component schemas (HelloResult
+│  │                            is in hello.rs), Environment, Labels and the four open enums
 │  ├─ port/                     PORT (depends on protocol only)
 │  │  ├─ mod.rs
 │  │  ├─ transport.rs           Transport, FrameSink, FrameSource (pure trait definitions)
 │  │  └─ transport_error.rs     TransportError
-│  ├─ client/                   APPLICATION (depends on port + protocol; tokio rt + sync)
+│  ├─ connection/               APPLICATION (depends on port + protocol; tokio rt + sync)
 │  │  ├─ mod.rs
 │  │  ├─ client.rs              Client<T>: connect, the 32 typed methods, call_raw
 │  │  ├─ writer.rs              the spawned writer task: owns the FrameSink, takes write commands
@@ -115,7 +144,9 @@ crates/herdrify-hc/
 │  │  ├─ connection_end.rs      ConnectionEnd, ConnectionEndKind
 │  │  ├─ pending.rs             request-id allocator and pending-call table
 │  │  ├─ subscription.rs        Subscription (events use case)
-│  │  ├─ attach.rs              AttachStream (attach use case)
+│  │  ├─ attach.rs              AttachStream, AttachEvent, CloseReason (attach use case)
+│  │  ├─ stream_handle.rs       the crate-private stream handle shared by both streams (§6.5)
+│  │  ├─ memory_link.rs         #[cfg(test)] in-memory FrameSink/FrameSource for unit tests
 │  │  └─ client_error.rs        Error
 │  └─ adapter/                  ADAPTERS (depend on port + protocol; tokio io-util + process)
 │     ├─ mod.rs
@@ -123,12 +154,19 @@ crates/herdrify-hc/
 │     └─ process.rs             ProcessTransport and its builder
 └─ tests/
    ├─ fixtures/hc-0.1.21.openrpc.json
-   ├─ support/                  fake_transport.rs, schema_instance.rs
+   ├─ support/                  fake_transport.rs, schema_instance.rs, live_core.rs
    ├─ schema_coverage.rs
    ├─ client_fake.rs
    ├─ adapter_stream.rs
    └─ live.rs
 ```
+
+**Why the application layer is `connection`.** A layer named `client` holding `client.rs` fails
+the gate: clippy (`clippy 0.1.94 (e408947bfd 2026-03-25)`, the 1.94.1 toolchain) reports `module has the same name as its containing module`
+(`module_inception`), an error under `-D warnings` (`evidence/probe-inception-output.txt`). The
+layer is named `connection`, which also matches `ConnectionEnd`. The public paths are
+`herdrify_hc::connection::{Client, Subscription, AttachStream, …}`, and the crate root re-exports
+`Client` and `Error`.
 
 **Why each module exists.**
 
@@ -136,17 +174,17 @@ crates/herdrify-hc/
 |---|---|
 | `protocol` | ADR 0002 requires a sans-IO protocol module. Keeping tokio out makes every codec rule testable as bytes in, values out (M-IMPL-IO) |
 | `port` | ADR 0002 requires a public transport seam that callers can fake. The application owns it, and adapters implement it |
-| `client` | The only owner of concurrency state: request ids, channels, credit, the spawned task |
+| `connection` | The only owner of concurrency state: request ids, channels, credit, the spawned task |
 | `adapter` | The only code that touches pipes and processes (M-MOCKABLE-SYSCALLS) |
 
 **Dependency rule.** Every dependency points inward.
 
 | Layer | May depend on | Must not depend on | External crates |
 |---|---|---|---|
-| `protocol` | nothing internal | `port`, `client`, `adapter` | serde, serde_json, thiserror, base64 |
-| `port` | `protocol` | `client`, `adapter` | none |
-| `client` | `port`, `protocol` | `adapter` | tokio (`rt`, `sync`) |
-| `adapter` | `port`, `protocol` | `client` | tokio (`io-util`, `process`) |
+| `protocol` | nothing internal | `port`, `connection`, `adapter` | serde, serde_json, thiserror, base64 |
+| `port` | `protocol` | `connection`, `adapter` | none |
+| `connection` | `port`, `protocol` | `adapter` | tokio (`rt`, `sync`) |
+| `adapter` | `port`, `protocol` | `connection` | tokio (`io-util`, `process`) |
 
 The caller is the composition root. It builds an adapter and passes it to `Client::connect`.
 `Client` has no constructor that names an adapter.
@@ -154,8 +192,8 @@ The caller is the composition root. It builds an adapter and passes it to `Clien
 **Enforcement.** Modules in one crate are not separated by the compiler, so the reviewer runs
 these checks, and each must print nothing:
 ```sh
-grep -rn 'crate::adapter' crates/herdrify-hc/src/protocol crates/herdrify-hc/src/port crates/herdrify-hc/src/client
-grep -rn 'crate::client'  crates/herdrify-hc/src/protocol crates/herdrify-hc/src/port crates/herdrify-hc/src/adapter
+grep -rn 'crate::adapter' crates/herdrify-hc/src/protocol crates/herdrify-hc/src/port crates/herdrify-hc/src/connection
+grep -rn 'crate::connection'  crates/herdrify-hc/src/protocol crates/herdrify-hc/src/port crates/herdrify-hc/src/adapter
 grep -rn 'crate::port'    crates/herdrify-hc/src/protocol
 grep -rn 'tokio'          crates/herdrify-hc/src/protocol crates/herdrify-hc/src/port
 ```
@@ -270,7 +308,10 @@ grep -rn 'tokio'          crates/herdrify-hc/src/protocol crates/herdrify-hc/src
 - **Request** `{jsonrpc:"2.0", id, method, params}`. The client always sends an object `params`.
 - **RequestId** is a `u64`, allocated from 1 upward per connection. The handshake uses 0.
 - **Incoming** classification of a channel-0 payload:
-  - `Response { id, Ok(Value) | Err(RpcError) }`
+  - `Response { id: Option<RequestId>, Ok(Value) | Err(RpcError) }`. An `id` that is a JSON
+    integer fitting `u64` is `Some`, and `id:null` is `None` (W9). A response whose `id` is
+    anything else (a string, a negative or fractional number) is `ProtocolError::NotJsonRpc`: the
+    client never sends such an id, so the reply cannot be its own.
   - `Notification { method, params }`
   - a payload that is valid JSON but neither is `ProtocolError::NotJsonRpc`
   - invalid JSON is `ProtocolError::InvalidJson`
@@ -377,6 +418,8 @@ The live core's hello reply carries `"version":"0.1.21"` (`evidence/probe-plain-
 - **The `Method` trait.** `trait Method { const NAME: &'static str; type Params: Serialize; type Output: DeserializeOwned; }`.
 - **Params mirror the schema.** One `Params` type per method has exactly the schema's params
   (`evidence/probe-schema-params-output.txt`).
+- **Params are send-only.** They implement `Serialize`, not `Deserialize`. The types of §4.9 are
+  read from replies and implement both.
 - **Constructor and setters.** Required params are `new()` arguments. Optional params are
   setters.
 - **Field mapping rules.**
@@ -392,7 +435,7 @@ The live core's hello reply carries `"version":"0.1.21"` (`evidence/probe-plain-
   | `integer<uint64>`, `integer<uint>` | `u64` |
   | `integer<int32>` | `i32` |
   | `number<double>` timeouts (seconds) | `std::time::Duration`, serialized as f64 seconds |
-  | `object{str:string}` env | `Environment` (a map with non-empty names) |
+  | `object{str:string}` env | `Environment`, a map of names to values. A name may be empty, because the core accepts `env:{"":"x"}` (§4.7) |
   | `object{str:string}` labels | `Labels`, a `LabelKey → LabelValue` map |
   | base64 strings (`terminal.put data`, `file.write data`, `machine.exec input`, `ExecResult stdout/stderr`) | `Vec<u8>` / `&[u8]`, base64-encoded and decoded by the SDK with the standard padded alphabet (`evidence/probe-base64-output.txt:36-41`) |
   | `any` (`doc.set value`) | `serde_json::Value` (null deletes, `probe-edges-output.txt:75-77`) |
@@ -420,7 +463,7 @@ The live core's hello reply carries `"version":"0.1.21"` (`evidence/probe-plain-
   | `machine.exec` | `MachineExec::new(ExecCommand::{Argv(Argv), Line(String)})` | E6, E7 (`:23`, `:26`) |
   | `terminal.wait` | `TerminalWait::new(WaitTarget::{Terminal(TerminalRef), Children(Children), ChildrenOf(TerminalRef, Children)})` | E23 (`:74`); param descriptions (`probe-schema-params-output.txt`, `terminal.wait`) |
   | `terminal.label` | `TerminalLabel::new(terminal, LabelChanges)`, entries `LabelChange::{Set(LabelValue), Remove}`. `Remove` serializes as `""` | `probe-methods-output.txt:90-113` |
-  | `machine.add` | `MachineAdd::new(MachineTarget::{Ssh(String), Via{name: MachineName, command: String}})`. `via` needs a name | `probe-methods-output.txt:300-312` |
+  | `machine.add` | `MachineAdd::new(MachineTarget::{Ssh { target: String, name: Option<MachineName> }, Via { name: MachineName, command: String }})`. `via` needs a name, so `Via` carries it; `Ssh` sends `target` and, when set, `name`. `MachineAdd` has no `name` setter. Its setters are `session` and `temporary` | `probe-methods-output.txt:300-312`: `{"name":"m1","via":"false"}` (`:302`), `{"target":"hfy-invalid.invalid"}` (`:310`) |
 
 - **Allowed empties.** `Argv::new` with an empty list is `EmptyValueError { what: "argv" }`.
   `Line` may be empty: the core runs `sh -c ""` (`probe-edges-output.txt:18-20`). Empty
@@ -481,6 +524,10 @@ The live core's hello reply carries `"version":"0.1.21"` (`evidence/probe-plain-
   - required properties are plain fields
   - optional and nullable properties are `Option<T>`, where null and absent both read as `None`
     (`evidence/probe-crates-output.txt:1448-1680`, C7d)
+  - `None` serializes as an absent property, never as `null` (`#[serde(skip_serializing_if)]`;
+    C7d: `d6 OptSkip None serializes: {}`, `probe-crates-output.txt:1655`). So a reply carrying `null`
+    round-trips to a value without that property, and round-trip tests use values whose optional
+    properties are all present (§9.1, §9.3)
 - **Unknown fields.** Unknown fields in replies are ignored, which is serde's default
   (`probe-crates-output.txt`, C7a).
 - **Names.** Each Rust type takes its schema name, with one exception: the schema's `Display`
@@ -490,6 +537,17 @@ The live core's hello reply carries `"version":"0.1.21"` (`evidence/probe-plain-
 - **Untyped access.** `Client::call_raw(MethodName, Value) -> Result<Value, Error>` reaches any
   method, including ones newer than the SDK, and any field a typed result does not name. Typed
   structs carry no catch-all map.
+- **`call_raw` on a stream method.** `call_raw` with `events.subscribe` or `terminal.attach` is
+  allowed, and returns the reply. No stream is opened for it: its channel stays unknown to the
+  router, so its frames are discarded (§6.5). The core stops sending on that channel when its
+  credit window is spent (W11), and "a stalled stream never blocks channel 0 or other streams"
+  (README:105-106). The SDK has no raw-frame API, so the caller cannot close that channel. It
+  stays open on the core for the connection's lifetime. A raw `terminal.attach` also makes the
+  connection an active viewer, and "the last active viewer sets the size" (README:71-72).
+  `call_raw`'s doc comment states all of this, and says to use `events_subscribe` and
+  `terminal_attach` for streams.
+- **Types are read and written.** Every type of this section implements `Serialize` and
+  `Deserialize`, so a reply value round-trips.
 
 ### 4.10 Errors from the core
 
@@ -531,7 +589,7 @@ pub trait FrameSource: Send + 'static {
   and its sink had no `close`. Neither affects that property.
 - **Other modes.** Plain-mode callers can use `send_line`/`recv_line` for the whole connection.
 
-## 6. Client (application)
+## 6. Connection (application)
 
 ### 6.1 Connect
 
@@ -540,7 +598,9 @@ pub trait FrameSource: Send + 'static {
 2. `recv_line`. On `None`, return `Error::Closed`.
 3. Classify the line (§4.4):
    - invalid JSON → `Error::Protocol(InvalidJson)`
-   - a notification, or a response whose id is not 0 → `Error::Protocol(UnexpectedHelloReply)`
+   - valid JSON that is not JSON-RPC (§4.4) → `Error::Protocol(NotJsonRpc)`
+   - a notification, or a response whose id is not `Some(0)` (another id, or `id:null`) →
+     `Error::Protocol(UnexpectedHelloReply)`
 4. If the reply is an error with kind `unsupported_generation`, return
    `Error::UnsupportedGeneration { message }` (W19). Any other error reply is `Error::Rpc` with
    method `hello`.
@@ -559,7 +619,10 @@ On any failure the transport is dropped. `Client<T>` is `Clone` through an inter
   1. allocate an id
   2. register a oneshot in the pending table
   3. serialize the request
-  4. a payload over 16777216 bytes is `Error::PayloadTooLarge`, returned before anything is sent
+  4. if the connection has ended, `Error::Closed` (§6.5); otherwise a payload over 16777216
+     bytes is `Error::PayloadTooLarge`. Both are returned before anything is sent, in that order,
+     the same order as attach writes. The size check guards every outgoing frame payload: attach
+     `input`, `automatic_input` and `facts` too (§6.4).
   5. hand the DATA frame for channel 0 to the writer (§6.5), and await its write acknowledgement
   6. await the oneshot
 - **Write failure.** If the writer reports a failed write, the call returns
@@ -569,7 +632,9 @@ On any failure the transport is dropped. `Client<T>` is `Clone` through an inter
 - **Results.** An `Ok(Value)` decodes into `M::Output` with `serde_json::from_value`. A decode
   failure is `Error::Decode`. An `Err(RpcError)` is `Error::Rpc { method, error }`.
 - **Dropping.** Dropping a call future removes its pending entry. A reply that arrives later is
-  discarded. There are no SDK timeouts: `terminal.wait` runs up to 180 s by default
+  discarded. The exception is a stream-opening call (`events_subscribe`, `terminal_attach`): its
+  pending entry stays registered, with its route request, until its reply arrives, so the router
+  still opens and then closes the route (§6.5). There are no SDK timeouts: `terminal.wait` runs up to 180 s by default
   (`probe-schema-params-output.txt`, `terminal.wait timeout`).
 - **`call_raw`** follows the same path, without typed decoding.
 
@@ -578,23 +643,57 @@ On any failure the transport is dropped. `Client<T>` is `Clone` through an inter
 - **Fields.** `events_subscribe(params)` returns `Subscription { seq, terminals, channel }` from
   the reply (W10).
 - **A missing channel.** A reply without `channel` (the schema makes it optional for plain mode)
-  is `Error::Protocol(MissingChannel)` with method `events.subscribe`.
+  is `Error::Protocol(MissingChannel)` with method `events.subscribe`. `terminal_attach` applies
+  the same rule with method `terminal.attach` (§6.5).
 - **Delivery.** `Subscription::next().await -> Option<Result<Notification, Error>>`:
   1. the router forwards the channel's DATA bytes
   2. `ndjson` assembles lines (§4.3)
   3. each line decodes as a `Notification`
-- **Bad items do not end the stream.**
+- **Bad items do not end the stream.** Each bad line yields one `Err`, and the next line is read
+  as usual:
   - A line that is not JSON yields `Err(Error::Protocol(InvalidJson))`.
-  - An event whose `data` does not match its known `type` yields
+  - Valid JSON that is neither a response nor a notification yields
+    `Err(Error::Protocol(NotJsonRpc))`.
+  - A JSON-RPC response yields `Err(Error::Protocol(ResponseOnStream))`.
+  - A `heartbeat` or `missed` whose params do not decode, or an `event` whose envelope fields do
+    not decode (`seq` missing or not a `u64`, `type` missing or not a string, `terminal` not a
+    string, or `machine` not a string or `""`), yields
+    `Err(Error::Protocol(InvalidNotification { method }))`.
+  - An event with a valid envelope whose `data` does not match its known `type` yields
     `Err(Error::Protocol(InvalidEvent { kind }))`.
-  - In both cases the next line is read as usual.
-- **Credit.** After the caller takes the notifications assembled from N bytes, the subscription
-  sends CREDIT N through the writer, so delivery never stalls at 256 KiB (W11). Unconsumed data is
-  bounded by the core's credit window.
+- **Credit.** The core's window counts bytes, not lines, and it stops in the middle of a line
+  (B3: the last frame before the stall had no trailing newline, at exactly 262144 bytes,
+  `probe-framed-output.txt:254-255`). So credit follows frames:
+  - `next()` takes DATA frames from the stream handle only when it has no complete line buffered.
+  - When it takes a frame of N > 0 bytes, it enqueues CREDIT N at once, with the synchronous
+    `UnboundedSender::send` and no acknowledgement, then appends the bytes to its line buffer.
+  - A zero-length DATA frame is skipped, with no CREDIT.
+  - Credit therefore covers partial lines too. A line of any length up to the 16 MiB cap of §4.3
+    completes, and `EventLineTooLong` is reachable.
+  - What is held without credit is bounded: frames not yet taken stay inside the core's window,
+    and taken bytes are bounded by one frame of complete lines plus a partial line of at most
+    16 MiB.
+  - Example: one 101-byte DATA frame holds a stale event line (39 bytes plus `\n`), then a line
+    to deliver (59 bytes plus `\n`), then the first byte of the next line. The first `next()`
+    takes the frame, enqueues CREDIT 101, drops the stale event and returns the notification. The
+    last byte stays buffered until a later frame completes its line.
+- **Cancel safety.** `next()` is cancel-safe. Its only await is the receive from the stream
+  handle. Taking a frame, enqueuing its CREDIT and buffering its bytes happen together with no
+  await between them, and complete lines not yet returned stay buffered for the next call. A
+  `next()` cancelled by `select!` or a timeout loses no notification and no credit.
 - **Stale events.** After `Missed { seq }`, events with `seq ≤` that value are dropped before
   delivery (W12).
-- **Closing.** `close().await`, or dropping the subscription, sends CLOSE through the writer
-  (§6.5). The core's empty CLOSE ends it (W14).
+- **Other frames.** A RESIZE on an event channel is discarded, as are other frame kinds §6.5 does
+  not route to streams.
+- **Closing.** `close(&mut self).await -> Result<(), Error>` is checked in this order:
+  1. the connection has ended → `Err(Error::Closed)`, nothing sent
+  2. the stream has ended (its closed-by-core flag is set, or `close()` already ran) → `Ok(())`,
+     nothing sent
+  3. otherwise it sends CLOSE through the writer, awaits the write acknowledgement, and returns
+     `Ok(())`
+
+  After `close()`, the subscription keeps yielding what arrives until the core's CLOSE ends it
+  with `None` (W14). Dropping it follows the CLOSE rule of §6.5.
 - **Endings.**
   - Any CLOSE from the core, empty or not, ends the stream with `None`.
   - `EventLineTooLong` yields that `Err`, then `None`.
@@ -612,10 +711,19 @@ On any failure the transport is dropped. `Client<T>` is `Clone` through an inter
   `Err(Error::Protocol(Frame(BadControlPayload)))`, and the stream continues.
 - **`CloseReason`:**
   - `Detached` for an empty CLOSE
-  - `Ended { reason: EndReason, exit_code, signal, finished_ms }` for a JSON CLOSE that decodes as
-    that shape (W15)
+  - `Ended { reason: EndReason, exit_code: Option<i32>, signal: Option<i32>, finished_ms:
+    Option<u64> }` for a JSON object CLOSE that decodes as that shape. `reason` is a required
+    string; the other three are optional, null or absent reading as `None`. `signal` is an
+    integer, as in the terminal record (README:110-111: "`reason` as in the terminal record"; the
+    schema's `signal` is `int32`; the core sent `"signal":1`, `probe-plain-output.txt:479`). A
+    payload that fails to decode as this shape, for example a string `signal`, is
+    `Unrecognized`, never an error. The core sent all four
+    (`probe-framed-output.txt:384-385`), and the README's example omits `finished_ms`:
+    `{"reason":"exited","exit_code":0,"signal":null}` (`upstream-v0.1.21-schema-README.md:109-110`).
+    An unknown `reason` word is `EndReason::Other` (§4.8)
   - `Unrecognized { payload: Vec<u8> }` for any other non-empty CLOSE
-- **Writes.** Each write is acknowledged by the writer and returns `Result<(), Error>`:
+- **Writes.** Each write is acknowledged by the writer and returns `Result<(), Error>`. Each
+  takes `&mut self`:
 
   | Method | Sends |
   |---|---|
@@ -624,10 +732,21 @@ On any failure the transport is dropped. `Client<T>` is `Clone` through an inter
   | `resize(u16, u16)` | RESIZE |
   | `focus(Focus)` | FOCUS |
   | `facts(DisplayFacts)` | FACTS (JSON) |
-  | `close()` | CLOSE |
+  | `close()` | CLOSE, under the CLOSE rule of §6.5 |
 
-- **Credit.** CREDIT is sent as `Output` bytes are taken (README:103-104).
-- **Dropping.** Dropping the stream sends CLOSE through the writer.
+- **Write refusals**, checked in this order before anything is sent:
+  1. the connection has ended → `Error::Closed`
+  2. the stream has ended (its closed-by-core flag is set, or `close()` already ran) →
+     `Error::StreamClosed`, except `close()`, which returns `Ok(())` and sends nothing
+  3. a payload over 16777216 bytes (`input`, `automatic_input`, `facts`) → `Error::PayloadTooLarge`
+- **After `close()`.** The stream keeps yielding until the core's CLOSE arrives as
+  `Closed(Detached)` (W15).
+- **Credit.** When `next()` takes a DATA frame of N > 0 bytes, it enqueues CREDIT N at once
+  (synchronous send, no acknowledgement), then returns `Output` with those bytes
+  (README:103-104). A zero-length DATA frame is skipped, with no `Output` and no CREDIT.
+- **Cancel safety.** `next()` is cancel-safe, as in §6.3: its only await is the receive, and
+  taking a frame, enqueuing its CREDIT and returning it happen with no await between them.
+- **Dropping.** Dropping the stream follows the CLOSE rule of §6.5.
 
 ### 6.5 Writer, router and lifecycle
 
@@ -637,17 +756,48 @@ On any failure the transport is dropped. `Client<T>` is `Clone` through an inter
   - A command is a frame plus an optional oneshot acknowledgement.
   - `Drop` impls send a CLOSE command with the synchronous `UnboundedSender::send`. If the
     connection has already ended, that send fails, and the drop does nothing more.
+- **"The core closed it."** When the router routes the core's CLOSE to a stream, it first sets
+  that stream's shared closed-by-core flag, then forwards the CLOSE. From that moment the stream
+  counts as closed by the core, even before the caller reads `Closed`/`None`.
+- **The CLOSE rule.** A `Subscription` or `AttachStream` sends CLOSE at most once, by `close()`
+  or else by `Drop`. It never sends CLOSE once its closed-by-core flag is set. This rule covers
+  CLOSE only. Input, RESIZE, CREDIT or CLOSE already on the wire when the core closes the channel
+  race with the core's CLOSE. What the core does with a frame on a channel it has closed is not
+  proven (W9 covers only a never-opened channel), and the SDK does not depend on it.
 - **The router.** It is a `tokio::spawn`ed task that owns the `FrameSource`. For each frame:
   - channel 0 DATA → `Incoming`
     - a response goes to its pending entry
     - an unknown id, or `id:null`, is discarded (W9)
     - a notification on channel 0 is discarded
+    - a payload that classifies as `InvalidJson` or `NotJsonRpc` is discarded, and the connection
+      stays open, as the core's own `id:null` error replies are (W9)
   - DATA, RESIZE or CLOSE on an open stream channel → that stream. After a CLOSE the channel is
     forgotten.
   - CREDIT, FOCUS, FACTS or AUTOMATIC_INPUT from the core → discarded. The core never sent CREDIT
     on any channel (W6, `probe-framed-output.txt:118-122`); the others are viewer → core only
     (README:55-58).
   - an unknown channel or an unknown kind → discarded (W9)
+- **Opening a stream channel.**
+  - `events_subscribe` and `terminal_attach` register their pending call with a stream route.
+  - When the router routes that call's successful reply, it reads the reply's `channel` and opens
+    the route before it reads the next frame. The core sends the reply before the stream's frames
+    ("The attach reply precedes stream frames", README:98-99; B4: the reply, then ch=2 DATA in the
+    same millisecond, `probe-framed-output.txt:376-378`), so no stream frame is lost.
+  - The router hands the caller the reply together with a **stream handle**: the channel, its
+    frame receiver, the closed-by-core flag and a writer sender. `Subscription` and `AttachStream`
+    are built on that handle. Dropping the handle applies the CLOSE rule. So any route opened for
+    a caller that never gets a stream is closed:
+    - the reply decodes with an error (`Error::Decode`): the handle is dropped and CLOSE is sent
+    - the `events_subscribe`/`terminal_attach` future is dropped after the reply was routed: the
+      handle is dropped with the undelivered reply, and CLOSE is sent
+    - the future is dropped before the reply arrives: its pending entry stays (§6.2), the reply
+      opens the route, the oneshot send fails, and the handle is dropped, so CLOSE is sent
+    - frames routed to the handle before then are dropped with it
+  - Which error a bad `channel` gives:
+    - absent → `Error::Protocol(MissingChannel)`, nothing opened
+    - present but not a `u32` (a string, a negative number, or more than 4294967295) →
+      `Error::Decode` for that method, nothing opened
+  - Calls made through `call_raw` carry no route (§4.9).
 - **Connection end.** These events end the connection:
 
   | Event | `ConnectionEndKind` |
@@ -663,7 +813,8 @@ On any failure the transport is dropped. `Client<T>` is `Clone` through an inter
   - every stream gets `Err(Error::Closed)`, then `None`
   - later calls and writes return `Error::Closed` without writing
   - `Client::close_reason()` returns `Some(ConnectionEnd { kind, message })`, where `message` is
-    the `Display` of the causing error and `ConnectionEnd` is `Clone`. It returns `None` while the
+    the `Display` of the causing error and `ConnectionEnd` is `Clone`. `PeerClosed` has no causing
+    error, so its `message` is exactly `herdr-core closed the connection`. It returns `None` while the
     connection is open.
 - **Server stop.** `server_stop` and `server_restart` return their reply, and the connection then
   ends with `PeerClosed` (W22).
@@ -678,7 +829,13 @@ On any failure the transport is dropped. `Client<T>` is `Clone` through an inter
 
 ### 7.1 `StreamTransport<R: AsyncRead, W: AsyncWrite>`
 
-- **Lines.** `send_line` writes the line and `\n`. `recv_line` uses `LineDecoder`.
+- **Lines.** `send_line` writes the line and `\n`. `recv_line` uses `LineDecoder`. Lines have no
+  length cap: the SDK trusts the peer the caller chose (its own `hc connect`, or a transport it
+  built), and line mode is not hardened against a hostile peer. `StreamTransport`'s doc comment
+  says so.
+- **End of stream mid-message.** If the reader hits end of stream inside a line or a frame, the
+  partial bytes are discarded and `recv_line`/`recv` return `Ok(None)`, the same as a clean
+  close. `connect` then returns `Error::Closed`, and an open connection ends with `PeerClosed`.
 - **Frames.** `into_framed` moves the decoder's leftover bytes into the `FrameSource` half's
   `FrameDecoder` (§4.2). `StreamSink<W>` encodes frames, and `StreamSource<R>` decodes them.
 - **Testing.** It works over any byte pair, including `tokio::io::duplex`.
@@ -704,9 +861,11 @@ On any failure the transport is dropped. `Client<T>` is `Clone` through an inter
   so the caller decides (§8 edge cases).
 - **Halves.** `StreamTransport` over the child's stdout and stdin carries the protocol. The child
   handle lives in the sink half, so closing the sink closes stdin (W21).
-- **Errors.** A program that cannot start is
-  `TransportError::Spawn { program, source }`, with source kind `NotFound`
-  (`probe-crates-output.txt`, C6a).
+- **Errors.** A program that cannot start is `TransportError::Spawn { program, source }`, where
+  `source` is the operating system's spawn error, passed through unchanged. On macOS a missing
+  program's kind is `NotFound` (`probe-crates-output.txt`, C6a). Other platforms were not probed,
+  so tests assert the variant, the program and the `cannot start {program}: ` prefix, not the
+  kind.
 
 ## 8. Errors and edge cases
 
@@ -714,15 +873,16 @@ On any failure the transport is dropped. `Client<T>` is `Clone` through an inter
 
 | Type | Variant | Display |
 |---|---|---|
-| `Error` (client) | `Transport(TransportError)` | `transport failed: {source}` |
+| `Error` (`connection`) | `Transport(TransportError)` | `transport failed: {source}` |
 | | `Rpc { method: MethodName, error }` | `{method} refused by herdr-core: {message} [{kind}]`, e.g. `terminal.get refused by herdr-core: no terminal "t999" [not_found]` (message: `probe-plain-output.txt:247`) |
 | | `Decode { method: MethodName, source }` | `cannot decode the {method} result: {source}`, e.g. ``cannot decode the terminal.get result: invalid value: integer `-1`, expected u32`` (the `serde_json::from_value` text: `probe-review-output.txt`, `== R4`) |
 | | `Protocol(ProtocolError)` | `herdr-core protocol violation: {source}` |
 | | `UnsupportedGeneration { message }` | `herdr-core refused protocol generation 1: {message}` |
 | | `UnsupportedVersion { found, minimum }` | `herdr-core {found} is older than the supported minimum {minimum}`, e.g. `herdr-core 0.1.20 is older than the supported minimum 0.1.21` |
 | | `InvalidVersion { found }` | `herdr-core reported version "{found}", which is not MAJOR.MINOR.PATCH` |
-| | `PayloadTooLarge { len }` | `payload of {len} bytes exceeds the 16777216-byte frame limit` |
+| | `PayloadTooLarge { len }` | `payload of {len} bytes exceeds the 16777216-byte frame limit`. Any outgoing frame payload (§6.2, §6.4) |
 | | `Closed` | `the connection to herdr-core is closed` |
+| | `StreamClosed` | `the terminal.attach stream is closed`. A write on an attach stream that has ended while the connection is open (§6.4) |
 | `TransportError` | `Spawn { program, source }` | `cannot start {program}: {source}`, e.g. `cannot start hc: No such file or directory (os error 2)` (C6a) |
 | | `Io(io::Error)` | `I/O error: {source}`, e.g. `I/O error: Broken pipe (os error 32)` (C6d) |
 | | `Frame(FrameError)` | transparent |
@@ -732,9 +892,11 @@ On any failure the transport is dropped. `Client<T>` is `Clone` through an inter
 | | `NotJsonRpc` | `message is not a JSON-RPC response or notification` |
 | | `HelloMismatch { framed, generation }` | `hello reply has framed={framed} and generation={generation}, expected framed=true and generation=1` |
 | | `EventLineTooLong` | `event line exceeds 16777216 bytes without a newline` |
-| | `UnexpectedHelloReply { got }` | `expected the hello reply (id 0), got {got}`, where `got` is `a response with id {id}` or `a notification` |
-| | `MissingChannel { method }` | `the {method} reply has no channel on a framed connection` |
+| | `UnexpectedHelloReply { got }` | `expected the hello reply (id 0), got {got}`, where `got` is `a response with id {id}`, `a response with id null` (an `id:null` response) or `a notification` |
+| | `MissingChannel { method: MethodName }` | `the {method} reply has no channel on a framed connection` |
 | | `InvalidEvent { kind, source }` | `cannot decode a {kind} event: {source}` |
+| | `InvalidNotification { method, source }` | `cannot decode a {method} notification: {source}`, where `source` is the `serde_json` error |
+| | `ResponseOnStream` | `a JSON-RPC response arrived on an event stream` |
 | | `Frame(FrameError)` | transparent |
 | `RpcError` | (struct) | `{message} [{kind}]` |
 | `EmptyValueError` | `{ what: &'static str }` | `{what} must not be empty`, e.g. `terminal reference must not be empty`, `argv must not be empty` |
@@ -755,37 +917,45 @@ On any failure the transport is dropped. `Client<T>` is `Clone` through an inter
 
 | Input or event | Rule | Owner |
 |---|---|---|
-| Reply for an unknown id (a late reply after a dropped call) | discarded | `client::router` |
-| Error with `id:null` (`-32700`) | discarded (W9) | `client::router` |
-| A notification on channel 0 in framed mode | discarded | `client::router` |
-| Frame on an unknown or closed channel, or an unknown kind | discarded (W9, W14) | `client::router` |
-| CREDIT, FOCUS, FACTS or AUTOMATIC_INPUT from the core | discarded (§6.5) | `client::router` |
-| Incoming `len` > 16 MiB | `TransportError::Frame(TooLarge)` ends the connection with `ProtocolViolation` (§6.5) | `protocol::frame_decoder`, `adapter::stream`, `client::router` |
-| A sink write fails (e.g. `Broken pipe`, `probe-framed-output.txt:464`) | that caller gets `Error::Transport`; the connection ends with `TransportFailed` (§6.5) | `client::writer` |
-| Outgoing payload > 16 MiB (a large `file.write`) | `Error::PayloadTooLarge` before sending. The connection is unaffected | `client::client` |
-| Incoming RESIZE with a payload that is not 4 bytes | `Err(Protocol(Frame(BadControlPayload)))` on that attach stream; it continues | `protocol::frame`, `client::attach` |
+| Reply for an unknown id (a late reply after a dropped call) | discarded | `connection::router` |
+| Error with `id:null` (`-32700`) | discarded (W9) | `connection::router` |
+| A notification on channel 0 in framed mode | discarded | `connection::router` |
+| Frame on an unknown or closed channel, or an unknown kind | discarded (W9, W14) | `connection::router` |
+| CREDIT, FOCUS, FACTS or AUTOMATIC_INPUT from the core | discarded (§6.5) | `connection::router` |
+| Incoming `len` > 16 MiB | `TransportError::Frame(TooLarge)` ends the connection with `ProtocolViolation` (§6.5) | `protocol::frame_decoder`, `adapter::stream`, `connection::router` |
+| A sink write fails (e.g. `Broken pipe`, `probe-framed-output.txt:464`) | that caller gets `Error::Transport`; the connection ends with `TransportFailed` (§6.5) | `connection::writer` |
+| Outgoing payload > 16 MiB (a large `file.write`) | `Error::PayloadTooLarge` before sending. The connection is unaffected | `connection::client` |
+| Incoming RESIZE with a payload that is not 4 bytes | `Err(Protocol(Frame(BadControlPayload)))` on that attach stream; it continues | `protocol::frame`, `connection::attach` |
 | Event line split across frames, or several lines in one frame | reassembled (W10) | `protocol::ndjson` |
-| Event line that is not JSON | `Err(Protocol(InvalidJson))`; the stream continues | `client::subscription` |
-| Known event `type` whose `data` does not match | `Err(Protocol(InvalidEvent))`; the stream continues | `protocol::notification`, `client::subscription` |
-| Event line over 16 MiB with no `\n` | that subscription yields `EventLineTooLong`, then ends | `protocol::ndjson`, `client::subscription` |
-| `events.subscribe` reply without `channel` | `Error::Protocol(MissingChannel)` | `client::client` |
-| `missed` | delivered. Later events with `seq ≤ missed.seq` are dropped (W12) | `client::subscription` |
+| Event line that is not JSON | `Err(Protocol(InvalidJson))`; the stream continues | `connection::subscription` |
+| Event line that is valid JSON but not JSON-RPC | `Err(Protocol(NotJsonRpc))`; the stream continues (§6.3) | `connection::subscription` |
+| JSON-RPC response on an event stream | `Err(Protocol(ResponseOnStream))`; the stream continues (§6.3) | `connection::subscription` |
+| `heartbeat`/`missed` with undecodable params, or an `event` whose envelope (`seq`, `type`, `terminal`, `machine`) does not decode | `Err(Protocol(InvalidNotification { method }))`; the stream continues (§6.3) | `protocol::notification`, `connection::subscription` |
+| Known event `type` whose `data` does not match | `Err(Protocol(InvalidEvent))`; the stream continues | `protocol::notification`, `connection::subscription` |
+| Event line over 16 MiB with no `\n` | that subscription yields `EventLineTooLong`, then ends | `protocol::ndjson`, `connection::subscription` |
+| `events.subscribe` or `terminal.attach` reply without `channel` | `Error::Protocol(MissingChannel)` with that method; nothing opened | `connection::client`, `connection::router` |
+| `channel` present but not a `u32` | `Error::Decode` for that method; nothing opened (§6.5) | `connection::router` |
+| Stream reply with a valid `channel` that fails typed decoding | `Error::Decode`; the stream handle is dropped, so CLOSE is sent (§6.5) | `connection::client`, `connection::router` |
+| `events_subscribe`/`terminal_attach` future dropped before its reply arrives | the pending entry stays; the reply opens the route, the handle is dropped, so CLOSE is sent (§6.2, §6.5). A reply without `channel` opens nothing | `connection::client`, `connection::pending`, `connection::router` |
+| `events_subscribe`/`terminal_attach` future dropped after its reply was routed | the stream handle is dropped with the reply, so CLOSE is sent (§6.5) | `connection::router` |
+| `missed` | delivered. Later events with `seq ≤ missed.seq` are dropped (W12) | `connection::subscription` |
 | Unknown event `type` | `EventKind::Unknown` | `protocol::notification` |
 | Unknown notification method | `Notification::Other` | `protocol::notification` |
 | Unknown error kind | `ErrorKind::Other(String)` | `protocol::rpc_error` |
 | Unknown word in an open-enum field (§4.8) | `Other(String)`, serialized back unchanged | `protocol::types` |
 | Unknown value in a closed schema enum | `Error::Decode` for that method | `protocol::types` |
 | Unknown field in a reply | ignored | `protocol::types` |
-| Core CLOSE on an attach channel: empty / JSON `Ended` shape / anything else | `Detached` / `Ended` (W15) / `Unrecognized { payload }` | `client::attach` |
-| Core CLOSE on an event channel, empty or not | the subscription ends | `client::subscription` |
-| Hello reply: EOF / not JSON / wrong id or a notification | `Error::Closed` / `Protocol(InvalidJson)` / `Protocol(UnexpectedHelloReply)` | `client::client` |
+| Core CLOSE on an attach channel: empty / JSON object decoding as the `Ended` shape (string `reason`; optional integer `exit_code`, `signal`, `finished_ms`) / anything else, including a wrongly typed field | `Detached` / `Ended` (W15, README:109-111) / `Unrecognized { payload }` | `connection::attach` |
+| Core CLOSE on an event channel, empty or not | the subscription ends | `connection::subscription` |
+| Hello reply: EOF / not JSON / valid JSON but not JSON-RPC (including a non-integer id) / wrong id, `id:null` or a notification | `Error::Closed` / `Protocol(InvalidJson)` / `Protocol(NotJsonRpc)` / `Protocol(UnexpectedHelloReply)` | `connection::client` |
+| Channel-0 DATA in framed mode that is not JSON, or not JSON-RPC | discarded; the connection stays open (§6.5) | `connection::router` |
 | Version table of §4.5 | as listed | `protocol::hello` |
 | `terminal.run` command | `Command::{Shell, Argv, Line}`. "Both" cannot be expressed (E3) | `protocol::methods::terminal` |
 | `Argv::new([])` | `argv must not be empty`. `Command::Shell` is the explicit form of "no command" (E4) | `protocol::methods` |
 | `machine.exec` command | exactly one of argv or line (E6, E7) | `protocol::methods::machine` |
 | `terminal.wait` target | required (E23) | `protocol::methods::terminal` |
 | `InitialSize` of 0 | impossible: `NonZeroU16` (E22) | `protocol::types` |
-| Attach or RESIZE at 0 | allowed: `u16`. The core accepts the attach and ignores the RESIZE (`probe-review-output.txt`, `== R2`) | `protocol::methods::terminal`, `client::attach` |
+| Attach or RESIZE at 0 | allowed: `u16`. The core accepts the attach and ignores the RESIZE (`probe-review-output.txt`, `== R2`) | `protocol::methods::terminal`, `connection::attach` |
 | Label set to `""` | impossible: `LabelValue` is non-empty. Removal is `LabelChange::Remove` | `protocol::methods::terminal` |
 | Empty identifier string | refused exactly where the core refuses it, per §4.7's table | `protocol::identifiers` |
 | Non-empty identifier the core refuses (`a b`, `a=b`) | passed through. It returns `Error::Rpc` with `invalid_params` | `protocol::identifiers` |
@@ -794,9 +964,24 @@ On any failure the transport is dropped. `Client<T>` is `Clone` through an inter
 | `doc.set` with value `null` | allowed: it deletes (E24) | `protocol::methods::doc` |
 | Base64 bytes from the core that are not valid base64 | `Error::Decode` for that method | `protocol::types` |
 | `ProcessTransport` started inside a Herdr terminal | inherits `HC_*` (`HC_SCOPE`, `HC_TERMINAL_ID`, `HC_TERMINAL_SOCKET`), as any child would. Callers use `env_remove` to opt out. The live tests remove every `HC_*` | `adapter::process`, `tests/live.rs` |
-| Dropping a `Subscription` or `AttachStream` | sends CLOSE through the writer; a no-op on an ended connection | `client::subscription`, `client::attach`, `client::writer` |
-| Last `Client` clone dropped while a stream lives | the connection stays open until the stream drops too (§6.5) | `client::writer` |
-| Last holder of the writer dropped | sink closed, so stdin EOF and `hc connect` exits 0. `kill_on_drop` is the backstop | `client::writer`, `adapter::process` |
+| Dropping a `Subscription` or `AttachStream` | sends CLOSE through the writer under the CLOSE rule (§6.5); a no-op on an ended connection | `connection::subscription`, `connection::attach`, `connection::writer` |
+| `close()` called twice, or `close()` then drop | one CLOSE in total. While the connection is open, the second `close()` returns `Ok(())` (§6.3, §6.4) | `connection::subscription`, `connection::attach` |
+| Drop or `close()` once the closed-by-core flag is set (set by the router before it forwards the core's CLOSE, even if the caller has not read it yet) | no CLOSE is sent; `close()` returns `Ok(())` (§6.3, §6.4, §6.5) | `connection::router`, `connection::subscription`, `connection::attach` |
+| `Subscription::close()` after the connection ended, first call or second | `Err(Error::Closed)`, nothing sent. This wins over the `Ok(())` of an ended stream (§6.3) | `connection::subscription` |
+| Attach write after the stream ended, connection open | `Error::StreamClosed`, nothing sent (§6.4) | `connection::attach` |
+| Attach write after the connection ended | `Error::Closed`, nothing sent. This wins over `StreamClosed` (§6.4) | `connection::attach` |
+| Attach `input`, `automatic_input` or `facts` payload > 16 MiB | `Error::PayloadTooLarge`, nothing sent; the stream is unaffected | `connection::attach` |
+| A stream frame arriving right after the reply that opened its channel | delivered: the router opens the route while routing the reply (§6.5) | `connection::router` |
+| Event line of 256 KiB or more | completes: credit is sent per DATA frame taken, partial lines included (§6.3) | `connection::subscription` |
+| Zero-length DATA frame on a stream | skipped, no CREDIT, no `Output` (§6.3, §6.4) | `connection::subscription`, `connection::attach` |
+| `next()` cancelled by `select!` or a timeout | nothing lost: no notification, output or credit (§6.3, §6.4) | `connection::subscription`, `connection::attach` |
+| Outgoing call on an ended connection with a payload over 16 MiB | `Error::Closed`, which is checked first (§6.2) | `connection::client` |
+| RESIZE on an event channel | discarded (§6.3) | `connection::subscription` |
+| `call_raw` with `events.subscribe` or `terminal.attach` | the reply is returned; the channel's frames are discarded (§4.9) | `connection::client`, `connection::router` |
+| End of stream inside a line or a frame | partial bytes discarded, `Ok(None)` (§7.1) | `adapter::stream` |
+| Empty name in `Environment` | accepted (§4.7, §4.8) | `protocol::types` |
+| Last `Client` clone dropped while a stream lives | the connection stays open until the stream drops too (§6.5) | `connection::writer` |
+| Last holder of the writer dropped | sink closed, so stdin EOF and `hc connect` exits 0. `kill_on_drop` is the backstop | `connection::writer`, `adapter::process` |
 
 ## 9. Testing
 
@@ -811,13 +996,14 @@ Every logic-bearing file under `src/` has a `#[cfg(test)] mod tests` (`unit-test
 | NDJSON | split, packed and over-long lines |
 | Envelope | classification |
 | Version | the floor, with every row of §4.5 |
-| Serde | a round-trip for every type and Params, error decode for every `ErrorKind` |
+| Serde | a deserialize-then-serialize round-trip for every type; the exact serialized JSON of every Params (send-only, §4.8); error decode for every `ErrorKind` |
 | Identifiers | for every refusing newtype, `""` refused and non-empty accepted; for every accepting newtype, `""` accepted (§4.7) |
 | Open enums | every known word, and an unknown word round-tripping through `Other` |
 | Writer | an acknowledged write, a failed write ending the connection, and a drop-time CLOSE on an open and an ended connection |
 | Base64 | encode and decode |
-| Client logic | router, pending table, credit accounting and stale-seq dropping, driven by in-memory frames through a test-only `FrameSource`/`FrameSink`, with no adapter |
-| `ProcessTransport` | argv and env assembly, and missing program → `Spawn`/`NotFound` |
+| Client logic | router (including opening a route while routing its reply), pending table, credit accounting (the §6.3 example; a line longer than 262144 bytes split over many frames completes; a zero-length frame sends no CREDIT; a `next()` cancelled mid-wait loses nothing) and stale-seq dropping, driven by in-memory frames through a test-only `FrameSource`/`FrameSink`, with no adapter |
+| Stream lifecycle | the CLOSE rule: one CLOSE for `close()` twice or `close()` then drop; none once the closed-by-core flag is set, including when the core's CLOSE is queued but unread. `Subscription::close()` results in §6.3's order. The attach write refusals in §6.4's order. A dropped stream handle (decode failure, dropped call future) sends CLOSE |
+| `ProcessTransport` | argv and env assembly, and missing program → `Spawn` with that program and the `cannot start {program}: ` prefix; the error kind is not asserted (§7.2) |
 
 ### 9.2 `tests/support/`
 
@@ -837,25 +1023,33 @@ Every logic-bearing file under `src/` has a `#[cfg(test)] mod tests` (`unit-test
   | integer | its `minimum` if that is ≥ 1, else `1` |
   | number | `1.0` |
   | boolean | `true` |
-  | array | `minItems` items if set, else one item |
+  | array | `minItems` items if set, else one item. An array whose item schema is a `$ref` to a schema already being built (a cycle: `WaitResult.children` is `array<WaitResult>`) gets no items |
   | map (`additionalProperties`) | one entry, key `"k"` |
   | `any` | `"x"` |
 
   One override table applies where §4.8 narrows a schema string to bytes:
   `ExecResult.stdout` and `ExecResult.stderr` get `"eAo="`, which is valid base64
-  (`probe-base64-output.txt:37-38`). Every value these rules produce is accepted by §4.7's
-  newtypes and §4.8's types: `"x"` is non-empty and an open-enum `Other`, integers ≥ 1 satisfy
-  `NonZeroU16`, and `Display.cell` gets two items.
+  (`probe-base64-output.txt:37-38`). The rules aim to produce values §4.7's newtypes and §4.8's
+  types accept: `"x"` is non-empty and an open-enum `Other`, integers ≥ 1 fit `NonZeroU16`, and
+  `Display.cell` gets two items. Coverage check 3 (§9.3) is what proves it: a refused value fails
+  that check.
 
 ### 9.3 `tests/schema_coverage.rs` (offline, always runs)
 
 It runs against `tests/fixtures/hc-0.1.21.openrpc.json`, a copy of
 `evidence/upstream-v0.1.21-schema-hc.openrpc.json`:
 1. The SDK's 32 `Method::NAME`s equal the fixture's method names.
-2. Every `Params` serialized with every optional set has exactly the fixture's param names. With
-   only `new()` arguments it has exactly the required names, except where §4.8 makes one of
-   several optional params mandatory (`Command`, `ExecCommand`, `WaitTarget`, `MachineTarget`).
-   There it has the required names plus the chosen variant's params.
+2. Params names:
+   - Every `Params` built with every setter has exactly the fixture's param names.
+   - The exception is the four Params whose §4.8 enum makes params exclusive: `TerminalRun`
+     (`Command`), `MachineExec` (`ExecCommand`), `TerminalWait` (`WaitTarget`) and `MachineAdd`
+     (`MachineTarget`). For these, each variant built with every setter has the fixture's names
+     minus the params only other variants send. The union over all variants equals the fixture's
+     names. For example, `TerminalRun` with `Command::Argv` lacks only `line`, with `Line` lacks
+     only `argv`, and with `Shell` lacks both. `MachineAdd` with `Ssh` lacks only `via`, and with
+     `Via` lacks only `target`.
+   - With only `new()` arguments, a `Params` has exactly the required names, plus, for those four,
+     the params the chosen variant value sends (`Ssh` with `name: None` sends only `target`).
 3. For each of the 36 schemas, a `schema_instance` deserialized into the SDK type and serialized
    back equals the instance. A dropped or renamed property fails.
 
@@ -864,12 +1058,26 @@ It runs against `tests/fixtures/hc-0.1.21.openrpc.json`, a copy of
 **Through the fake transport:**
 - every one of the 32 methods: the request JSON is asserted, and a canned reply is decoded.
   Replies are copied from the probe outputs.
-- events: split and packed lines, credit sent, `missed` dropping, close
+- events: split and packed lines, credit sent, `missed` dropping, close; the first DATA frame
+  sent right after the subscribe reply is delivered
 - events failure paths: a non-JSON line, mismatched `data`, an over-long line, a reply without
-  `channel`, CLOSE empty and non-empty
+  `channel`, CLOSE empty and non-empty, a RESIZE on the event channel (discarded), a reply
+  with a valid `channel` that fails decoding (`Error::Decode`, then a CLOSE is sent on that
+  channel), a valid-JSON non-JSON-RPC line (`NotJsonRpc`), a response line (`ResponseOnStream`),
+  a `heartbeat` without `seq` (`InvalidNotification`); each followed by a delivered event
+- a stream-opening future dropped before its reply: the peer then sends the reply, and a CLOSE
+  is sent on its channel
+- `Subscription::close()`: after the core's CLOSE (`Ok(())`, nothing sent), twice (one CLOSE),
+  and after a connection end (`Err(Error::Closed)`)
 - attach: output, resize (including a malformed one), all three close reasons, `automatic_input`
-  with and without negotiation
-- every `connect` refusal of §6.1, including each bad-hello-reply case
+  with and without negotiation; a write after the core's CLOSE (`StreamClosed`), after a
+  connection end (`Closed`), and with a payload over 16 MiB (`PayloadTooLarge`); a reply
+  without `channel` (`MissingChannel` with method `terminal.attach`)
+- `call_raw` with `events.subscribe`: the reply is returned and a following DATA frame on its
+  channel is discarded
+- every `connect` refusal of §6.1, including each bad-hello-reply case (`id:null` among them)
+  and both `HelloMismatch` causes (`framed:false`, generation 2)
+- `close_reason()` after EOF is `peer closed: herdr-core closed the connection`
 - connection loss with calls and streams pending: by EOF, by a failed write, and by a frame
   over 16 MiB, with `close_reason()` checked for each
 - lifetime: the connection stays open after the last `Client` clone drops while a stream lives,
@@ -882,8 +1090,9 @@ applied, with the fake transport, to:
 
 A non-`Send` future fails the build, and so fails the gate.
 
-**Through `StreamTransport` over `tokio::io::duplex`:** the hello line followed in the same write
-by frames.
+**Through `StreamTransport` over `tokio::io::duplex`:**
+- the hello line followed in the same write by frames
+- end of stream inside a line, and inside a frame: `Ok(None)` (§7.1)
 
 ### 9.5 `tests/live.rs`
 
@@ -891,18 +1100,25 @@ by frames.
   early. Captured test output does not reach the log, so the CI warning grep stays clean
   (`evidence/probe-crates-output.txt:1277-1336`).
 - **Isolated core per test.**
-  - session `hfy-<pid>-<n>`
-  - a fresh short directory: `/tmp/hfy<random>` on Unix (W24), `std::env::temp_dir()` on Windows
+  - session `hfy-<pid>-<n>`, where `n` counts the tests started in that process
+  - a fresh short directory named the same way: `/tmp/hfy<pid>-<n>` on Unix (W24),
+    `std::env::temp_dir()` joined with it on Windows. If that path already exists (left by a
+    killed run whose pid is reused), the guard first runs `hc server stop` under that session and
+    directory, then removes the directory, then creates it fresh
   - `XDG_STATE_HOME`, `XDG_CONFIG_HOME` and `XDG_RUNTIME_DIR` set under it
   - every `HC_*` variable removed
   - `hc connect` starts the core (W23)
-  - a guard's `Drop` runs `hc server stop` with the same environment, then removes the directory
+  - a guard's `Drop` runs `hc server stop` with the same environment plus `HC_SESSION=<session>`,
+    then removes the directory. `hc connect --session <name>` and `HC_SESSION=<name>` reach the
+    same core (`probe-plain-output.txt:132-138`), and `hc server stop` under `HC_SESSION` stops
+    an isolated core with exit 0 (`evidence/probe-exec-output.txt`). The core's socket and pids
+    are gone afterwards (`probe-plain-output.txt:636-650`)
   - no test addresses the default session
 - **Coverage: all 32 methods.**
 
   | Result | Methods |
   |---|---|
-  | success (28) | `hello`, `server.status`, `server.restart`, `server.stop`, `terminal.run`, `templates.list`, `terminal.list`, `terminal.get`, `terminal.kill`, `terminal.rm`, `terminal.keep`, `terminal.label`, `terminal.read`, `terminal.attach`, `terminal.send`, `terminal.wait`, `terminal.keys`, `terminal.interrupt` (short `timeout`), `terminal.put`, `machine.exec`, `file.read`, `file.write`, `file.edit`, `doc.get`, `doc.set`, `events.subscribe`, `machine.list`, `rpc.discover` |
+  | success (28; `machine.exec` success recorded in `evidence/probe-exec-output.txt`: `argv:["echo","hi"]` gives `"stdout":"aGkK"`, code 0) | `hello`, `server.status`, `server.restart`, `server.stop`, `terminal.run`, `templates.list`, `terminal.list`, `terminal.get`, `terminal.kill`, `terminal.rm`, `terminal.keep`, `terminal.label`, `terminal.read`, `terminal.attach`, `terminal.send`, `terminal.wait`, `terminal.keys`, `terminal.interrupt` (short `timeout`), `terminal.put`, `machine.exec`, `file.read`, `file.write`, `file.edit`, `doc.get`, `doc.set`, `events.subscribe`, `machine.list`, `rpc.discover` |
   | typed error (4) | `machine.add` with `MachineTarget::Via { name: m1, command: "false" }` → `unreachable` (18 ms, `probe-methods-output.txt:300-306`); `machine.connect`, `machine.rename` and `machine.rm` on `nope` → `machine_unknown` (`:283-300`) |
 
 - **Drift.** The installed `hc schema` output and `rpc_discover()` are each JSON-equal to the
