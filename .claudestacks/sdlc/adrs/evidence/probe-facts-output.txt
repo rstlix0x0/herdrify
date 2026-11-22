@@ -1,0 +1,46 @@
+$ cargo run -q --bin facts -- ../hc-0.1.21-schema.json ../herdr-app-0.1.16-commands.json
+== hc schema (../hc-0.1.21-schema.json)
+openrpc: "1.3.2"
+info.title: "herdr-core"
+info.version: "0.1.21"
+info.description: "Terminal runtime for coding agents. JSON-RPC 2.0, one message per line on the hc socket (or framed after `hello`). Protocol generation 1. Errors carry a stable `data.kind`."
+methods: 32
+  method hello (calls_you, core, features, framed, generation) | Handshake: protocol generation, core identity, methods and features. `framed: true` switches the connection to framed mode.
+  method server.status () | This core's identity, version, pid, uptime, holder and terminal counts.
+  method server.stop () | Stop the core and its programs. Kept terminals remain pending and get new shells when the core next starts.
+  method server.restart (environment) | Planned restart (e.g. after an update): screens are saved, programs keep running, the next core adopts them.
+  method terminal.run (argv, caller, cwd, die_with_parent, display, env, keep, labels, line, name, no_notify, no_parent, on, outlive_parent, parent, rm, size, timeout, wait) | Start a program in a new terminal; or, when argv[0] names a template, start its command and send its body plus the rest of argv as the first message once the agent is ready. Returns once it runs (and the first message is sent or not).
+  method templates.list () | Templates by name and description, so you can pick a role without knowing its command.
+  method terminal.list (all, labels) | Live terminals (all with `all`), optionally filtered by labels.
+  method terminal.get (caller, terminal) | One terminal's facts, live or finished.
+  method terminal.kill (caller, terminal) | End the program: hangup, then terminate, then kill. Returns the observed result.
+  method terminal.rm (caller, terminal) | Remove a finished terminal.
+  method terminal.keep (keep, terminal) | Set whether a live terminal restarts as a shell after loss, including death by signal without an exit code. Exit with a code and explicit kill close it. Recovery runs on every OS after a grace delay, except while the core stops/restarts or Windows reports session shutdown. Streams end on loss; reattach after restarted.
+  method terminal.label (labels, terminal) | Set or remove labels (free-form `key=value`, never interpreted).
+  method terminal.read (caller, lines, terminal) | The screen plus `lines` of history as text, live or finished.
+  method terminal.attach (caller, cols, display, history, observe, resize_notifications, resumed, rows, terminal) | Open a raw stream to a live terminal on this framed connection (see `hello` with `framed`). Loss ends the stream even when kept; reattach after the restarted event.
+  method terminal.send (caller, force, if, terminal, text, timeout, wait) | Paste text and press Enter after a person sends or clears their draft (at most 60 s since their last key), otherwise after ~3 s of quiet. Keys pressed during delivery are held, then delivered. Refuses a blocked program unless `force`.
+  method terminal.wait (caller, children, output, terminal, timeout) | Wait until the program is not working (any word but working, or it exited/was lost); already not working returns at once. A program that never reported status is working until it exits. After a send from the same caller, waits for the turn that send started. A message to the caller also ends it: ended false, reason message, from = sender. A timeout is a check-in: ended false, current status.
+  method terminal.keys (caller, keys, terminal) | Press named keys, encoded for the program's current keyboard modes, after ~3 s of quiet. Does not wait for an unsent draft.
+  method terminal.interrupt (terminal, timeout) | Press the stop key (esc if it reports status, else ctrl+c), then report what was observed. Never escalates.
+  method terminal.put (data, name, terminal) | Write bytes to a file beside a live terminal, on its machine, for its program to read (a pasted image). Lands in a folder of its own, removed with the terminal; the name is kept (a suffix when taken). Types nothing: paste the path yourself.
+  method machine.exec (argv, cwd, env, input, line, on, timeout) | Run one program here or on a machine (`on`) without a terminal; return its exit code and exactly what it wrote (base64). `argv` runs as given, `line` in that machine's shell. Everything it started ends with it: at its exit, at `timeout` (default 60 s), or when the caller goes away. A nonzero exit or a timeout is a result, not an error.
+  method file.read (cwd, limit, offset, on, path) | Read a text file here or on a machine (`on`): lines from `offset`, at most `limit` and 8 MB, and how many it has.
+  method file.write (cwd, data, on, path) | Write a file here or on a machine (`on`), making missing folders. Swapped in whole: a reader sees old or new, never half. An existing file keeps its mode; a symlink is followed.
+  method file.edit (cwd, edits, on, path) | Edit a text file here or on a machine (`on`): each `old` must be found exactly once in the file as it was, edits must not overlap; all are made or none. Written like file.write.
+  method doc.get (name, on) | Read an opaque JSON document and its version (zero when never written). Optional on selects another machine.
+  method doc.set (name, on, value, version) | Write an opaque JSON document (at most 1 MiB) if its version still matches. Null deletes the value but retains its version. Persists atomically and emits a doc event.
+  method events.subscribe (children_of, labels, terminal) | Snapshot of matching terminals, then every fact change in order (created, lost, restarted, keep, finished, removed, status, turn, title, labels, size, doc) as `event` notifications, `heartbeat` every 15 s, and `missed` + fresh snapshot for a subscriber that fell behind.
+  method machine.add (name, session, target, temporary, via) | Add another machine: dial it over ssh, check that hc answers there, and keep it under a name.
+  method machine.list () | The machines this core has added.
+  method machine.connect (machine) | Dial a machine now instead of at its next retry (after a login), and report its line.
+  method machine.rename (machine, new_name) | Give a machine a new name here. Only this core's name for it changes.
+  method machine.rm (machine) | Forget a machine. Its terminals keep running there.
+  method rpc.discover () | The whole API as an OpenRPC document: every method with its params, result and errors in JSON Schema.
+components.schemas: 36
+== herdr-app commands (../herdr-app-0.1.16-commands.json)
+commands: 75
+keys per command: {"about", "args", "name"}
+keys per arg: {"name", "required"}
+commands with an `argv` arg: 4 ["space.new", "tab.new", "pane.split", "terminal.open"]
+exit: 0

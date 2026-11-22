@@ -1,0 +1,4 @@
+# Standalone probe workspace: core dev-depends on testkit, testkit depends on core.
+[workspace]
+resolver = "3"
+members = ["core", "testkit"]

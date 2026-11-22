@@ -1,0 +1,8 @@
+$ cargo run -q --bin bridge
+case A (spawn_blocking): ok -> screen of t7
+
+thread 'tokio-rt-worker' (4777212) panicked at src/bin/bridge.rs:41:61:
+Cannot start a runtime from within a runtime. This happens because a function (like `block_on`) attempted to block the current thread while the thread is being used to drive asynchronous tasks. If you are in an async function, use `.await` on the future instead of blocking on it.
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+case B (async context): panic -> Cannot start a runtime from within a runtime. This happens because a function (like `block_on`) attempted to block the current thread while the thread is being used to drive asynchronous tasks. If you are in an async function, use `.await` on the future instead of blocking on it.
+exit: 0

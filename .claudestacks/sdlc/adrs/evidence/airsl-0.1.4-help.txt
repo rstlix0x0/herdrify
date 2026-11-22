@@ -1,0 +1,15 @@
+Command-line runner for airsl Lua scripts: run, test, check and doctor
+
+Usage: airsl <COMMAND>
+
+Commands:
+  run     Run a Lua script
+  test    Run the Lua test files under a directory
+  check   Compile every Lua file under a path without running any of it
+  doctor  Report the runtime version and the policy a script would run under
+  ext     Work with extensions: inspect a manifest against a ceiling, or fire one event
+  help    Print this message or the help of the given subcommand(s)
+
+Options:
+  -h, --help     Print help
+  -V, --version  Print version
