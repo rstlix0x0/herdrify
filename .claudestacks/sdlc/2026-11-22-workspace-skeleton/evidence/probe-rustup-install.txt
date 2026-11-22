@@ -1,0 +1,27 @@
+$ rustup --version
+rustup 1.29.3 (edbc831ce 2026-11-02)
+$ rustup toolchain install --help | head -12
+Install or update the given toolchains, or by default the active toolchain
+
+Usage: rustup[EXE] toolchain install [OPTIONS] [TOOLCHAIN]...
+
+Arguments:
+  [TOOLCHAIN]...  Toolchain name, such as 'stable', 'nightly', or '1.8.0'. For more information see
+                  `rustup help toolchain`
+
+Options:
+      --profile <PROFILE>      [possible values: minimal, default, complete]
+  -c, --component <COMPONENT>  Comma-separated list of components to be added on installation
+  -t, --target <TARGET>        Comma-separated list of targets to be added on installation
+
+$ rustup show --help | head -3
+Show the active and installed toolchains or profiles
+
+Usage: rustup[EXE] show [OPTIONS] [COMMAND]
+
+$ (in the workspace, rust-toolchain.toml channel 1.94) rustup toolchain install
+info: using existing install for 1.94-aarch64-apple-darwin
+info: the active toolchain `1.94-aarch64-apple-darwin` has been installed
+info: it's active because: overridden by '/private/tmp/claude-501/-Users-hiraq--herdr-worktrees-herdrify-workspace-skeleton/1a2db9c1-f15d-41c2-96b7-62deeb35c834/scratchpad/design-probes/ws/rust-toolchain.toml'
+info: checking for self-update (current version: 1.29.3)
+exit: 0

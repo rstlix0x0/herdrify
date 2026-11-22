@@ -1,0 +1,10 @@
+$ (herdrify-core gains nom = "7", an MIT-only crate) cargo deny check licenses
+error[rejected]: failed to satisfy license requirements
+48 │ license = "Unlicense OR MIT"
+   │            │            rejected: license is not explicitly allowed
+   │            rejected: license is not explicitly allowed
+     └── nom v7.1.3
+error[rejected]: failed to satisfy license requirements
+   ┌─ /Users/hiraq/.cargo/registry/src/index.crates.io-1949cf8c6b5b557f/nom-7.1.3/Cargo.toml:41:12
+41 │ license = "MIT"
+exit: 4

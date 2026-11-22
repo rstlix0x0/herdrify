@@ -1,0 +1,10 @@
+$ mkdir crates/leftover   # a directory with no Cargo.toml
+$ cargo metadata --format-version 1 --no-deps >/dev/null
+error: failed to load manifest for workspace member `/private/tmp/claude-501/-Users-hiraq--herdr-worktrees-herdrify-workspace-skeleton/1a2db9c1-f15d-41c2-96b7-62deeb35c834/scratchpad/design-probes/ws/crates/leftover`
+referenced via `crates/*` by workspace at `/private/tmp/claude-501/-Users-hiraq--herdr-worktrees-herdrify-workspace-skeleton/1a2db9c1-f15d-41c2-96b7-62deeb35c834/scratchpad/design-probes/ws/Cargo.toml`
+
+Caused by:
+exit: 101
+$ touch crates/.DS_Store   # a stray file
+$ cargo metadata --format-version 1 --no-deps >/dev/null
+exit: 0

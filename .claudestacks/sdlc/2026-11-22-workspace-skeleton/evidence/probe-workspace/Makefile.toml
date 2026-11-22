@@ -1,0 +1,53 @@
+[config]
+default_to_workspace = false
+skip_core_tasks = true
+min_version = "0.37.24"
+
+[env]
+CARGO_TERM_COLOR = "always"
+
+[tasks.default]
+alias = "dod"
+
+[tasks.dod]
+category = "Gate"
+description = "Definition of Done: every step exits 0 with zero warnings"
+dependencies = ["fmt-check", "clippy", "doc", "test", "test-doc"]
+
+[tasks.fmt-check]
+category = "Gate"
+command = "cargo"
+args = ["fmt", "--all", "--", "--check"]
+
+[tasks.clippy]
+category = "Gate"
+command = "cargo"
+args = ["clippy", "--workspace", "--all-targets", "--all-features", "--", "-D", "warnings"]
+
+[tasks.doc]
+category = "Gate"
+command = "cargo"
+args = ["doc", "--workspace", "--all-features", "--no-deps"]
+
+[tasks.doc.env]
+RUSTDOCFLAGS = "-D warnings"
+
+[tasks.test]
+category = "Gate"
+command = "cargo"
+args = ["test", "--workspace", "--all-targets", "--all-features"]
+
+[tasks.test-doc]
+category = "Gate"
+command = "cargo"
+args = ["test", "--workspace", "--all-features", "--doc"]
+
+[tasks.fmt]
+category = "Format"
+command = "cargo"
+args = ["fmt", "--all"]
+
+[tasks.deny]
+category = "Supply chain"
+command = "cargo"
+args = ["deny", "check"]

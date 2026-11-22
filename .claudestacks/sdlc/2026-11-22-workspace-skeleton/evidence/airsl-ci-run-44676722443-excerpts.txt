@@ -1,0 +1,25 @@
+34:Book	##[group]Run actions/checkout@v5
+113:Book	##[group]Run taiki-e/install-action@v2
+240:Definition of Done (macos-latest)	##[group]Run actions/checkout@v5
+354:Definition of Done (macos-latest)	cargo 1.94.1 (29ea6fb6a 2026-03-24)
+355:Definition of Done (macos-latest)	clippy 0.1.94 (e408947bfd 2026-03-25)
+356:Definition of Done (macos-latest)	rustfmt 1.8.0-stable (e408947bfd 2026-03-25)
+357:Definition of Done (macos-latest)	##[group]Run Swatinem/rust-cache@v2
+414:Definition of Done (macos-latest)	##[group]Run taiki-e/install-action@v2
+1818:Installer (ubuntu-latest)	##[group]Run actions/checkout@v5
+2003:Installer (windows-latest)	##[group]Run actions/checkout@v5
+2177:Installer (macos-latest)	##[group]Run actions/checkout@v5
+2355:Definition of Done (windows-latest)	##[group]Run actions/checkout@v5
+2455:Definition of Done (windows-latest)	cargo 1.94.1 (29ea6fb6a 2026-03-24)
+2456:Definition of Done (windows-latest)	clippy 0.1.94 (e408947bfd 2026-03-25)
+2457:Definition of Done (windows-latest)	rustfmt 1.8.0-stable (e408947bfd 2026-03-25)
+2458:Definition of Done (windows-latest)	##[group]Run Swatinem/rust-cache@v2
+2515:Definition of Done (windows-latest)	##[group]Run taiki-e/install-action@v2
+3925:Definition of Done (ubuntu-latest)	##[group]Run actions/checkout@v5
+4038:Definition of Done (ubuntu-latest)	cargo 1.94.1 (29ea6fb6a 2026-03-24)
+4039:Definition of Done (ubuntu-latest)	clippy 0.1.94 (e408947bfd 2026-03-25)
+4040:Definition of Done (ubuntu-latest)	rustfmt 1.8.0-stable (e408947bfd 2026-03-25)
+4041:Definition of Done (ubuntu-latest)	##[group]Run Swatinem/rust-cache@v2
+4098:Definition of Done (ubuntu-latest)	##[group]Run taiki-e/install-action@v2
+5499:Supply chain	##[group]Run actions/checkout@v5
+5609:Supply chain	##[group]Run taiki-e/install-action@v2

@@ -1,0 +1,40 @@
+$ cargo tree -e normal -p herdrify-core --depth 1 --prefix none --format '{p}' | sed 's/ (.*//'
+herdrify-core v0.0.0
+
+$ cargo tree -e normal -p herdrify-hc --depth 1 --prefix none --format '{p}' | sed 's/ (.*//'
+herdrify-hc v0.0.0
+
+$ cargo tree -e normal -p herdrify-app --depth 1 --prefix none --format '{p}' | sed 's/ (.*//'
+herdrify-app v0.0.0
+
+$ cargo tree -e normal -p herdrify-lua --depth 1 --prefix none --format '{p}' | sed 's/ (.*//'
+herdrify-lua v0.0.0
+herdrify-core v0.0.0
+
+$ cargo tree -e normal -p herdrify-herdr --depth 1 --prefix none --format '{p}' | sed 's/ (.*//'
+herdrify-herdr v0.0.0
+herdrify-app v0.0.0
+herdrify-core v0.0.0
+herdrify-hc v0.0.0
+
+$ cargo tree -e normal -p herdrify-store --depth 1 --prefix none --format '{p}' | sed 's/ (.*//'
+herdrify-store v0.0.0
+herdrify-core v0.0.0
+
+$ cargo tree -e normal -p herdrify-git --depth 1 --prefix none --format '{p}' | sed 's/ (.*//'
+herdrify-git v0.0.0
+herdrify-core v0.0.0
+
+$ cargo tree -e normal -p herdrify-testkit --depth 1 --prefix none --format '{p}' | sed 's/ (.*//'
+herdrify-testkit v0.0.0
+herdrify-core v0.0.0
+
+$ cargo tree -e normal -p herdrify-cli --depth 1 --prefix none --format '{p}' | sed 's/ (.*//'
+herdrify-cli v0.0.0
+herdrify-core v0.0.0
+herdrify-git v0.0.0
+herdrify-herdr v0.0.0
+herdrify-lua v0.0.0
+herdrify-store v0.0.0
+herdrify-testkit v0.0.0
+

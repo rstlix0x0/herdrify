@@ -1,0 +1,7 @@
+$ cargo metadata --format-version 1 >/dev/null
+exit: 0
+$ cargo tree -d --workspace
+warning: nothing to print.
+
+To find dependencies that require specific target platforms, try to use option `--target all` first, and then narrow your search scope accordingly.
+exit: 0

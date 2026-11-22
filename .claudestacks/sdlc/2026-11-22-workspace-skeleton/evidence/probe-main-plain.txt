@@ -1,0 +1,8 @@
+=== plain: fn main() {}
+//! The `herdrify` command.
+
+fn main() {}
+$ cargo clippy -p herdrify-cli --all-targets -- -D warnings
+error: this could be a `const fn`
+error: could not compile `herdrify-cli` (bin "herdrify" test) due to 1 previous error
+exit: 101

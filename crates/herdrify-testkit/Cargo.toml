@@ -1,0 +1,17 @@
+[package]
+name        = "herdrify-testkit"
+description = "Fakes of the herdrify ports for tests."
+version     = "0.0.0"
+readme      = "README.md"
+
+edition.workspace      = true
+rust-version.workspace = true
+license.workspace      = true
+repository.workspace   = true
+authors.workspace      = true
+
+[lints]
+workspace = true
+
+[dependencies]
+herdrify-core = { workspace = true }

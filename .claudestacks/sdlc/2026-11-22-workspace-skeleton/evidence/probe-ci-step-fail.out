@@ -1,0 +1,16 @@
+[cargo-make] INFO - cargo make 0.37.24
+[cargo-make] INFO - 
+[cargo-make] INFO - Build File: Makefile.toml
+[cargo-make] INFO - Task: dod
+[cargo-make] INFO - Profile: development
+[cargo-make] INFO - Execute Command: "cargo" "fmt" "--all" "--" "--check"
+Diff in /private/tmp/claude-501/-Users-hiraq--herdr-worktrees-herdrify-workspace-skeleton/1a2db9c1-f15d-41c2-96b7-62deeb35c834/scratchpad/redesign2/work/fail/crates/herdrify-cli/src/main.rs:3:
+ //! Prints the command's name and version on standard output and exits.
+ 
+ fn main() {
+[31m-    println!(  "{}", version_line());
+(B[m[32m+    println!("{}", version_line());
+(B[m }
+ 
+ /// The line the command prints: its name and its package version.
+Error while executing command, exit code: 1

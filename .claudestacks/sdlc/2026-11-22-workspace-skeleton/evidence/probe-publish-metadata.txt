@@ -1,0 +1,11 @@
+$ cargo metadata --format-version 1 --no-deps | python3 -c 'import json,sys; [print(p["name"], p["version"], p["license"], p["repository"], p["readme"], p["authors"], repr(p["description"])) for p in sorted(json.load(sys.stdin)["packages"], key=lambda p: p["name"])]'
+herdrify-app 0.0.0 Apache-2.0 https://github.com/rstlix0x0/herdrify README.md ['rstlix0x0 <rstlix.dev@gmail.com>'] 'Async client for herdr-app and its layout, theme and keys files.'
+herdrify-cli 0.0.0 Apache-2.0 https://github.com/rstlix0x0/herdrify README.md ['rstlix0x0 <rstlix.dev@gmail.com>'] 'The herdrify command.'
+herdrify-core 0.0.0 Apache-2.0 https://github.com/rstlix0x0/herdrify README.md ['rstlix0x0 <rstlix.dev@gmail.com>'] 'Domain types, ports and use cases of herdrify, with no I/O.'
+herdrify-git 0.0.0 Apache-2.0 https://github.com/rstlix0x0/herdrify README.md ['rstlix0x0 <rstlix.dev@gmail.com>'] 'Fetches herdrify component and bundle repositories.'
+herdrify-hc 0.0.0 Apache-2.0 https://github.com/rstlix0x0/herdrify README.md ['rstlix0x0 <rstlix.dev@gmail.com>'] 'Async client for herdr-core: JSON-RPC over hc connect.'
+herdrify-herdr 0.0.0 Apache-2.0 https://github.com/rstlix0x0/herdrify README.md ['rstlix0x0 <rstlix.dev@gmail.com>'] 'Writes herdrify files into the Herdr home and drives herdr-app and herdr-core.'
+herdrify-lua 0.0.0 Apache-2.0 https://github.com/rstlix0x0/herdrify README.md ['rstlix0x0 <rstlix.dev@gmail.com>'] 'Runs herdrify components under the airsl Lua sandbox.'
+herdrify-store 0.0.0 Apache-2.0 https://github.com/rstlix0x0/herdrify README.md ['rstlix0x0 <rstlix.dev@gmail.com>'] 'The herdrify home: config, lock, installed components, cache and state.'
+herdrify-testkit 0.0.0 Apache-2.0 https://github.com/rstlix0x0/herdrify README.md ['rstlix0x0 <rstlix.dev@gmail.com>'] 'Fakes of the herdrify ports for tests.'
+exit: 0

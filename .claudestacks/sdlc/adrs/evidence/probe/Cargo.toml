@@ -1,0 +1,14 @@
+[package]
+name = "herdrify-adr-probe"
+version = "0.0.0"
+edition = "2024"
+rust-version = "1.94"
+publish = false
+
+# Standalone: never part of the herdrify workspace.
+[workspace]
+
+[dependencies]
+airsl = "=0.1.4"
+serde_json = "1"
+tokio = { version = "1", features = ["rt-multi-thread", "macros", "time"] }

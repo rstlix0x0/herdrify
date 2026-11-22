@@ -1,0 +1,15 @@
+$ find .claudestacks -name Cargo.toml -path "*/Cargo.toml" -exec grep -l "^\[workspace\]" {} +
+.claudestacks/sdlc/2026-11-22-workspace-skeleton/evidence/probe-ci-yaml/Cargo.toml
+.claudestacks/sdlc/2026-11-22-workspace-skeleton/evidence/probe-workspace/Cargo.toml
+.claudestacks/sdlc/adrs/evidence/probe-devdep-cycle/Cargo.toml
+.claudestacks/sdlc/adrs/evidence/probe/Cargo.toml
+
+$ cargo metadata --format-version 1 --no-deps | python3 -c 'import json,sys; print(sorted(p["name"] for p in json.load(sys.stdin)["packages"]))'
+['herdrify-app', 'herdrify-cli', 'herdrify-core', 'herdrify-git', 'herdrify-hc', 'herdrify-herdr', 'herdrify-lua', 'herdrify-store', 'herdrify-testkit']
+
+$ cargo make dod 2>&1 | tail -1
+[cargo-make] INFO - Build Done in 1.77 seconds.
+exit: 0
+$ cargo deny check 2>&1 | tail -1
+advisories ok, bans ok, licenses ok, sources ok
+exit: 0

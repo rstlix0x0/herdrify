@@ -1,0 +1,26 @@
+[package]
+name        = "herdrify-cli"
+description = "The herdrify command."
+version     = "0.0.0"
+readme      = "README.md"
+
+edition.workspace      = true
+rust-version.workspace = true
+license.workspace      = true
+repository.workspace   = true
+authors.workspace      = true
+
+[[bin]]
+name = "herdrify"
+path = "src/main.rs"
+
+[lints]
+workspace = true
+
+[dependencies]
+herdrify-core = { workspace = true }
+herdrify-lua = { workspace = true }
+herdrify-herdr = { workspace = true }
+herdrify-store = { workspace = true }
+herdrify-git = { workspace = true }
+herdrify-testkit = { workspace = true }

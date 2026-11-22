@@ -1,0 +1,12 @@
+$ gh run view 44676722443 -R airsstack/airsl --json headSha,event,headBranch,conclusion
+{"conclusion":"success","event":"push","headBranch":"main","headSha":"1a926b3ca5c1596a07dcd2da2be5abd916f3bd6e"}
+
+$ gh run view 44676722443 -R airsstack/airsl --json jobs --jq ".jobs[] | \"\(.name) | \(.conclusion)\""
+Book | success
+Definition of Done (macos-latest) | success
+Installer (ubuntu-latest) | success
+Installer (windows-latest) | success
+Installer (macos-latest) | success
+Definition of Done (windows-latest) | success
+Definition of Done (ubuntu-latest) | success
+Supply chain | success
