@@ -1,5 +1,5 @@
 ---
-status: approved
+status: done
 created: 2026-11-22
 depends-on: [03]
 built-on: ca0f990f7018
@@ -80,3 +80,20 @@ Every method returns `impl Future<Output = …> + Send`. The doc comments state 
 
 - `grep -rn 'crate::connection\|crate::adapter\|tokio' crates/herdrify-hc/src/port` prints nothing (spec §2 enforcement).
 - The Definition of Done is green.
+
+## Review findings
+
+Final batch check (2026-11-23): `cargo make dod` exit 0, zero warning lines; herdrify-hc 181 unit + 47 doc + 6 schema_coverage tests pass; `cargo make deny` advisories/bans/licenses/sources ok.
+
+- Reviewer (with plan 07): blocking none; 5🔵 + 1❓ on port files:
+- open 🔵 transport.rs:22 redundant `use std::future::Future`; transport_error.rs:37,45 Spawn/Io show `{source}` and return it from `source()` (as the plan specifies); transport_error.rs:49 `#[from] FrameError` untested; lib.rs trait re-exports unguarded until plans 09/11.
+- open ❓ transport_error.rs:35 `TransportError` is not `#[non_exhaustive]`.
+- `cargo test -p herdrify-hc transport_error` → 4 passed; port grep for connection/adapter/tokio prints nothing.
+
+## Deviations
+
+- 2026-11-23 — Commits skipped: execute commits only when instructed; every task's changes are left uncommitted in the working tree.
+- 2026-11-23 — One coder ran each plan's tasks in order (tasks share `protocol/mod.rs`, so no two ran at once); the coder read the plan directly instead of a task-briefer brief.
+- 2026-11-23 — `TransportError::Io` is `Io(#[source] io::Error)` with Display `I/O error: {0}`; `Frame` is `#[error(transparent)]` + `#[from]`.
+- 2026-11-23 — The `into_framed` doc states that bytes buffered but not yet returned by `recv_line` carry into the source (the adapter contract plan 09 relies on).
+- 2026-11-23 — After the build, the files this plan created were moved into the layout of the redesigned spec (§2, redesign #3): a concept and its error share one file, `frame/`, `jsonrpc/` and `methods/terminal/` split by role, and `types/` is grouped by domain. Paths named in the tasks above are the pre-move paths. Behaviour and public paths are unchanged. `cargo make dod` exits 0 with zero warnings (herdrify_hc: 212 unit, 7 schema_coverage, 49 doctests).

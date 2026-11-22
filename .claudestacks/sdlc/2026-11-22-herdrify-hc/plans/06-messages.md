@@ -1,5 +1,5 @@
 ---
-status: approved
+status: done
 created: 2026-11-22
 depends-on: [03, 05]
 built-on: ca0f990f7018
@@ -145,3 +145,23 @@ crates/herdrify-hc/src/protocol/notification.rs  — create: Notification, Event
 - `cargo test -p herdrify-hc` passes.
 - `grep -rn 'tokio\|crate::port\|crate::connection\|crate::adapter' crates/herdrify-hc/src/protocol` prints nothing.
 - The Definition of Done is green.
+
+## Review findings
+
+Final batch check (2026-11-23): `cargo make dod` exit 0, zero warning lines; herdrify-hc 181 unit + 47 doc + 6 schema_coverage tests pass; `cargo make deny` advisories/bans/licenses/sources ok.
+
+- Reviewer: COMPLIANT-WITH-AMENDMENTS; blocking hello.rs:283 and notification.rs:193 — both FIXED by a fix coder:
+  - hello.rs: `CoreVersion::parse` now refuses numeric pre-release identifiers with a leading zero (`1.0.0-01`, `-00`, `-alpha.01`); `-0`, `-0a`, `-01a`, `+01` stay valid. Red: `"1.0.0-01" parsed`; then `cargo test -p herdrify-hc hello` → 10 passed.
+  - notification.rs: the `Missed.terminals` doc now says it is a fresh snapshot that replaces the subscriber's set (per the pinned README). `cargo test -p herdrify-hc notification` → 10 passed; `cargo make dod` exit 0, zero warnings.
+- open 🔵 envelope.rs:58 `Request::new` takes any Value; envelope.rs:141 not requiring `jsonrpc` is unguarded by a test; hello.rs:8 `//!` omits InvalidCoreVersion; hello.rs:57 doc key order differs from the real bytes; hello.rs:185 message wording for suffix errors; hello.rs:208 no FromStr; notification.rs:255 foreground without data reads `Foreground(None)`; notification.rs:385 `removed` ignoring data is unguarded; rpc_error.rs:49 `Other("not_found")` != `NotFound`; status event with `kind` (probe-methods :449) untested.
+- open ❓ rpc_error.rs:126 a missing `data.kind` displays as `no such method []`.
+
+## Deviations
+
+- 2026-11-23 — Commits skipped: execute commits only when instructed; every task's changes are left uncommitted in the working tree.
+- 2026-11-23 — One coder ran each plan's tasks in order (tasks share `protocol/mod.rs`, so no two ran at once); the coder read the plan directly instead of a task-briefer brief.
+- 2026-11-23 — `UnexpectedReply::Response.id` switched from u64 to `RequestId` (protocol_error.rs edited; Display unchanged).
+- 2026-11-23 — `Notification::Event` holds `Box<Event>` (clippy `large_enum_variant`, 816 vs 32 bytes).
+- 2026-11-23 — `CoreVersion::parse` returns a new public `InvalidCoreVersion { found }`; `HelloResult.version` stays String.
+- 2026-11-23 — Decided where the spec is silent: no `data.kind` → `ErrorKind::Other("")`; no `data` → `Value::Null`; malformed error object, both/neither result+error, or id+method → `NotJsonRpc`; `jsonrpc` not required; absent notification params → null; `removed` ignores data; CoreVersion Eq/Ord follow semver precedence (build metadata ignored).
+- 2026-11-23 — After the build, the files this plan created were moved into the layout of the redesigned spec (§2, redesign #3): a concept and its error share one file, `frame/`, `jsonrpc/` and `methods/terminal/` split by role, and `types/` is grouped by domain. Paths named in the tasks above are the pre-move paths. Behaviour and public paths are unchanged. `cargo make dod` exits 0 with zero warnings (herdrify_hc: 212 unit, 7 schema_coverage, 49 doctests).

@@ -1,5 +1,5 @@
 ---
-status: approved
+status: done
 created: 2026-11-22
 depends-on: [02]
 built-on: ca0f990f7018
@@ -209,3 +209,23 @@ Tasks 3 to 6 share one structure: each type is a struct with exactly the fixture
 - `grep -rn 'tokio' crates/herdrify-hc/src/protocol` prints nothing.
 - `ls crates/herdrify-hc/src/protocol/types | grep -vc mod.rs` prints 41: 35 schema types plus the six helper types (`Environment`, `Labels` and the four open enums). `Children` and `IdleOrWorking` are among the 35.
 - The Definition of Done is green.
+
+## Review findings
+
+Final batch check (2026-11-23): `cargo make dod` exit 0, zero warning lines; herdrify-hc 181 unit + 47 doc + 6 schema_coverage tests pass; `cargo make deny` advisories/bans/licenses/sources ok.
+
+- Reviewer: blocking wait_reason.rs:3 — FIXED: the docs said `Other` holds a word "not in the documented list", but the fixture documents status/output/not_started/children/running, which read as `Other`. Docs at wait_reason.rs:3-4, 9, 20, 42 now say "not one of the named variants". Verified: `rustfmt --check` ok; `cargo make dod` exit 0 with zero warning lines.
+- open 🟡 public `Other(String)` lets a caller build `Other("live")`, which reads back as `Live` (end_reason.rs:52, status_word.rs:46, terminal_state.rs:40, wait_reason.rs:42); the plan fixes this shape.
+- open 🟡 status-word fields are `Option<String>`, not `StatusWord` (keys_result.rs:27, send_result.rs:33, wait_result.rs:48); the plan allows it.
+- open 🔵 13 + ❓ 2: open-enum code repeated 4×, `without_nulls` test helper copied 5×, no test that unknown reply fields are ignored, doc wording, Default/Copy/IntoIterator gaps, #[non_exhaustive]/Display questions.
+- open plan ❓: the plan names 3 WaitReason words; the fixture documents 8. 🔵 list_result live-reply test uses probe-methods evidence.
+
+## Deviations
+
+- 2026-11-23 — Commits skipped: execute commits only when instructed; every task's changes are left uncommitted in the working tree.
+- 2026-11-23 — One coder ran each plan's tasks in order (tasks share `protocol/mod.rs`, so no two ran at once); the coder read the plan directly instead of a task-briefer brief.
+- 2026-11-23 — WaitResult was built in Task 3, because RunResult.wait needs it to compile.
+- 2026-11-23 — `base64_bytes` carried `#[cfg_attr(not(test), expect(dead_code))]` in Tasks 1–5 (removed in Task 6); its functions are `pub(super)` (clippy `redundant_pub_crate` / `unreachable_pub`).
+- 2026-11-23 — The list_result live-reply test uses `probe-methods-output.txt:98`, because probe-plain's list replies hold no terminals.
+- 2026-11-23 — Decided where the spec is silent: non-required props with a schema default are `Option<T>`; parent/session/path fields are `String`; `Terminal.name` is `Option<TerminalName>`; Labels/Environment are sorted BTreeMap newtypes; open enums have `as_str` + `From<String>`; closed enums are `Copy` with const `as_str`.
+- 2026-11-23 — After the build, the files this plan created were moved into the layout of the redesigned spec (§2, redesign #3): a concept and its error share one file, `frame/`, `jsonrpc/` and `methods/terminal/` split by role, and `types/` is grouped by domain. Paths named in the tasks above are the pre-move paths. Behaviour and public paths are unchanged. `cargo make dod` exits 0 with zero warnings (herdrify_hc: 212 unit, 7 schema_coverage, 49 doctests).

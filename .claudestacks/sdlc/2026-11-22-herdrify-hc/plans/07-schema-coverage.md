@@ -1,5 +1,5 @@
 ---
-status: approved
+status: done
 created: 2026-11-22
 depends-on: [06]
 built-on: ca0f990f7018
@@ -93,3 +93,20 @@ Any failure names the method or schema that differs.
 - `cargo test -p herdrify-hc` passes, and the coverage test needs no `hc`.
 - `grep -rnE 'ADR [0-9]|\.claudestacks|milestone' crates/herdrify-hc` prints nothing.
 - The Definition of Done is green.
+
+## Review findings
+
+Final batch check (2026-11-23): `cargo make dod` exit 0, zero warning lines; herdrify-hc 181 unit + 47 doc + 6 schema_coverage tests pass; `cargo make deny` advisories/bans/licenses/sources ok.
+
+- Reviewer (with plan 08): blocking none; coverage is not tautological (mutating `TerminalRun::rm` and deleting `ExecResult.signal` each fail a check); all 32 methods, all 36 schemas, per-variant setter checks and new()-only required sets are covered.
+- open 🔵 variant lists are hand-written (a new variant would go unchecked); "all 36" is guarded by count only; `# Errors` doc omits the anyOf-null-only error; cycle detection handles only a direct array `$ref` (enough for the fixture).
+- `cmp` of the fixture against evidence prints nothing; `cargo test -p herdrify-hc --test schema_coverage` → 6 passed.
+
+## Deviations
+
+- 2026-11-23 — Commits skipped: execute commits only when instructed; every task's changes are left uncommitted in the working tree.
+- 2026-11-23 — One coder ran each plan's tasks in order (tasks share `protocol/mod.rs`, so no two ran at once); the coder read the plan directly instead of a task-briefer brief.
+- 2026-11-23 — `instance()` returns `Result<Value, String>`, not `Value` (unwrap/panic/expect are denied, so an unknown schema or `$ref` is an Err).
+- 2026-11-23 — The support module is declared `pub mod schema_instance;` (`unreachable_pub` and `redundant_pub_crate` conflict on a private module).
+- 2026-11-23 — The Task 2 tests passed on their first run (the SDK types were already right); red was shown by temporary mutations. No SDK type needed a fix.
+- 2026-11-23 — After the build, the files this plan created were moved into the layout of the redesigned spec (§2, redesign #3): a concept and its error share one file, `frame/`, `jsonrpc/` and `methods/terminal/` split by role, and `types/` is grouped by domain. Paths named in the tasks above are the pre-move paths. Behaviour and public paths are unchanged. `cargo make dod` exits 0 with zero warnings (herdrify_hc: 212 unit, 7 schema_coverage, 49 doctests).
