@@ -1,24 +1,190 @@
-$ diff <(git -C /Users/hiraq/Projects/airsstack/airsl show 1a926b3:.github/workflows/ci.yml | sed -n "/^  dod:/,/^  deny:/p" | grep -E "uses:|run:|^ +rustup|^ +cargo|os:|tool:") <(sed -n "/^  dod:/,/^  deny:/p" .github/workflows/ci.yml | grep -E "uses:|run:|^ +rustup|^ +cargo|os:|tool:")
-4c4
+# airsl .github/workflows/ci.yml at commit 1a926b3 (<) vs evidence/probe-workspace/.github/workflows/ci.yml (>), unfiltered, per job
+
+$ diff <(git -C /Users/hiraq/Projects/airsstack/airsl show 1a926b3:.github/workflows/ci.yml | sed -n '/^  dod:/,/^  deny:/p') <(sed -n '/^  dod:/,/^  deny:/p' .github/workflows/ci.yml)
+3,9d2
+<     # The matrix is the point: `mlua` is vendored, so every job here compiles Lua 5.4
+<     # from C. A platform-specific break in that build — or in the host modules that
+<     # touch paths, processes and time — is invisible on a single runner.
+<     #
+<     # Windows is `x86_64-pc-windows-msvc` only. The GNU target is not gated here: it
+<     # links a different C runtime under the vendored Lua build, and supporting a second
+<     # Windows ABI is a promise the crate does not make.
+19,20d11
+<       # `rustup show` resolves the override in rust-toolchain.toml and installs it.
+<       # The versions printed below are the record of which toolchain the gate ran on.
+24c15
 <           rustup show
 ---
 >           rustup toolchain install
-10,11c10
+37c28
 <           tool: cargo-make
-<         run: reg add "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\AppModelUnlock" /t REG_DWORD /f /v AllowDevelopmentWithoutDevLicense /d 1
 ---
 >           tool: cargo-make@0.37.24
-13d11
+39,66c30,39
+<       # Windows requires elevated rights to create symlinks unless Developer Mode
+<       # is on; the sandbox tests create them, so this makes the leg match what
+<       # unix runners get for free.
+<       #
+<       # This writes a machine-wide HKLM key that drops the developer-license
+<       # requirement for symlink creation and app sideloading. That is acceptable
+<       # only because a GitHub-hosted runner is ephemeral and discarded after the
+<       # job. Do not copy this step onto a self-hosted runner or a developer
+<       # machine, where it persists and permanently lowers a system-wide boundary;
+<       # there, turn on Settings -> For developers -> Developer Mode instead.
+<       - name: Enable Developer Mode
+<         if: runner.os == 'Windows'
+<         run: reg add "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\AppModelUnlock" /t REG_DWORD /f /v AllowDevelopmentWithoutDevLicense /d 1
+< 
+<       # One command, the same one a developer runs locally: fmt-check, clippy,
+<       # rustdoc, tests, doctests — each with warnings as errors.
+<       - name: cargo make dod
+<         run: cargo make dod
+< 
+<       # A step in this job rather than a job of its own — unlike `deny`, which
+<       # compiles nothing and is free to isolate. The examples link the whole
+<       # workspace, so running them where the target dir is already warm costs
+<       # seconds instead of a second full build.
+<       #
+<       # The gate above only compiles the examples. This runs them, which is
+<       # what makes them a check on the runtime rather than on the type checker.
+<       - name: cargo make examples
 <         run: cargo make examples
-diff exit: 1
+---
+>       - name: cargo make dod, failing on any warning line
+>         shell: bash
+>         run: |
+>           set -o pipefail
+>           mkdir -p target
+>           cargo make dod 2>&1 | tee target/dod.log
+>           if sed $'s/\x1b\\[[0-9;]*m//g' target/dod.log | grep -E '^ *(warning|error)'; then
+>             echo "cargo make dod printed the warning or error lines above"
+>             exit 1
+>           fi
+exit: 1
 
-$ diff <(git -C /Users/hiraq/Projects/airsstack/airsl show 1a926b3:.github/workflows/ci.yml | sed -n "/^  deny:/,/^  book:/p" | grep -E "uses:|run:|^ +rustup|^ +cargo|os:|tool:") <(sed -n "/^  deny:/,\$p" .github/workflows/ci.yml | grep -E "uses:|run:|^ +rustup|^ +cargo|os:|tool:")
-2c2
+$ diff <(git -C /Users/hiraq/Projects/airsstack/airsl show 1a926b3:.github/workflows/ci.yml | sed -n '/^  deny:/,$p') <(sed -n '/^  deny:/,$p' .github/workflows/ci.yml)
+5,7d4
+<     # Independent of the gate: this reads Cargo.lock and the advisory database,
+<     # compiles nothing, and finishes in seconds, so it should not wait behind a
+<     # build to report a licence or advisory problem.
+11,14d7
+<       # cargo-deny shells out to `cargo metadata`, and `cargo` here is a rustup
+<       # shim that resolves rust-toolchain.toml, so the pinned toolchain gets
+<       # fetched either way. Doing it in its own step keeps that cost out of the
+<       # check's log.
+16c9
 <         run: rustup show
 ---
 >         run: rustup toolchain install
-4c4
+21c14
 <           tool: cargo-deny
 ---
 >           tool: cargo-deny@0.20.2
-diff exit: 1
+23,24d15
+<       # Advisories, licences, duplicate versions and source registries. Policy
+<       # and every suppression live in deny.toml.
+27,129d17
+< 
+<   book:
+<     name: Book
+<     runs-on: ubuntu-latest
+<     timeout-minutes: 10
+<     # pages.yml only builds the book after a merge, when a broken build would
+<     # already be on main. This is the same build, on every pull request.
+<     steps:
+<       - uses: actions/checkout@v5
+< 
+<       # Pinned to the version the book is written against; keep in step with
+<       # pages.yml and min_version in Makefile.toml.
+<       - name: Install mdBook
+<         uses: taiki-e/install-action@v2
+<         with:
+<           tool: mdbook@0.4.52
+< 
+<       - name: mdbook build
+<         run: mdbook build book
+< 
+<   installer:
+<     name: Installer (${{ matrix.os }})
+<     # The wrappers in install/ go live the moment they merge, and they are the
+<     # first thing a new user runs. Each leg installs the latest release through
+<     # the wrapper for its platform, pins a version, and asks for one that does
+<     # not exist. They test the wrappers, not the release: a release's archives
+<     # are smoke-tested by airsl-cli-smoke.yml before they are published.
+<     strategy:
+<       fail-fast: false
+<       matrix:
+<         os: [ubuntu-latest, macos-latest, windows-latest]
+<     runs-on: ${{ matrix.os }}
+<     timeout-minutes: 10
+<     env:
+<       # A directory of its own, with no PATH edits and no install receipt, so
+<       # the runner's environment stays as it was.
+<       AIRSL_CLI_UNMANAGED_INSTALL: ${{ github.workspace }}/.install-test
+<     steps:
+<       - uses: actions/checkout@v5
+< 
+<       - name: shellcheck
+<         if: runner.os == 'Linux'
+<         run: shellcheck --shell=sh install/install.sh
+< 
+<       # `sh -s < file` is the shape `curl ... | sh` runs in: the script arrives
+<       # on stdin, not as a path.
+<       - name: install.sh installs the latest release
+<         if: runner.os != 'Windows'
+<         run: |
+<           sh -s -- --quiet < install/install.sh
+<           "$AIRSL_CLI_UNMANAGED_INSTALL/airsl" --version
+< 
+<       - name: install.sh installs a pinned version
+<         if: runner.os != 'Windows'
+<         run: |
+<           rm -rf "$AIRSL_CLI_UNMANAGED_INSTALL"
+<           AIRSL_VERSION=0.1.4 sh install/install.sh --quiet
+<           test "$("$AIRSL_CLI_UNMANAGED_INSTALL/airsl" --version)" = "airsl 0.1.4"
+< 
+<       - name: install.sh refuses a version that was never released
+<         if: runner.os != 'Windows'
+<         run: |
+<           if AIRSL_VERSION=0.0.0 sh install/install.sh 2> err.txt; then
+<             echo "::error::install.sh succeeded for a version that does not exist"
+<             exit 1
+<           fi
+<           cat err.txt
+<           grep -q 'is 0.0.0 a released version' err.txt
+< 
+<       # Windows PowerShell 5.1 is what `powershell -c "irm ... | iex"` starts,
+<       # and PowerShell 7 is what a developer is likely to have open. Piping the
+<       # file's text into iex is the shape `irm | iex` runs in.
+<       - name: install.ps1 installs the latest release (Windows PowerShell)
+<         if: runner.os == 'Windows'
+<         shell: powershell
+<         run: |
+<           Get-Content -Raw install/install.ps1 | Invoke-Expression
+<           & "$env:AIRSL_CLI_UNMANAGED_INSTALL/airsl.exe" --version
+<           if ($LASTEXITCODE -ne 0) { exit 1 }
+< 
+<       - name: install.ps1 installs a pinned version (PowerShell 7)
+<         if: runner.os == 'Windows'
+<         shell: pwsh
+<         run: |
+<           Remove-Item -Recurse -Force $env:AIRSL_CLI_UNMANAGED_INSTALL
+<           $env:AIRSL_VERSION = '0.1.4'
+<           Get-Content -Raw install/install.ps1 | Invoke-Expression
+<           $got = & "$env:AIRSL_CLI_UNMANAGED_INSTALL/airsl.exe" --version
+<           if ($got -ne 'airsl 0.1.4') { throw "airsl --version printed '$got'" }
+< 
+<       - name: install.ps1 refuses a version that was never released
+<         if: runner.os == 'Windows'
+<         shell: pwsh
+<         run: |
+<           $env:AIRSL_VERSION = '0.0.0'
+<           try {
+<             Get-Content -Raw install/install.ps1 | Invoke-Expression
+<           } catch {
+<             $_.Exception.Message
+<             if ($_.Exception.Message -notmatch 'is 0\.0\.0 a released version') { throw }
+<             exit 0
+<           }
+<           throw 'install.ps1 succeeded for a version that does not exist'
+exit: 1

@@ -38,8 +38,8 @@ prints `rust-version: 1.94` (`evidence/airsl-rust-version.txt`).
   depends on testkit normally.
 
 **Crate names are free.** None of the nine crate names, nor `herdrify`, exists on crates.io:
-`cargo info <name>` exits 101 with "could not find". The control, `cargo info airsl`, exits 0
-(`evidence/crates-io-names.txt`).
+`cargo info <name>` exits 101 with "could not find". The control, `cargo info airsl`, exits 0.
+The probe ran in an empty directory outside any workspace (`evidence/crates-io-names.txt`).
 
 ## 2. Architecture
 
@@ -399,9 +399,54 @@ args = ["deny", "check"]
 ```
 
 On the probe workspace, `cargo make dod` runs exactly those five commands
-(`evidence/probe-gate-full.txt:7,8,19,39,105`) and exits 0 (`:156`). The full unfiltered log has
-no `warning` or `error` lines (`grep -c -E '^(warning|error)'` gives 0). The gate passes with every
-inter-crate edge declared and unused, so this lint table raises no unused-dependency warning.
+(`evidence/probe-gate-full.txt:7,8,19,39,105`) and exits 0 (`:156`). A fresh copy with no
+`target/` does the same (`evidence/probe-gate-warning-check.txt`, full log
+`evidence/probe-gate-clean-run.log`).
+
+**The zero-warning check.** `-D warnings` makes clippy and rustdoc fail on rustc, clippy and
+rustdoc warnings (the guideline's `SKILL.md:27-32`). Cargo's own warnings are different: an unused
+manifest key prints `warning:` and `cargo make dod` still exits 0. A log check catches them. It
+runs in CI on every push and pull request (§7), and locally through the commands `CLAUDE.md`
+lists (§8).
+
+`CARGO_TERM_COLOR = "always"` colours cargo's output even into a pipe or a file. A warning line
+starts with escape codes, not with `warning`: its raw bytes begin
+`033 [ 1 m 033 [ 3 3 m w a r n i n g`. A plain `grep '^(warning|error)'` therefore never matches.
+The check strips the colour codes first (`evidence/probe-gate-warning-check.txt`, full logs
+`evidence/probe-gate-clean-run.log` and `evidence/probe-gate-control-run.log`):
+
+| Run | `cargo make dod` exit | Raw `grep -c` | Colour-stripped `grep -c` |
+|---|---|---|---|
+| fresh probe workspace, no `target/` | 0 | 0 | 0 |
+| control: plus `probe-unused-key = 1` | 0 | 0 | 4 |
+
+**Pass criterion.** The check passes when the colour-stripped `grep -E '^ *(warning|error)'` prints
+no line. `grep` then exits 1, and it exits 0 when it finds lines. A script must therefore read
+"found" as failure, never test `grep`'s exit status for success. The CI step does this with
+`if … then exit 1`.
+
+**The check, run three ways** (`evidence/probe-ci-step-warning-check.txt`; macOS sed and grep,
+GNU bash 3.2.57, zsh 5.9). The CI script is the `run` text yaml-rust2 0.10.4 parses from `ci.yml`.
+It is run as GitHub runs `shell: bash`: `bash --noprofile --norc -eo pipefail {0}`
+(`evidence/github-workflow-syntax.md:911`).
+
+| Copy | CI step exit | Local: first command exit (bash, zsh) | Local: check prints (bash, zsh) |
+|---|---|---|---|
+| clean | 0 | 0, 0 | nothing, nothing |
+| warn: plus `probe-unused-key = 1` | 1, after printing the 4 lines and "cargo make dod printed the warning or error lines above" | 0, 0 | the 4 warning lines |
+| fail: a mis-formatted `main.rs` line | 105, cargo-make's status, before the check runs | 105, 105 | nothing |
+
+`pipefail` makes a pipeline into `tee` report cargo-make's status, not `tee`'s. In bash 3.2.57,
+`false | tee` exits 0 without it and 1 with it (`evidence/probe-gate-warning-check.txt`, last
+section). The step sets it itself, as well as getting it from GitHub's `-eo pipefail`. The local
+first command sets it inside a subshell, so the caller's shell is unchanged.
+
+**The `dod` description.** "every step exits 0 with zero warnings" states the bar. `cargo make
+dod` enforces it for rustc, clippy and rustdoc warnings. The log check enforces it for cargo's own.
+`Makefile.toml` is unchanged, by the author's decision.
+
+The gate passes with every inter-crate edge declared and unused, so this lint table raises no
+unused-dependency warning.
 
 ## 6. Supply chain
 
@@ -503,8 +548,16 @@ jobs:
         with:
           tool: cargo-make@0.37.24
 
-      - name: cargo make dod
-        run: cargo make dod
+      - name: cargo make dod, failing on any warning line
+        shell: bash
+        run: |
+          set -o pipefail
+          mkdir -p target
+          cargo make dod 2>&1 | tee target/dod.log
+          if sed $'s/\x1b\\[[0-9;]*m//g' target/dod.log | grep -E '^ *(warning|error)'; then
+            echo "cargo make dod printed the warning or error lines above"
+            exit 1
+          fi
 
   deny:
     name: Supply chain
@@ -533,30 +586,39 @@ CI once its pull request is open.
 (`evidence/probe-ci-yaml.txt`):
 - the three triggers, with `push` limited to `main`
 - `contents: read`
-- a `dod` job over `ubuntu-latest`, `macos-latest` and `windows-latest`
+- a `dod` job over `ubuntu-latest`, `macos-latest` and `windows-latest`, whose last step has
+  `shell: bash` and, as its `run` text, exactly the script above
+  (`evidence/probe-ci-step-warning-check.txt`)
 - a `deny` job on `ubuntu-latest`
 
-**What it shares with airsl's passing CI.** Compared with airsl's workflow at commit 1a926b3, the
-`dod` job differs in four lines, and the `deny` job in two (`evidence/ci-vs-airsl-diff.txt`):
+**What it shares with airsl's passing CI.** `evidence/ci-vs-airsl-diff.txt` diffs each job,
+unfiltered, against airsl's workflow at commit 1a926b3. Apart from airsl's comments, and airsl's
+`book` and `installer` jobs, which herdrify does not copy, these are the differences:
 
 | Change | Why |
 |---|---|
 | `rustup show` → `rustup toolchain install` | rustup 1.29.3 documents `toolchain install` as installing "by default the active toolchain", while `show` only shows toolchains (`evidence/probe-rustup-install.txt`). In this workspace it resolves the toolchain from `rust-toolchain.toml` and exits 0 (same file). |
 | tools pinned to `cargo-make@0.37.24` and `cargo-deny@0.20.2` | The install action documents the `@version` syntax (`evidence/taiki-install-action-v2-README.md:44-51`), and supports both tools on Linux, macOS and Windows (`evidence/taiki-install-action-v2-TOOLS.md:30,39`). These are the versions the gate was proven with. |
 | airsl's Developer Mode step and `cargo make examples` dropped | Both serve airsl alone: its symlink tests and its examples. |
+| airsl's `cargo make dod` step → the step that also fails on any warning line | Cargo's own warnings leave `cargo make dod` exiting 0 (§5). |
 
 **The shared blocks work on all three runners.** airsl run 44676722443 built commit 1a926b3 on a
 push to `main`. All three of its Definition of Done jobs and its Supply chain job succeeded
 (`evidence/airsl-ci-jobs.txt`). That run used `actions/checkout@v5`, `Swatinem/rust-cache@v2` and
 `taiki-e/install-action@v2` on every runner, and each runner reported cargo 1.94.1, clippy 0.1.94
 and rustfmt 1.8.0 for a `channel = "1.94"` pin (`evidence/airsl-ci-run-44676722443-excerpts.txt`).
+That version step is a `shell: bash` step (airsl `.github/workflows/ci.yml:47` at 1a926b3), so
+`shell: bash` ran on all three runners, Windows included. On Windows it is the bash of Git for
+Windows (`evidence/github-workflow-syntax.md:911`).
 
 **No formatting config.** airsl has no `.gitattributes`, `rustfmt.toml` or `.rustfmt.toml`
 (`evidence/airsl-format-config-absent.txt`, with a control), and its Windows `dod` job, which runs
 `cargo fmt --check`, passed. herdrify adds none either.
 
-**Not proven yet.** That this exact file passes on GitHub cannot be shown before it is pushed. The
-first pull request's run is the acceptance check (§10).
+**Not proven yet.** That this exact file passes on GitHub cannot be shown before it is pushed.
+That includes the warning-line check on the ubuntu and windows runners, whose `sed` and `grep` were
+not run locally: the check was proven with macOS's only (§5). The first pull request's run is the
+acceptance check (§10).
 
 ## 8. Documentation changes
 
@@ -577,16 +639,20 @@ The new section reads:
 rustup toolchain install                       # installs the toolchain rust-toolchain.toml pins
 cargo install --locked cargo-make@0.37.24 cargo-deny@0.20.2   # once
 cargo make dod                                 # the Definition-of-Done gate: fmt-check, clippy, doc, test, test-doc
+(set -o pipefail; mkdir -p target && cargo make dod 2>&1 | tee target/dod.log)   # the gate, keeping its log
+sed $'s/\x1b\\[[0-9;]*m//g' target/dod.log | grep -E '^ *(warning|error)'          # prints nothing when the gate had zero warnings
 cargo make fmt                                 # rewrite formatting
 cargo make deny                                # supply chain: advisories, licences, bans, sources
 cargo run -q -p herdrify-cli                   # prints the command's name and version
 ```
 
-CI runs `cargo make dod` on ubuntu, macos and windows, and `cargo deny check` on ubuntu, for every
-push to `main` and every pull request.
+CI runs `cargo make dod` on ubuntu, macos and windows, failing if its log has any warning or error
+line, and `cargo deny check` on ubuntu, for every push to `main` and every pull request.
 ````
 
-`cargo install` accepts `CRATE[@<VER>]` (`evidence/probe-cargo-install-help.txt:3,6`).
+`cargo install` accepts `CRATE[@<VER>]` (`evidence/probe-cargo-install-help.txt:3,6`). The two
+log-check lines behave the same in bash and zsh (§5, `evidence/probe-ci-step-warning-check.txt`).
+`target/` is ignored by git (`.gitignore:4`).
 
 **`README.md`.** This edit is not named in the intent's affected systems. Without it, the README's
 "Nothing is built yet" would become false.
@@ -606,6 +672,8 @@ the tools' own output.
 | A stray file under `crates/` (e.g. `.DS_Store`) | Harmless; exit 0. | `evidence/probe-stray-dir.txt` |
 | Nested Cargo workspaces under `.claudestacks/` (four probe roots, each with its own `[workspace]`) | They are not members. `cargo metadata` lists exactly the nine crates; `cargo make dod` and `cargo deny check` exit 0. | `evidence/probe-nested-workspaces.txt` |
 | An empty `main` | Fails clippy, so `main` prints the version instead (§4.2). | `evidence/probe-main-plain.txt` |
+| A cargo warning that does not fail any command (e.g. an unused manifest key) | `cargo make dod` still exits 0. The CI `dod` step prints the warning lines and exits 1, on every push and pull request. Locally, the `CLAUDE.md` check prints them. | `evidence/probe-ci-step-warning-check.txt` |
+| A gate step fails (e.g. `cargo fmt --check`) | The CI step and the local first command both exit with cargo-make's status (105 in the probe), before the check runs. | `evidence/probe-ci-step-warning-check.txt` |
 | Unused inter-crate dependencies | No warning; the gate passes. | §5 |
 | A dependency under a licence outside `allow` | `cargo deny check` fails, exit 4, until `deny.toml` allows it. | `evidence/probe-deny-license.txt` |
 | A member published before its dependencies | `cargo package` fails for that member. | `evidence/probe-package.txt` |
@@ -616,15 +684,15 @@ the tools' own output.
 ## 10. Acceptance
 
 The skeleton is done when all of the following hold:
-1. On a clean checkout with no `target/`, `cargo make dod` exits 0 with no `warning` or `error`
-   lines.
+1. On a clean checkout with no `target/`, the two log-check commands of §8 pass: the first exits 0,
+   and the second prints nothing.
 2. `cargo deny check` exits 0.
 3. `cargo run -q -p herdrify-cli` prints `herdrify 0.0.0`.
 4. `cargo tree -e normal -p <crate> --depth 1` gives exactly the edges in §4 for every member.
 5. Every file §3–§7 names equals the same path under `evidence/probe-workspace/`.
 6. `CLAUDE.md` and `README.md` read as §8 says.
-7. The CI workflow's three `dod` legs and its `deny` job succeed on the branch's first pull
-   request.
+7. The CI workflow's three `dod` legs, each with its warning-line check, and its `deny` job succeed
+   on the branch's first pull request.
 
 ## 11. Non-goals
 

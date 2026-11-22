@@ -50,8 +50,16 @@ jobs:
         with:
           tool: cargo-make@0.37.24
 
-      - name: cargo make dod
-        run: cargo make dod
+      - name: cargo make dod, failing on any warning line
+        shell: bash
+        run: |
+          set -o pipefail
+          mkdir -p target
+          cargo make dod 2>&1 | tee target/dod.log
+          if sed $'s/\x1b\\[[0-9;]*m//g' target/dod.log | grep -E '^ *(warning|error)'; then
+            echo "cargo make dod printed the warning or error lines above"
+            exit 1
+          fi
 
   deny:
     name: Supply chain

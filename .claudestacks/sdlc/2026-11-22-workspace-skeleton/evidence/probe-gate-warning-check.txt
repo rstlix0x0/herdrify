@@ -1,0 +1,58 @@
+# Does the zero-warning check on 'cargo make dod' output detect a warning?
+# clean   = a fresh copy of evidence/probe-workspace
+# control = the same copy plus one unused manifest key in crates/herdrify-core/Cargo.toml
+
+$ cd clean && cargo --version && cargo make --version
+cargo 1.94.1 (29ea6fb6a 2026-03-24)
+cargo-make 0.37.24
+$ diff '/Users/hiraq/.herdr/worktrees/herdrify/workspace-skeleton/.claudestacks/sdlc/2026-11-22-workspace-skeleton/evidence/probe-workspace/crates/herdrify-core/Cargo.toml' control/crates/herdrify-core/Cargo.toml
+5a6
+> probe-unused-key = 1
+
+## clean
+$ cd clean && ls -d target 2>&1; set -o pipefail; cargo make dod 2>&1 | tee ../clean.log >/dev/null; echo exit: $?
+ls: target: No such file or directory
+exit: 0
+$ grep -c $'\x1b' clean.log
+57
+$ grep -c -E '^(warning|error)' clean.log
+0
+$ sed $'s/\x1b\\[[0-9;]*m//g' clean.log | grep -c -E '^ *(warning|error)'
+0
+
+## control
+$ cd control && ls -d target 2>&1; set -o pipefail; cargo make dod 2>&1 | tee ../control.log >/dev/null; echo exit: $?
+ls: target: No such file or directory
+exit: 0
+$ grep -c $'\x1b' control.log
+61
+$ grep -c -E '^(warning|error)' control.log
+0
+$ sed $'s/\x1b\\[[0-9;]*m//g' control.log | grep -c -E '^ *(warning|error)'
+4
+
+## control: the matching lines (colour-stripped), and the raw bytes of the first
+$ sed $'s/\x1b\\[[0-9;]*m//g' control.log | grep -E '^ *(warning|error)'
+warning: /private/tmp/claude-501/-Users-hiraq--herdr-worktrees-herdrify-workspace-skeleton/1a2db9c1-f15d-41c2-96b7-62deeb35c834/scratchpad/redesign/work/control/crates/herdrify-core/Cargo.toml: unused manifest key: package.probe-unused-key
+warning: /private/tmp/claude-501/-Users-hiraq--herdr-worktrees-herdrify-workspace-skeleton/1a2db9c1-f15d-41c2-96b7-62deeb35c834/scratchpad/redesign/work/control/crates/herdrify-core/Cargo.toml: unused manifest key: package.probe-unused-key
+warning: /private/tmp/claude-501/-Users-hiraq--herdr-worktrees-herdrify-workspace-skeleton/1a2db9c1-f15d-41c2-96b7-62deeb35c834/scratchpad/redesign/work/control/crates/herdrify-core/Cargo.toml: unused manifest key: package.probe-unused-key
+warning: /private/tmp/claude-501/-Users-hiraq--herdr-worktrees-herdrify-workspace-skeleton/1a2db9c1-f15d-41c2-96b7-62deeb35c834/scratchpad/redesign/work/control/crates/herdrify-core/Cargo.toml: unused manifest key: package.probe-unused-key
+$ grep -m1 'unused manifest key' control.log | od -c | head -2
+0000000  033   [   1   m 033   [   3   3   m   w   a   r   n   i   n   g
+0000020  033   [   0   m   :       /   p   r   i   v   a   t   e   /   t
+
+## clean: the five commands, in order
+$ grep -n 'Execute Command' clean.log
+6:[cargo-make] INFO - Execute Command: "cargo" "fmt" "--all" "--" "--check"
+7:[cargo-make] INFO - Execute Command: "cargo" "clippy" "--workspace" "--all-targets" "--all-features" "--" "-D" "warnings"
+18:[cargo-make] INFO - Execute Command: "cargo" "doc" "--workspace" "--all-features" "--no-deps"
+38:[cargo-make] INFO - Execute Command: "cargo" "test" "--workspace" "--all-targets" "--all-features"
+104:[cargo-make] INFO - Execute Command: "cargo" "test" "--workspace" "--all-features" "--doc"
+
+## pipefail: whose exit status a pipeline into tee reports
+$ bash --version | head -1
+GNU bash, version 3.2.57(1)-release (arm64-apple-darwin25)
+$ bash -c 'false | tee /dev/null; echo exit: $?'
+exit: 0
+$ bash -c 'set -o pipefail; false | tee /dev/null; echo exit: $?'
+exit: 1

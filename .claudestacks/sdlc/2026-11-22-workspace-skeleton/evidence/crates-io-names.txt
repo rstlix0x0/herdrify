@@ -1,34 +1,45 @@
+$ pwd; ls -A | wc -l     # an empty directory outside any workspace
+/private/tmp/claude-501/-Users-hiraq--herdr-worktrees-herdrify-workspace-skeleton/1a2db9c1-f15d-41c2-96b7-62deeb35c834/scratchpad/empty
+0
 $ cargo info herdrify
+    Updating crates.io index
 error: could not find `herdrify` in registry `https://github.com/rust-lang/crates.io-index`
 exit: 101
 $ cargo info herdrify-core
+    Updating crates.io index
 error: could not find `herdrify-core` in registry `https://github.com/rust-lang/crates.io-index`
 exit: 101
 $ cargo info herdrify-hc
+    Updating crates.io index
 error: could not find `herdrify-hc` in registry `https://github.com/rust-lang/crates.io-index`
 exit: 101
 $ cargo info herdrify-app
+    Updating crates.io index
 error: could not find `herdrify-app` in registry `https://github.com/rust-lang/crates.io-index`
 exit: 101
 $ cargo info herdrify-lua
+    Updating crates.io index
 error: could not find `herdrify-lua` in registry `https://github.com/rust-lang/crates.io-index`
 exit: 101
 $ cargo info herdrify-herdr
+    Updating crates.io index
 error: could not find `herdrify-herdr` in registry `https://github.com/rust-lang/crates.io-index`
 exit: 101
 $ cargo info herdrify-store
+    Updating crates.io index
 error: could not find `herdrify-store` in registry `https://github.com/rust-lang/crates.io-index`
 exit: 101
 $ cargo info herdrify-git
+    Updating crates.io index
 error: could not find `herdrify-git` in registry `https://github.com/rust-lang/crates.io-index`
 exit: 101
 $ cargo info herdrify-testkit
+    Updating crates.io index
 error: could not find `herdrify-testkit` in registry `https://github.com/rust-lang/crates.io-index`
 exit: 101
 $ cargo info herdrify-cli
+    Updating crates.io index
 error: could not find `herdrify-cli` in registry `https://github.com/rust-lang/crates.io-index`
 exit: 101
-$ cargo info airsl
-airsl #lua #scripting #embedded #sandbox
-Embeddable Lua 5.4 runtime with a capability-gated sandbox and a host standard library
+$ cargo info airsl > /dev/null   # control
 exit: 0

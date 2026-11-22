@@ -1,0 +1,102 @@
+# The zero-warning check: the CI dod step's exact script, and the local CLAUDE.md commands
+# clean = fresh copy of evidence/probe-workspace; warn = plus one unused manifest key;
+# fail  = plus one mis-formatted line, so cargo fmt --check fails
+
+$ cd '/Users/hiraq/.herdr/worktrees/herdrify/workspace-skeleton/.claudestacks/sdlc/2026-11-22-workspace-skeleton/evidence/probe-workspace' && cargo --version && cargo make --version && sed --version 2>&1 | head -1; bash --version | head -1; zsh --version
+cargo 1.94.1 (29ea6fb6a 2026-03-24)
+cargo-make 0.37.24
+sed: illegal option -- -
+GNU bash, version 3.2.57(1)-release (arm64-apple-darwin25)
+zsh 5.9 (arm64-apple-darwin25.0)
+
+## The step's run text, exactly as yaml-rust2 0.10.4 parses it from ci.yml (job dod, step 4)
+$ '/Users/hiraq/.herdr/worktrees/herdrify/workspace-skeleton/.claudestacks/sdlc/2026-11-22-workspace-skeleton/evidence/probe-ci-yaml/target/debug/ci-yaml-probe' '/Users/hiraq/.herdr/worktrees/herdrify/workspace-skeleton/.claudestacks/sdlc/2026-11-22-workspace-skeleton/evidence/probe-workspace/.github/workflows/ci.yml' dod 4 > ci-step.sh; cat ci-step.sh
+shell: Some("bash")
+set -o pipefail
+mkdir -p target
+cargo make dod 2>&1 | tee target/dod.log
+if sed $'s/\x1b\\[[0-9;]*m//g' target/dod.log | grep -E '^ *(warning|error)'; then
+  echo "cargo make dod printed the warning or error lines above"
+  exit 1
+fi
+
+$ diff '/Users/hiraq/.herdr/worktrees/herdrify/workspace-skeleton/.claudestacks/sdlc/2026-11-22-workspace-skeleton/evidence/probe-workspace/crates/herdrify-core/Cargo.toml' warn/crates/herdrify-core/Cargo.toml
+5a6
+> probe-unused-key = 1
+$ diff '/Users/hiraq/.herdr/worktrees/herdrify/workspace-skeleton/.claudestacks/sdlc/2026-11-22-workspace-skeleton/evidence/probe-workspace/crates/herdrify-cli/src/main.rs' fail/crates/herdrify-cli/src/main.rs
+6c6
+<     println!("{}", version_line());
+---
+>     println!(  "{}", version_line());
+
+## clean: the CI step, run the way GitHub runs shell: bash
+$ cd clean && ls -d target; bash --noprofile --norc -eo pipefail ../ci-step.sh > ../out/ci-clean.out 2>&1; echo exit: $?
+ls: target: No such file or directory
+exit: 0
+$ tail -n 3 out/ci-clean.out
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+[cargo-make] INFO - Build Done in 6.31 seconds.
+## clean: the local commands, in bash
+$ cd clean && rm -rf target && ls -d target; bash -c '(set -o pipefail; mkdir -p target && cargo make dod 2>&1 | tee target/dod.log) > /dev/null; echo exit: $?'
+ls: target: No such file or directory
+exit: 0
+$ cd clean && bash -c "sed \$'s/\\x1b\\\\[[0-9;]*m//g' target/dod.log | grep -E '^ *(warning|error)'; echo grep-exit: \$?"
+grep-exit: 1
+## clean: the local commands, in zsh
+$ cd clean && rm -rf target && ls -d target; zsh -c '(set -o pipefail; mkdir -p target && cargo make dod 2>&1 | tee target/dod.log) > /dev/null; echo exit: $?'
+ls: target: No such file or directory
+exit: 0
+$ cd clean && zsh -c "sed \$'s/\\x1b\\\\[[0-9;]*m//g' target/dod.log | grep -E '^ *(warning|error)'; echo grep-exit: \$?"
+grep-exit: 1
+
+## warn: the CI step, run the way GitHub runs shell: bash
+$ cd warn && ls -d target; bash --noprofile --norc -eo pipefail ../ci-step.sh > ../out/ci-warn.out 2>&1; echo exit: $?
+ls: target: No such file or directory
+exit: 1
+$ tail -n 3 out/ci-warn.out
+warning: /private/tmp/claude-501/-Users-hiraq--herdr-worktrees-herdrify-workspace-skeleton/1a2db9c1-f15d-41c2-96b7-62deeb35c834/scratchpad/redesign2/work/warn/crates/herdrify-core/Cargo.toml: unused manifest key: package.probe-unused-key
+warning: /private/tmp/claude-501/-Users-hiraq--herdr-worktrees-herdrify-workspace-skeleton/1a2db9c1-f15d-41c2-96b7-62deeb35c834/scratchpad/redesign2/work/warn/crates/herdrify-core/Cargo.toml: unused manifest key: package.probe-unused-key
+cargo make dod printed the warning or error lines above
+## warn: the local commands, in bash
+$ cd warn && rm -rf target && ls -d target; bash -c '(set -o pipefail; mkdir -p target && cargo make dod 2>&1 | tee target/dod.log) > /dev/null; echo exit: $?'
+ls: target: No such file or directory
+exit: 0
+$ cd warn && bash -c "sed \$'s/\\x1b\\\\[[0-9;]*m//g' target/dod.log | grep -E '^ *(warning|error)'; echo grep-exit: \$?"
+warning: /private/tmp/claude-501/-Users-hiraq--herdr-worktrees-herdrify-workspace-skeleton/1a2db9c1-f15d-41c2-96b7-62deeb35c834/scratchpad/redesign2/work/warn/crates/herdrify-core/Cargo.toml: unused manifest key: package.probe-unused-key
+warning: /private/tmp/claude-501/-Users-hiraq--herdr-worktrees-herdrify-workspace-skeleton/1a2db9c1-f15d-41c2-96b7-62deeb35c834/scratchpad/redesign2/work/warn/crates/herdrify-core/Cargo.toml: unused manifest key: package.probe-unused-key
+warning: /private/tmp/claude-501/-Users-hiraq--herdr-worktrees-herdrify-workspace-skeleton/1a2db9c1-f15d-41c2-96b7-62deeb35c834/scratchpad/redesign2/work/warn/crates/herdrify-core/Cargo.toml: unused manifest key: package.probe-unused-key
+warning: /private/tmp/claude-501/-Users-hiraq--herdr-worktrees-herdrify-workspace-skeleton/1a2db9c1-f15d-41c2-96b7-62deeb35c834/scratchpad/redesign2/work/warn/crates/herdrify-core/Cargo.toml: unused manifest key: package.probe-unused-key
+grep-exit: 0
+## warn: the local commands, in zsh
+$ cd warn && rm -rf target && ls -d target; zsh -c '(set -o pipefail; mkdir -p target && cargo make dod 2>&1 | tee target/dod.log) > /dev/null; echo exit: $?'
+ls: target: No such file or directory
+exit: 0
+$ cd warn && zsh -c "sed \$'s/\\x1b\\\\[[0-9;]*m//g' target/dod.log | grep -E '^ *(warning|error)'; echo grep-exit: \$?"
+warning: /private/tmp/claude-501/-Users-hiraq--herdr-worktrees-herdrify-workspace-skeleton/1a2db9c1-f15d-41c2-96b7-62deeb35c834/scratchpad/redesign2/work/warn/crates/herdrify-core/Cargo.toml: unused manifest key: package.probe-unused-key
+warning: /private/tmp/claude-501/-Users-hiraq--herdr-worktrees-herdrify-workspace-skeleton/1a2db9c1-f15d-41c2-96b7-62deeb35c834/scratchpad/redesign2/work/warn/crates/herdrify-core/Cargo.toml: unused manifest key: package.probe-unused-key
+warning: /private/tmp/claude-501/-Users-hiraq--herdr-worktrees-herdrify-workspace-skeleton/1a2db9c1-f15d-41c2-96b7-62deeb35c834/scratchpad/redesign2/work/warn/crates/herdrify-core/Cargo.toml: unused manifest key: package.probe-unused-key
+warning: /private/tmp/claude-501/-Users-hiraq--herdr-worktrees-herdrify-workspace-skeleton/1a2db9c1-f15d-41c2-96b7-62deeb35c834/scratchpad/redesign2/work/warn/crates/herdrify-core/Cargo.toml: unused manifest key: package.probe-unused-key
+grep-exit: 0
+
+## fail: the CI step, run the way GitHub runs shell: bash
+$ cd fail && ls -d target; bash --noprofile --norc -eo pipefail ../ci-step.sh > ../out/ci-fail.out 2>&1; echo exit: $?
+ls: target: No such file or directory
+exit: 105
+$ tail -n 3 out/ci-fail.out
+ 
+ /// The line the command prints: its name and its package version.
+Error while executing command, exit code: 1
+## fail: the local commands, in bash
+$ cd fail && rm -rf target && ls -d target; bash -c '(set -o pipefail; mkdir -p target && cargo make dod 2>&1 | tee target/dod.log) > /dev/null; echo exit: $?'
+ls: target: No such file or directory
+exit: 105
+$ cd fail && bash -c "sed \$'s/\\x1b\\\\[[0-9;]*m//g' target/dod.log | grep -E '^ *(warning|error)'; echo grep-exit: \$?"
+grep-exit: 1
+## fail: the local commands, in zsh
+$ cd fail && rm -rf target && ls -d target; zsh -c '(set -o pipefail; mkdir -p target && cargo make dod 2>&1 | tee target/dod.log) > /dev/null; echo exit: $?'
+ls: target: No such file or directory
+exit: 105
+$ cd fail && zsh -c "sed \$'s/\\x1b\\\\[[0-9;]*m//g' target/dod.log | grep -E '^ *(warning|error)'; echo grep-exit: \$?"
+grep-exit: 1
+

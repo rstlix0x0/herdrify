@@ -1,1 +1,2 @@
 taiki fetched: 2026-11-22 from raw.githubusercontent.com/taiki-e/install-action/v2/{README,TOOLS}.md
+github-workflow-syntax.md  curl -sS -L 'https://docs.github.com/api/article/body?pathname=/en/actions/reference/workflows-and-actions/workflow-syntax'  (2026-11-22)

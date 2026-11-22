@@ -6,6 +6,13 @@ fn main() {
     let text = std::fs::read_to_string(&path).expect("read workflow");
     let docs = YamlLoader::load_from_str(&text).expect("valid YAML");
     let w = &docs[0];
+    // `<path> <job> <step-index>` prints that step's `run` text exactly as parsed, and its `shell`.
+    if let (Some(job), Some(idx)) = (std::env::args().nth(2), std::env::args().nth(3)) {
+        let step = &w["jobs"][job.as_str()]["steps"][idx.parse::<usize>().expect("step index")];
+        eprintln!("shell: {:?}", step["shell"].as_str());
+        print!("{}", step["run"].as_str().expect("run text"));
+        return;
+    }
     println!("documents: {}", docs.len());
     println!("name: {:?}", w["name"].as_str());
     // `on` is a plain string key in YAML 1.2 (yaml-rust2), not the boolean `true`.
