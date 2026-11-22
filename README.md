@@ -4,7 +4,7 @@ Rust tools and libraries for [Herdr](https://herdr.dev): standalone async SDKs f
 `herdr-app`, plus a framework of sandboxed components you can add and remove one at a time. The
 components are written in Lua and run under [airsl](https://github.com/airsstack/airsl).
 
-> **Status: planned.** Nothing is built yet. This README describes the plan. The decisions behind
+> **Status: early.** The Cargo workspace and its nine crates exist; no features are built yet. This README describes the plan. The decisions behind
 > it are in [`.claudestacks/sdlc/adrs/`](.claudestacks/sdlc/adrs/) and [`docs/`](docs/).
 
 ## What it is

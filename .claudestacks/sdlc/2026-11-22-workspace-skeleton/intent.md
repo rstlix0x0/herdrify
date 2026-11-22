@@ -1,5 +1,5 @@
 ---
-status: approved
+status: done
 created: 2026-11-22
 milestone: herdrify-v0/01
 ---

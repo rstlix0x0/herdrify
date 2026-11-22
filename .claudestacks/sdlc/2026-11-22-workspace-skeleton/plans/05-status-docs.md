@@ -1,5 +1,5 @@
 ---
-status: approved
+status: done
 created: 2026-11-22
 depends-on: [03, 04]
 built-on: 38eeb1508131
@@ -85,3 +85,27 @@ README.md   — modify: status block opening sentence reworded (spec §8)
 - Every `grep` check above holds on the committed tree.
 - `git diff --stat HEAD~1` on this plan's commit lists only `CLAUDE.md` and `README.md`.
 - `cargo make dod` stays green.
+
+## Review findings
+
+Reviewer verdict: COMPLIANT, `blocking: none` (code 0🔴 0🟡 3🔵 · plan 0). No fix round was needed.
+
+- 🔵 open (not actionable, the section must equal spec §8 character for character): the CI sentence (`CLAUDE.md:28-29`) names pushes to `main` and pull requests but not `ci.yml`'s `workflow_dispatch` trigger. Accurate, but incomplete.
+- 🔵 open (not actionable): the pins `cargo-make@0.37.24` and `cargo-deny@0.20.2` (`CLAUDE.md:21`) are repeated in `ci.yml` and in `Makefile.toml` `min_version`. Nothing checks that the copies agree.
+- 🔵 open (not actionable): the plan's text greps run once. They are not part of the DoD or CI, so nothing catches a later reversion.
+
+Verification on the tree (orchestrator run, 2026-11-22):
+- Red state (coder, before the edit): `grep -c "Pre-code" CLAUDE.md` → 1; `grep -c "When the workspace lands" CLAUDE.md` → 1; the status-sentence `grep -n` → no match (rc=1); headings Status, What herdrify is, no Commands; the §8 fence diff → `1,15d0` (rc=1); README "Nothing is built yet" → 1, "Status: early" → 0.
+- `grep -c "Pre-code" CLAUDE.md` → 0; `grep -c "When the workspace lands" CLAUDE.md` → 0.
+- `grep -n "The Cargo workspace exists: …"` → `7:The Cargo workspace exists: nine crates, no features yet. The architecture is decided:`.
+- `grep -n "^## " CLAUDE.md` → `5:## Status`, `17:## Commands`, `33:## What herdrify is`, then the later sections.
+- The §8 fence diff (bash, as in Proof) → no output, rc=0.
+- README: "Nothing is built yet" → 0, "Status: early" → 1; line 8 is unchanged and line 7 is not rewrapped.
+- `git diff --stat` → CLAUDE.md and README.md, plus this chain's plan files (status flips and plan 04's findings, see Deviations).
+- `cargo make dod` (coder and reviewer) → rc=0; the colour-stripped log check → no lines, grep rc=1.
+
+## Deviations
+
+- 2026-11-22: Not committed. The execute instruction did not say to commit, so the commit `docs(repo): document the workspace commands and update the status` is left to the author.
+- 2026-11-22: The Proof check "`git diff --stat` lists only `CLAUDE.md` and `README.md`" was run as `git diff --stat -- . ':!.claudestacks'`. The uncommitted tree also holds this chain's plan-file status flips and plan 04's untracked `.github/workflows/ci.yml`, which are not this task's edits. On a commit of only this task's files, `git diff --stat HEAD~1` lists only the two files.
+- 2026-11-22: README.md line 7 is now longer than 100 columns, because the plan requires the opening sentence to be replaced in place with no rewrap.

@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Status
 
-Pre-code. There is no Cargo workspace, build or test yet. The architecture is decided:
+The Cargo workspace exists: nine crates, no features yet. The architecture is decided:
 
 - **Approved ADRs** in `.claudestacks/sdlc/adrs/` (0001–0007). They are sealed and are the
   authority. A changed decision is a new superseding ADR, written with `/claudestacks-sdlc:adr`.
@@ -14,7 +14,21 @@ Pre-code. There is no Cargo workspace, build or test yet. The architecture is de
 - **Explanations** in `docs/`: `architecture.md`, `concepts.md` (one word per concept) and
   `herdr-and-airsl.md` (external facts with versions).
 
-When the workspace lands, add the real build/lint/test commands here.
+## Commands
+
+```sh
+rustup toolchain install                       # installs the toolchain rust-toolchain.toml pins
+cargo install --locked cargo-make@0.37.24 cargo-deny@0.20.2   # once
+cargo make dod                                 # the Definition-of-Done gate: fmt-check, clippy, doc, test, test-doc
+(set -o pipefail; mkdir -p target && cargo make dod 2>&1 | tee target/dod.log)   # the gate, keeping its log
+sed $'s/\x1b\\[[0-9;]*m//g' target/dod.log | grep -E '^ *(warning|error)'          # prints nothing when the gate had zero warnings
+cargo make fmt                                 # rewrite formatting
+cargo make deny                                # supply chain: advisories, licences, bans, sources
+cargo run -q -p herdrify-cli                   # prints the command's name and version
+```
+
+CI runs `cargo make dod` on ubuntu, macos and windows, failing if its log has any warning or error
+line, and `cargo deny check` on ubuntu, for every push to `main` and every pull request.
 
 ## What herdrify is
 
