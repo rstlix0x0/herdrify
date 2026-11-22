@@ -24,8 +24,24 @@ Rust probe sources, and `probe-*-output.txt` files hold their raw output. Labels
 against an isolated core (its own `HC_SESSION` and scratch XDG directories). The author's default
 core was only read, for its pid.
 
-This draft replaces `spec-superseded-2026-11-22-2.md`, which replaced
-`spec-superseded-2026-11-22.md`. The second plan-set review found further gaps, settled here:
+This draft replaces `spec-superseded-2026-11-23.md` (redesign #3). It changes the module layout
+(§2): no `<concept>_<qualifier>.rs` files, a concept and its error share one file, and a
+folder is used only for a concept with distinct roles. Public paths do not change. One test file
+moves with it: the build's `tests/method_outputs.rs` is merged into `tests/schema_coverage.rs`
+(§9.3 check 4) and deleted. It also records
+what the build of plans 01–08 settled where the earlier text was silent, each now in its section:
+- `Line::new` refuses a `\n` with `LineError` (§4.2, §8.1)
+- `CoreVersion::parse` returns `InvalidCoreVersion`, and a numeric pre-release identifier with a
+  leading zero is refused (§4.5, §8.1)
+- the open enums compare and hash by their wire word (§4.8)
+- the `status` fields of `SendResult`, `WaitResult` and `KeysResult` are `StatusWord` (§4.8)
+- `UnexpectedReply`, the reply `UnexpectedHelloReply` names (§8.1)
+
+Each of these was settled by a test of the plans 01–08 build; the run is
+`evidence/build-01-08-dod-output.txt` (the `cargo make dod` log of that build, colour codes stripped), cited in each
+section by line.
+
+The second redesign (`spec-superseded-2026-11-22-2.md` → `spec-superseded-2026-11-23.md`) settled:
 - the application layer is named `connection`, not `client` (§2)
 - the schema-instance rule for recursive schemas (§9.2) and the per-variant Params check (§9.3)
 - the `MachineTarget` shape (§4.8)
@@ -95,7 +111,7 @@ unless asked … Tests need their own `HC_SESSION` and scratch XDG paths"
 
 ## 2. Architecture
 
-The author approved this section on its own before the first spec was written. This redesign changes it (the layer is renamed `connection`, files are added to the tree), and the changed section is presented to the author again for approval.
+The author approved this section on its own before the first spec was written, again at the second redesign, and again for this redesign, which changes only the file layout (2026-11-23).
 
 It applies clean architecture with ports and adapters inside the crate. The layers, from inside
 out:
@@ -111,43 +127,64 @@ crates/herdrify-hc/
 │  ├─ lib.rs                    table of contents: //! docs, pub mod, pub use
 │  ├─ protocol/                 DOMAIN (serde, serde_json, thiserror, base64; no tokio, no I/O)
 │  │  ├─ mod.rs
-│  │  ├─ frame.rs               Frame, FrameKind, Channel, Focus; header encode/decode; 16 MiB cap
-│  │  ├─ frame_decoder.rs       bytes → Frames across partial reads
-│  │  ├─ frame_error.rs         FrameError
-│  │  ├─ line.rs                Line; LineDecoder (hands leftover bytes to the FrameDecoder)
-│  │  ├─ ndjson.rs              stream bytes → complete JSON lines
-│  │  ├─ envelope.rs            Request, RequestId, Incoming (its Response and Notification variants)
-│  │  ├─ hello.rs               HelloParams, HelloResult, Generation, CoreVersion, floor check
-│  │  ├─ rpc_error.rs           RpcError, ErrorKind
-│  │  ├─ protocol_error.rs      ProtocolError
-│  │  ├─ empty_value_error.rs   EmptyValueError
-│  │  ├─ identifiers.rs         the identifier newtypes of §4.7
+│  │  ├─ error.rs               ProtocolError, UnexpectedReply
+│  │  ├─ frame/                 frames: three roles
+│  │  │  ├─ mod.rs
+│  │  │  ├─ wire.rs             Frame, FrameKind, Channel, Focus; header encode; control payloads; 16 MiB cap
+│  │  │  ├─ decoder.rs          FrameDecoder: bytes → Frames across partial reads
+│  │  │  └─ error.rs            FrameError
+│  │  ├─ line.rs                Line, LineError; LineDecoder (hands leftover bytes to the FrameDecoder)
+│  │  ├─ ndjson.rs              NdjsonDecoder: stream bytes → complete JSON lines
+│  │  ├─ jsonrpc/               the JSON-RPC 2.0 layer: two roles
+│  │  │  ├─ mod.rs
+│  │  │  ├─ envelope.rs         Request, RequestId, Incoming (its Response and Notification variants)
+│  │  │  └─ error.rs            RpcError, ErrorKind (the error object a reply carries)
+│  │  ├─ hello.rs               HelloParams, HelloResult, Generation, CoreVersion, InvalidCoreVersion
+│  │  ├─ identifiers.rs         the identifier newtypes of §4.7, DocVersion, EmptyValueError
 │  │  ├─ notification.rs        Notification, Event, EventKind
-│  │  ├─ base64_bytes.rs        serde with-module: bytes as standard padded base64 (crate-private)
-│  │  ├─ method.rs              trait Method
-│  │  ├─ methods/               one file per group: server, terminal, templates, machine, file,
-│  │  │                         doc, events, rpc: the 31 non-hello Params types and their Method
-│  │  │                         impls; terminal.rs also holds Command, Keep, LabelChange(s) and
-│  │  │                         WaitTarget, machine.rs holds ExecCommand and MachineTarget; plus
-│  │  │                         argv.rs (Argv) and seconds.rs (Duration as seconds)
-│  │  └─ types/                 one file per type, named after it: 35 component schemas (HelloResult
-│  │                            is in hello.rs), Environment, Labels and the four open enums
+│  │  ├─ base64.rs              serde helpers: bytes as standard padded base64 (crate-private)
+│  │  ├─ word.rs                equality and hashing by wire word for the open enums (crate-private)
+│  │  ├─ methods/               Method and the 31 non-hello Params types, by method group
+│  │  │  ├─ mod.rs
+│  │  │  ├─ method.rs           trait Method
+│  │  │  ├─ argv.rs             Argv
+│  │  │  ├─ seconds.rs          Duration written as seconds (crate-private)
+│  │  │  ├─ server.rs  templates.rs  rpc.rs  events.rs  file.rs  doc.rs
+│  │  │  ├─ machine.rs          machine.* Params, ExecCommand, MachineTarget
+│  │  │  └─ terminal/           the 14 terminal.* Params: two roles
+│  │  │     ├─ mod.rs
+│  │  │     ├─ lifecycle.rs     run, list, get, kill, rm, keep, label; Command, Keep, LabelChange(s)
+│  │  │     └─ interaction.rs   read, attach, send, wait, keys, interrupt, put; WaitTarget
+│  │  └─ types/                 the 35 component schemas (HelloResult is in hello.rs), by domain
+│  │     ├─ mod.rs
+│  │     ├─ terminal/
+│  │     │  ├─ mod.rs
+│  │     │  ├─ record.rs        Terminal, Status, Foreground, FirstMessage, DisplayFacts, InitialSize
+│  │     │  ├─ state.rs         TerminalState, StatusWord, IdleOrWorking, Children
+│  │     │  ├─ reasons.rs       EndReason, WaitReason
+│  │     │  └─ results.rs       List, Remove, Read, Send, Wait, Keys, Interrupt, Put, Attach and Run results
+│  │     ├─ machine.rs          Machine, MachineView, MachineListResult, ExecResult
+│  │     ├─ server.rs           CoreInfo, LoginSession, HolderInfo, StatusResult, StopResult
+│  │     ├─ templates.rs        TemplateInfo, TemplatesResult
+│  │     ├─ file.rs             Edit, FileReadResult, FileResult
+│  │     ├─ doc.rs              DocGetResult, DocSetResult
+│  │     ├─ events.rs           SubscribeResult
+│  │     └─ maps.rs             Environment, Labels
 │  ├─ port/                     PORT (depends on protocol only)
 │  │  ├─ mod.rs
 │  │  ├─ transport.rs           Transport, FrameSink, FrameSource (pure trait definitions)
-│  │  └─ transport_error.rs     TransportError
+│  │  └─ error.rs               TransportError
 │  ├─ connection/               APPLICATION (depends on port + protocol; tokio rt + sync)
 │  │  ├─ mod.rs
 │  │  ├─ client.rs              Client<T>: connect, the 32 typed methods, call_raw
 │  │  ├─ writer.rs              the spawned writer task: owns the FrameSink, takes write commands
 │  │  ├─ router.rs              the spawned reader task: owns the FrameSource, routes frames
-│  │  ├─ connection_end.rs      ConnectionEnd, ConnectionEndKind
 │  │  ├─ pending.rs             request-id allocator and pending-call table
+│  │  ├─ stream.rs              the crate-private stream handle shared by both streams (§6.5)
 │  │  ├─ subscription.rs        Subscription (events use case)
 │  │  ├─ attach.rs              AttachStream, AttachEvent, CloseReason (attach use case)
-│  │  ├─ stream_handle.rs       the crate-private stream handle shared by both streams (§6.5)
-│  │  ├─ memory_link.rs         #[cfg(test)] in-memory FrameSink/FrameSource for unit tests
-│  │  └─ client_error.rs        Error
+│  │  ├─ error.rs               Error, ConnectionEnd, ConnectionEndKind
+│  │  └─ memory_link.rs         #[cfg(test)] in-memory FrameSink/FrameSource for unit tests
 │  └─ adapter/                  ADAPTERS (depend on port + protocol; tokio io-util + process)
 │     ├─ mod.rs
 │     ├─ stream.rs              StreamTransport<R, W> and its two halves
@@ -155,11 +192,27 @@ crates/herdrify-hc/
 └─ tests/
    ├─ fixtures/hc-0.1.21.openrpc.json
    ├─ support/                  fake_transport.rs, schema_instance.rs, live_core.rs
-   ├─ schema_coverage.rs
+   ├─ schema_coverage.rs        also asserts every Method::Output (absorbs the build's method_outputs.rs)
    ├─ client_fake.rs
    ├─ adapter_stream.rs
    └─ live.rs
 ```
+
+**File layout rule.** The author refuses flat `<concept>_<qualifier>.rs` siblings (`line.rs`
+beside `line_error.rs`, `machine.rs` beside `machine_view.rs`):
+- One concept per file, its error included (`line.rs` holds `Line`, `LineError` and
+  `LineDecoder`).
+- A `<concept>/` folder only when the concept has distinct roles or the merged file would be
+  large (`frame/`, `jsonrpc/`, `methods/terminal/`, `types/terminal/`). Files inside take role
+  names, never the folder's own name: `frame/frame.rs` would fail clippy `module_inception`, the
+  same lint `client/client.rs` fails in `evidence/probe-inception-output.txt` (quoted below).
+- A layer's own error is that layer's `error.rs` (`protocol/error.rs`, `port/error.rs`,
+  `connection/error.rs`). There is no crate-wide `errors.rs`.
+- `types/` is grouped by domain, mirroring `methods/`.
+- Public paths are unchanged. Every public item is re-exported flat from its own layer module
+  (`protocol`, `port`, `connection`, `adapter`), so `herdrify_hc::protocol::LineError` and
+  `herdrify_hc::port::TransportError` keep working whatever file holds them. The crate root
+  re-exports only the fixed list in the `mod-rs-export-only.md` bullet below.
 
 **Why the application layer is `connection`.** A layer named `client` holding `client.rs` fails
 the gate: clippy (`clippy 0.1.94 (e408947bfd 2026-03-25)`, the 1.94.1 toolchain) reports `module has the same name as its containing module`
@@ -207,7 +260,7 @@ grep -rn 'tokio'          crates/herdrify-hc/src/protocol crates/herdrify-hc/src
     `TransportError`, `StreamTransport` and `ProcessTransport`
 - `modularity.md`: one concept per file, and no `*Manager`, `*Util` or `*Helper`. `Error`,
   `TransportError`, `RpcError`, `ProtocolError` and `FrameError` carry different invariants, each
-  documented in its own doc comment. One shared `EmptyValueError` replaces field-identical
+  documented in its own doc comment, and each lives with its context (the layout rule above). One shared `EmptyValueError` replaces field-identical
   per-newtype error types (Rule 2).
 - `static-dispatch.md`:
   - `Client<T: Transport>` is generic
@@ -220,7 +273,9 @@ grep -rn 'tokio'          crates/herdrify-hc/src/protocol crates/herdrify-hc/src
   - durations are `std::time::Duration`
 - `unit-test-mandate.md`:
   - every logic-bearing file has a colocated `#[cfg(test)] mod tests`
-  - `port/transport.rs` is a pure trait file (exemption #3)
+  - `port/transport.rs` and `protocol/methods/method.rs` are pure trait files (exemption #3)
+  - `protocol/word.rs` holds a macro that implements `PartialEq`, `Eq` and `Hash`, which is
+    logic, so it has its own colocated tests on a test-only enum, besides the open enums' tests
   - `lib.rs` and every `mod.rs` are export-only (exemption #1)
   - each exemption is cited in its file's `//!`
 - `doc-comment-discipline.md`: nothing under `crates/herdrify-hc/` names ADRs, specs, plans,
@@ -290,7 +345,20 @@ grep -rn 'tokio'          crates/herdrify-hc/src/protocol crates/herdrify-hc/src
 
 ### 4.2 Lines
 
-- `Line` is one JSON text without the terminating `\n`.
+- `Line` is one JSON text without the terminating `\n`. `Line::new` refuses text containing a
+  `\n` with `LineError { index }`, the byte offset of the first one; empty text is allowed.
+
+  | Input | Outcome |
+  |---|---|
+  | `"{\"a\":1}"`, `"a\r"`, `""` | accepted, kept as given |
+  | `"\n"` | `LineError { index: 0 }` |
+  | `"ab\ncd\n"`, `"{}\n"` | `LineError { index: 2 }` |
+  | `"a\nb"` | `LineError { index: 1 }`, shown as `a line must not contain a newline (found at byte 1)` |
+
+  Checked by the tests `new_keeps_text_without_a_newline`, `new_allows_empty_text`,
+  `new_refuses_a_newline_and_names_the_first_one` and `display_names_the_byte_index`, and the
+  `LineError` doctest (`evidence/build-01-08-dod-output.txt`:96-98, :104, :350).
+  `LineDecoder` builds its lines directly, as they never hold a `\n`.
 - `LineDecoder` yields complete lines from bytes in any chunking. After a line it can hand its
   unconsumed bytes to a `FrameDecoder`, so frames that arrive in the same read as the hello reply
   are kept (W4). This is new code: a unit test (§9.1) and `tests/adapter_stream.rs` (§9.4) check
@@ -332,15 +400,24 @@ grep -rn 'tokio'          crates/herdrify-hc/src/protocol crates/herdrify-hc/src
   - `MAJOR.MINOR.PATCH`, each a decimal that fits `u64` with no leading zero (except `0` itself)
   - optionally `-<pre-release>` and/or `+<build>`, each a non-empty dot-separated list of
     non-empty `[0-9A-Za-z-]` identifiers
+  - A pre-release identifier made only of digits has no leading zero (`-0` is allowed, `-01` is
+    not); an alphanumeric one may start with `0` (`-0a`, `-01a`). Build identifiers are exempt
+    from the leading-zero rule (`+01` is accepted).
+  - Checked by the tests `version_table_accepted` (`1.0.0-0`, `1.0.0-0a`, `1.0.0-01a` and
+    `1.0.0+01` parse and display unchanged), `version_table_invalid` (`1.0.0-01`, `1.0.0-00` and
+    `1.0.0-alpha.01` are refused) and `invalid_version_names_the_text` (`"0.1"` is shown as
+    `"0.1" is not a MAJOR.MINOR.PATCH version`), `evidence/build-01-08-dod-output.txt`:80, :84-85.
   - Ordering follows semver precedence: build metadata is ignored, and a pre-release sorts below
     its release.
+  - `CoreVersion::parse` refuses with `InvalidCoreVersion { found }` (§8.1); `connect` reports it
+    as `Error::InvalidVersion`.
   - The floor is `CoreVersion::MINIMUM` = 0.1.21.
 
 | `version` | Outcome |
 |---|---|
 | `0.1.21`, `0.1.22`, `0.2.0`, `1.0.0`, `0.1.21+abc` | accepted |
 | `0.1.20`, `0.0.9`, `0.1.21-rc.1` | `Error::UnsupportedVersion` |
-| `v0.1.21`, `0.1`, `""`, `0.1.x`, `0.1.21.4`, `0.01.21`, `0.1.21-`, `0.1.21+`, ` 0.1.21`, `18446744073709551616.0.0` | `Error::InvalidVersion` |
+| `v0.1.21`, `0.1`, `""`, `0.1.x`, `0.1.21.4`, `0.01.21`, `0.1.21-`, `0.1.21+`, ` 0.1.21`, `18446744073709551616.0.0`, `0.1.21-01` | `Error::InvalidVersion` |
 
 The live core's hello reply carries `"version":"0.1.21"` (`evidence/probe-plain-output.txt:119`).
 
@@ -445,14 +522,21 @@ The live core's hello reply carries `"version":"0.1.21"` (`evidence/probe-plain-
   | optional boolean, default false | an argument-less setter that turns it on (`TerminalRun::new(cmd).keep().rm()`) |
   | required boolean (`terminal.keep keep`) | a two-variant enum: `Keep::{On, Off}` |
 
-- **Open enums.** Each serializes back to the exact word it read, including `Other`:
+- **Open enums.** Each serializes back to the exact word it read, including `Other`. Equality and
+  hashing follow the wire word, so `StatusWord::Other("idle".into()) == StatusWord::Idle`: a
+  caller-built `Other` holding a known word equals the named variant it reads back as, and both
+  hash the same. Two `Other` values are equal only when their words are. The same holds for
+  `ErrorKind` (§4.10). Checked by the tests `a_named_word_equals_other_holding_the_same_word`
+  and `other_words_are_equal_only_when_the_words_are` on `StatusWord`,
+  `a_named_kind_equals_other_holding_the_same_word` on `ErrorKind`, and the `StatusWord` doctest
+  (`evidence/build-01-08-dod-output.txt`:153, :219, :222, :366).
 
   | Enum | Fields | Known variants | Evidence |
   |---|---|---|---|
   | `TerminalState` | `Terminal.state`, `RunResult.state` | `live`, `finished` | README:133; `probe-plain-output.txt:404`; `probe-methods-output.txt:170-177` |
   | `EndReason` | `Terminal.reason`, `lost`/`finished` event `reason`, the attach CLOSE `reason` | `exited`, `killed`, `server_stop`, `host_shutdown`, `holder_lost`, `stopped_by_restart`, `signaled`, `spawn_pending` | README:111, 153, 165, 171-173 |
   | `WaitReason` | `WaitResult.reason`, the `wait` object inside `RunResult`/`SendResult` | `exit`, `timeout`, `message` | `probe-plain-output.txt:407`; `probe-methods-output.txt:121-133`; fixture `upstream-v0.1.21-schema-hc.openrpc.json:2664` |
-  | `StatusWord` | `Status.state`, the `turn` event `state` | `idle`, `working`, `done`, `blocked`, `error` | README:217-218; `probe-methods-output.txt:423-427`, `:449` |
+  | `StatusWord` | `Status.state`, the `turn` event `state`, `SendResult.status`, `WaitResult.status`, `KeysResult.status` (each `Option<StatusWord>`) | `idle`, `working`, `done`, `blocked`, `error` | README:217-218; `probe-methods-output.txt:423-427`, `:449`; fixture `upstream-v0.1.21-schema-hc.openrpc.json:1002-1003` ("The program's status word when the text went in"), `:1501-1502` ("The exact word the program reported"). `KeysResult.status` (`:448`) has no description; it takes `StatusWord` as the `terminal.keys` sibling of `SendResult.status` |
 
 - **Rules where the core refuses a combination.** These make the refused combination impossible
   to express:
@@ -892,13 +976,18 @@ On any failure the transport is dropped. `Client<T>` is `Clone` through an inter
 | | `NotJsonRpc` | `message is not a JSON-RPC response or notification` |
 | | `HelloMismatch { framed, generation }` | `hello reply has framed={framed} and generation={generation}, expected framed=true and generation=1` |
 | | `EventLineTooLong` | `event line exceeds 16777216 bytes without a newline` |
-| | `UnexpectedHelloReply { got }` | `expected the hello reply (id 0), got {got}`, where `got` is `a response with id {id}`, `a response with id null` (an `id:null` response) or `a notification` |
+| | `UnexpectedHelloReply { got }` | `expected the hello reply (id 0), got {got}`, where `got: UnexpectedReply` |
+| `UnexpectedReply` (`Copy`) | `Response { id: RequestId }` | `a response with id {id}` |
+| | `NullIdResponse` | `a response with id null` (an `id:null` response) |
+| | `Notification` | `a notification`; all three checked by the `UnexpectedReply` doctest (`evidence/build-01-08-dod-output.txt`:357) |
 | | `MissingChannel { method: MethodName }` | `the {method} reply has no channel on a framed connection` |
 | | `InvalidEvent { kind, source }` | `cannot decode a {kind} event: {source}` |
 | | `InvalidNotification { method, source }` | `cannot decode a {method} notification: {source}`, where `source` is the `serde_json` error |
 | | `ResponseOnStream` | `a JSON-RPC response arrived on an event stream` |
 | | `Frame(FrameError)` | transparent |
 | `RpcError` | (struct) | `{message} [{kind}]` |
+| `LineError` | `{ index: usize }` | `a line must not contain a newline (found at byte {index})` |
+| `InvalidCoreVersion` | `{ found: String }` | `{found:?} is not a MAJOR.MINOR.PATCH version`, `found` in Rust debug quoting, e.g. `"v0.1.21" is not a MAJOR.MINOR.PATCH version` |
 | `EmptyValueError` | `{ what: &'static str }` | `{what} must not be empty`, e.g. `terminal reference must not be empty`, `argv must not be empty` |
 | `ConnectionEnd` | `{ kind, message }` (`Clone`) | `{kind}: {message}`, where `kind` is `peer closed`, `transport failed` or `protocol violation` |
 
@@ -922,10 +1011,10 @@ On any failure the transport is dropped. `Client<T>` is `Clone` through an inter
 | A notification on channel 0 in framed mode | discarded | `connection::router` |
 | Frame on an unknown or closed channel, or an unknown kind | discarded (W9, W14) | `connection::router` |
 | CREDIT, FOCUS, FACTS or AUTOMATIC_INPUT from the core | discarded (§6.5) | `connection::router` |
-| Incoming `len` > 16 MiB | `TransportError::Frame(TooLarge)` ends the connection with `ProtocolViolation` (§6.5) | `protocol::frame_decoder`, `adapter::stream`, `connection::router` |
+| Incoming `len` > 16 MiB | `TransportError::Frame(TooLarge)` ends the connection with `ProtocolViolation` (§6.5) | `protocol::frame::decoder`, `adapter::stream`, `connection::router` |
 | A sink write fails (e.g. `Broken pipe`, `probe-framed-output.txt:464`) | that caller gets `Error::Transport`; the connection ends with `TransportFailed` (§6.5) | `connection::writer` |
 | Outgoing payload > 16 MiB (a large `file.write`) | `Error::PayloadTooLarge` before sending. The connection is unaffected | `connection::client` |
-| Incoming RESIZE with a payload that is not 4 bytes | `Err(Protocol(Frame(BadControlPayload)))` on that attach stream; it continues | `protocol::frame`, `connection::attach` |
+| Incoming RESIZE with a payload that is not 4 bytes | `Err(Protocol(Frame(BadControlPayload)))` on that attach stream; it continues | `protocol::frame::wire`, `connection::attach` |
 | Event line split across frames, or several lines in one frame | reassembled (W10) | `protocol::ndjson` |
 | Event line that is not JSON | `Err(Protocol(InvalidJson))`; the stream continues | `connection::subscription` |
 | Event line that is valid JSON but not JSON-RPC | `Err(Protocol(NotJsonRpc))`; the stream continues (§6.3) | `connection::subscription` |
@@ -941,28 +1030,28 @@ On any failure the transport is dropped. `Client<T>` is `Clone` through an inter
 | `missed` | delivered. Later events with `seq ≤ missed.seq` are dropped (W12) | `connection::subscription` |
 | Unknown event `type` | `EventKind::Unknown` | `protocol::notification` |
 | Unknown notification method | `Notification::Other` | `protocol::notification` |
-| Unknown error kind | `ErrorKind::Other(String)` | `protocol::rpc_error` |
-| Unknown word in an open-enum field (§4.8) | `Other(String)`, serialized back unchanged | `protocol::types` |
-| Unknown value in a closed schema enum | `Error::Decode` for that method | `protocol::types` |
-| Unknown field in a reply | ignored | `protocol::types` |
+| Unknown error kind | `ErrorKind::Other(String)` | `protocol::jsonrpc::error` |
+| Unknown word in an open-enum field (§4.8) | `Other(String)`, serialized back unchanged | `protocol::types::terminal::{state, reasons}` |
+| Unknown value in a closed schema enum | `Error::Decode` for that method | `protocol::types::terminal::state` |
+| Unknown field in a reply | ignored | every record type under `protocol::types` |
 | Core CLOSE on an attach channel: empty / JSON object decoding as the `Ended` shape (string `reason`; optional integer `exit_code`, `signal`, `finished_ms`) / anything else, including a wrongly typed field | `Detached` / `Ended` (W15, README:109-111) / `Unrecognized { payload }` | `connection::attach` |
 | Core CLOSE on an event channel, empty or not | the subscription ends | `connection::subscription` |
 | Hello reply: EOF / not JSON / valid JSON but not JSON-RPC (including a non-integer id) / wrong id, `id:null` or a notification | `Error::Closed` / `Protocol(InvalidJson)` / `Protocol(NotJsonRpc)` / `Protocol(UnexpectedHelloReply)` | `connection::client` |
 | Channel-0 DATA in framed mode that is not JSON, or not JSON-RPC | discarded; the connection stays open (§6.5) | `connection::router` |
 | Version table of §4.5 | as listed | `protocol::hello` |
-| `terminal.run` command | `Command::{Shell, Argv, Line}`. "Both" cannot be expressed (E3) | `protocol::methods::terminal` |
-| `Argv::new([])` | `argv must not be empty`. `Command::Shell` is the explicit form of "no command" (E4) | `protocol::methods` |
+| `terminal.run` command | `Command::{Shell, Argv, Line}`. "Both" cannot be expressed (E3) | `protocol::methods::terminal::lifecycle` |
+| `Argv::new([])` | `argv must not be empty`. `Command::Shell` is the explicit form of "no command" (E4) | `protocol::methods::argv` |
 | `machine.exec` command | exactly one of argv or line (E6, E7) | `protocol::methods::machine` |
-| `terminal.wait` target | required (E23) | `protocol::methods::terminal` |
-| `InitialSize` of 0 | impossible: `NonZeroU16` (E22) | `protocol::types` |
-| Attach or RESIZE at 0 | allowed: `u16`. The core accepts the attach and ignores the RESIZE (`probe-review-output.txt`, `== R2`) | `protocol::methods::terminal`, `connection::attach` |
-| Label set to `""` | impossible: `LabelValue` is non-empty. Removal is `LabelChange::Remove` | `protocol::methods::terminal` |
+| `terminal.wait` target | required (E23) | `protocol::methods::terminal::interaction` |
+| `InitialSize` of 0 | impossible: `NonZeroU16` (E22) | `protocol::types::terminal::record` |
+| Attach or RESIZE at 0 | allowed: `u16`. The core accepts the attach and ignores the RESIZE (`probe-review-output.txt`, `== R2`) | `protocol::methods::terminal::interaction`, `connection::attach` |
+| Label set to `""` | impossible: `LabelValue` is non-empty. Removal is `LabelChange::Remove` | `protocol::methods::terminal::lifecycle` |
 | Empty identifier string | refused exactly where the core refuses it, per §4.7's table | `protocol::identifiers` |
 | Non-empty identifier the core refuses (`a b`, `a=b`) | passed through. It returns `Error::Rpc` with `invalid_params` | `protocol::identifiers` |
 | Whitespace-only terminal ref | passed through. The core answers `not_found` (`probe-edges-output.txt:32`) | `protocol::identifiers` |
-| Empty `text` in `terminal.send`, empty `keys` | allowed (E17, E18) | `protocol::methods::terminal` |
+| Empty `text` in `terminal.send`, empty `keys` | allowed (E17, E18) | `protocol::methods::terminal::interaction` |
 | `doc.set` with value `null` | allowed: it deletes (E24) | `protocol::methods::doc` |
-| Base64 bytes from the core that are not valid base64 | `Error::Decode` for that method | `protocol::types` |
+| Base64 bytes from the core that are not valid base64 | `Error::Decode` for that method | `protocol::base64`, `protocol::types::machine` (`ExecResult`) |
 | `ProcessTransport` started inside a Herdr terminal | inherits `HC_*` (`HC_SCOPE`, `HC_TERMINAL_ID`, `HC_TERMINAL_SOCKET`), as any child would. Callers use `env_remove` to opt out. The live tests remove every `HC_*` | `adapter::process`, `tests/live.rs` |
 | Dropping a `Subscription` or `AttachStream` | sends CLOSE through the writer under the CLOSE rule (§6.5); a no-op on an ended connection | `connection::subscription`, `connection::attach`, `connection::writer` |
 | `close()` called twice, or `close()` then drop | one CLOSE in total. While the connection is open, the second `close()` returns `Ok(())` (§6.3, §6.4) | `connection::subscription`, `connection::attach` |
@@ -979,7 +1068,7 @@ On any failure the transport is dropped. `Client<T>` is `Clone` through an inter
 | RESIZE on an event channel | discarded (§6.3) | `connection::subscription` |
 | `call_raw` with `events.subscribe` or `terminal.attach` | the reply is returned; the channel's frames are discarded (§4.9) | `connection::client`, `connection::router` |
 | End of stream inside a line or a frame | partial bytes discarded, `Ok(None)` (§7.1) | `adapter::stream` |
-| Empty name in `Environment` | accepted (§4.7, §4.8) | `protocol::types` |
+| Empty name in `Environment` | accepted (§4.7, §4.8) | `protocol::types::maps` |
 | Last `Client` clone dropped while a stream lives | the connection stays open until the stream drops too (§6.5) | `connection::writer` |
 | Last holder of the writer dropped | sink closed, so stdin EOF and `hc connect` exits 0. `kill_on_drop` is the backstop | `connection::writer`, `adapter::process` |
 
@@ -995,10 +1084,12 @@ Every logic-bearing file under `src/` has a `#[cfg(test)] mod tests` (`unit-test
 | Hand-off | line → frame hand-off with leftover bytes |
 | NDJSON | split, packed and over-long lines |
 | Envelope | classification |
-| Version | the floor, with every row of §4.5 |
+| Lines | every row of §4.2's `Line::new` table, and the `LineError` message |
+| Version | the floor, with every row of §4.5, plus the pre-release and build cases of §4.5 (`1.0.0-0`, `-0a`, `-01a`, `+01` accepted; `-01`, `-00`, `-alpha.01` refused), and the `InvalidCoreVersion` message |
 | Serde | a deserialize-then-serialize round-trip for every type; the exact serialized JSON of every Params (send-only, §4.8); error decode for every `ErrorKind` |
 | Identifiers | for every refusing newtype, `""` refused and non-empty accepted; for every accepting newtype, `""` accepted (§4.7) |
-| Open enums | every known word, and an unknown word round-tripping through `Other` |
+| Open enums | every known word, and an unknown word round-tripping through `Other`; for each open enum and `ErrorKind`, `Other` holding a known word equals and hashes as the named variant, and two `Other`s are equal only when their words are |
+| Word identity | `word.rs`'s macro on a test-only enum: equality and hashing follow the word |
 | Writer | an acknowledged write, a failed write ending the connection, and a drop-time CLOSE on an open and an ended connection |
 | Base64 | encode and decode |
 | Client logic | router (including opening a route while routing its reply), pending table, credit accounting (the §6.3 example; a line longer than 262144 bytes split over many frames completes; a zero-length frame sends no CREDIT; a `next()` cancelled mid-wait loses nothing) and stale-seq dropping, driven by in-memory frames through a test-only `FrameSource`/`FrameSink`, with no adapter |
@@ -1051,7 +1142,14 @@ It runs against `tests/fixtures/hc-0.1.21.openrpc.json`, a copy of
    - With only `new()` arguments, a `Params` has exactly the required names, plus, for those four,
      the params the chosen variant value sends (`Ssh` with `name: None` sends only `target`).
 3. For each of the 36 schemas, a `schema_instance` deserialized into the SDK type and serialized
-   back equals the instance. A dropped or renamed property fails.
+   back equals the instance. A dropped or renamed property fails. The set of checked schema names
+   equals the fixture's `components.schemas` keys.
+4. Each of the 32 `Method` impls has its `Method::Output`, asserted at compile time (a wrong
+   `Output` fails to build). For 30 methods that is the Output column of §4.8's method table. The
+   two stream methods differ: that column names what the `Client` method returns, a `connection`
+   type `protocol` cannot depend on (§2), so `EventsSubscribe::Output` is `SubscribeResult` and
+   `TerminalAttach::Output` is `AttachResult`, the reply the stream is opened from. This check was
+   built as `tests/method_outputs.rs` (`evidence/build-01-08-dod-output.txt`:253-258) and moves here.
 
 ### 9.4 `tests/client_fake.rs` and `tests/adapter_stream.rs`
 
