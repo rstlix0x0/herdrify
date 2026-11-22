@@ -1,5 +1,5 @@
 ---
-status: approved
+status: done
 created: 2026-11-22
 depends-on: [01]
 built-on: 38eeb1508131
@@ -68,3 +68,17 @@ No Rust code changes.
 - `cargo deny check` exits 0 on the committed tree.
 - The five Definition-of-Done commands stay green.
 - `deny.toml` is byte-identical to the probe copy.
+
+## Review findings
+
+Reviewer verdict: COMPLIANT, `blocking: none` (code 0 · plan 0). No fix round was needed.
+
+Verification on the tree (orchestrator run, 2026-11-22):
+- `diff <probe>/deny.toml deny.toml` → no output, rc=0.
+- `cargo deny check` → `advisories ok, bans ok, licenses ok, sources ok`, rc=0.
+- Red state (coder, before the copy): `cargo deny check` exited 4: `advisories ok, bans ok, licenses FAILED, sources ok`.
+- The coder ran the five Definition-of-Done commands: rc=0, zero warning/error lines. Plan 03's `cargo make dod` re-runs them workspace-wide on the same tree.
+
+## Deviations
+
+- 2026-11-22: Not committed. The execute instruction did not say to commit, so the commit `build(workspace): add the cargo-deny supply-chain policy` is left to the author.
