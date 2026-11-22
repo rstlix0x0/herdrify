@@ -1,0 +1,14 @@
+[package]
+name        = "herdrify-hc"
+description = "Async client for herdr-core: JSON-RPC over hc connect."
+version     = "0.0.0"
+readme      = "README.md"
+
+edition.workspace      = true
+rust-version.workspace = true
+license.workspace      = true
+repository.workspace   = true
+authors.workspace      = true
+
+[lints]
+workspace = true

@@ -1,0 +1,24 @@
+$ diff <(git -C /Users/hiraq/Projects/airsstack/airsl show 1a926b3:.github/workflows/ci.yml | sed -n "/^  dod:/,/^  deny:/p" | grep -E "uses:|run:|^ +rustup|^ +cargo|os:|tool:") <(sed -n "/^  dod:/,/^  deny:/p" .github/workflows/ci.yml | grep -E "uses:|run:|^ +rustup|^ +cargo|os:|tool:")
+4c4
+<           rustup show
+---
+>           rustup toolchain install
+10,11c10
+<           tool: cargo-make
+<         run: reg add "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\AppModelUnlock" /t REG_DWORD /f /v AllowDevelopmentWithoutDevLicense /d 1
+---
+>           tool: cargo-make@0.37.24
+13d11
+<         run: cargo make examples
+diff exit: 1
+
+$ diff <(git -C /Users/hiraq/Projects/airsstack/airsl show 1a926b3:.github/workflows/ci.yml | sed -n "/^  deny:/,/^  book:/p" | grep -E "uses:|run:|^ +rustup|^ +cargo|os:|tool:") <(sed -n "/^  deny:/,\$p" .github/workflows/ci.yml | grep -E "uses:|run:|^ +rustup|^ +cargo|os:|tool:")
+2c2
+<         run: rustup show
+---
+>         run: rustup toolchain install
+4c4
+<           tool: cargo-deny
+---
+>           tool: cargo-deny@0.20.2
+diff exit: 1

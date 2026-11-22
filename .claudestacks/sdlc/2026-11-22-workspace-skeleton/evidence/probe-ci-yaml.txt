@@ -1,0 +1,19 @@
+$ cargo +1.94 run -q -- ../ws/.github/workflows/ci.yml   (yaml-rust2 0.10.4)
+cargo 1.94.1 (29ea6fb6a 2026-03-24)
+documents: 1
+name: Some("CI")
+on: ["push", "pull_request", "workflow_dispatch"]
+on.push.branches: Some(["main"])
+permissions.contents: Some("read")
+job dod: runs-on=Some("${{ matrix.os }}") matrix.os=Some(["ubuntu-latest", "macos-latest", "windows-latest"])
+  step uses=Some("actions/checkout@v5") run=None
+  step uses=None run=Some("rustup toolchain install")
+  step uses=Some("Swatinem/rust-cache@v2") run=None
+  step uses=Some("taiki-e/install-action@v2") run=None
+  step uses=None run=Some("cargo make dod")
+job deny: runs-on=Some("ubuntu-latest") matrix.os=None
+  step uses=Some("actions/checkout@v5") run=None
+  step uses=None run=Some("rustup toolchain install")
+  step uses=Some("taiki-e/install-action@v2") run=None
+  step uses=None run=Some("cargo deny check")
+exit: 0

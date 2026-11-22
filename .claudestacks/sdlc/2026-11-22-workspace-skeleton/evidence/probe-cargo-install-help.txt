@@ -1,0 +1,3 @@
+$ cargo install --help | grep -n -i -E "crate\[|@"
+3:Usage: cargo install [OPTIONS] [CRATE[@<VER>]]...
+6:  [CRATE[@<VER>]]...  Select the package from the given source

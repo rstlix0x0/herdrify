@@ -1,0 +1,34 @@
+$ cargo info herdrify
+error: could not find `herdrify` in registry `https://github.com/rust-lang/crates.io-index`
+exit: 101
+$ cargo info herdrify-core
+error: could not find `herdrify-core` in registry `https://github.com/rust-lang/crates.io-index`
+exit: 101
+$ cargo info herdrify-hc
+error: could not find `herdrify-hc` in registry `https://github.com/rust-lang/crates.io-index`
+exit: 101
+$ cargo info herdrify-app
+error: could not find `herdrify-app` in registry `https://github.com/rust-lang/crates.io-index`
+exit: 101
+$ cargo info herdrify-lua
+error: could not find `herdrify-lua` in registry `https://github.com/rust-lang/crates.io-index`
+exit: 101
+$ cargo info herdrify-herdr
+error: could not find `herdrify-herdr` in registry `https://github.com/rust-lang/crates.io-index`
+exit: 101
+$ cargo info herdrify-store
+error: could not find `herdrify-store` in registry `https://github.com/rust-lang/crates.io-index`
+exit: 101
+$ cargo info herdrify-git
+error: could not find `herdrify-git` in registry `https://github.com/rust-lang/crates.io-index`
+exit: 101
+$ cargo info herdrify-testkit
+error: could not find `herdrify-testkit` in registry `https://github.com/rust-lang/crates.io-index`
+exit: 101
+$ cargo info herdrify-cli
+error: could not find `herdrify-cli` in registry `https://github.com/rust-lang/crates.io-index`
+exit: 101
+$ cargo info airsl
+airsl #lua #scripting #embedded #sandbox
+Embeddable Lua 5.4 runtime with a capability-gated sandbox and a host standard library
+exit: 0

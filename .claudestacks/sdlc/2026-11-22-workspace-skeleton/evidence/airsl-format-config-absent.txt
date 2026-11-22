@@ -1,0 +1,5 @@
+$ (in airsl at 1a926b3) ls -A | grep -xE '\.gitattributes|rustfmt\.toml|\.rustfmt\.toml'; echo "(grep exit: $?)"
+(grep exit: 1)
+$ ls -A | grep -xE 'rust-toolchain\.toml|deny\.toml'   # control: same search shape finds siblings
+deny.toml
+rust-toolchain.toml

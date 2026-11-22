@@ -1,0 +1,49 @@
+=== A const fn main
+//! The `herdrify` command.
+
+const fn main() {}
+$ cargo clippy -p herdrify-cli --all-targets -- -D warnings
+exit: 0
+
+=== B ExitCode
+//! The `herdrify` command.
+
+use std::process::ExitCode;
+
+fn main() -> ExitCode {
+    ExitCode::SUCCESS
+}
+$ cargo clippy -p herdrify-cli --all-targets -- -D warnings
+error: this could be a `const fn`
+error: could not compile `herdrify-cli` (bin "herdrify" test) due to 1 previous error
+exit: 101
+
+=== C expect
+//! The `herdrify` command.
+
+#[expect(
+    clippy::missing_const_for_fn,
+    reason = "the entry point must be a plain fn, and the command does no work"
+)]
+fn main() {}
+$ cargo clippy -p herdrify-cli --all-targets -- -D warnings
+error: this lint expectation is unfulfilled
+error: could not compile `herdrify-cli` (bin "herdrify") due to 1 previous error
+exit: 101
+
+=== D version line
+//! The `herdrify` command.
+
+fn main() {
+    println!("herdrify {}", env!("CARGO_PKG_VERSION"));
+}
+$ cargo clippy -p herdrify-cli --all-targets -- -D warnings
+exit: 0
+
+=== A: const fn main
+$ cargo run -q -p herdrify-cli; echo "exit: $?"
+exit: 0
+=== D: version line
+$ cargo run -q -p herdrify-cli; echo "exit: $?"
+herdrify 0.0.0
+exit: 0

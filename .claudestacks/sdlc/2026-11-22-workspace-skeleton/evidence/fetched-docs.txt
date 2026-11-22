@@ -1,0 +1,1 @@
+taiki fetched: 2026-11-22 from raw.githubusercontent.com/taiki-e/install-action/v2/{README,TOOLS}.md
