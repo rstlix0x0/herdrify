@@ -1,5 +1,5 @@
 ---
-status: approved
+status: done
 created: 2026-11-22
 depends-on: [02, 03]
 built-on: 38eeb1508131
@@ -66,3 +66,23 @@ built-on: 38eeb1508131
 
 - `ci.yml` is byte-identical to the probe copy, and `cargo make dod` stays green.
 - After `execute`, the author pushes the branch and opens its first pull request. All three `dod` legs and the `deny` job must succeed on that run (acceptance §10 item 7). This is the author's act, because pushing is outside `execute`.
+
+## Review findings
+
+Reviewer verdict: COMPLIANT, `blocking: none` (code 0🔴 1🟡 2🔵 · plan 0). No fix round was needed.
+
+- 🟡 open (not actionable here, the probe bytes are fixed): the third-party actions are pinned to movable major tags (`actions/checkout@v5`, `Swatinem/rust-cache@v2`, `taiki-e/install-action@v2`; `.github/workflows/ci.yml:34,51,74`). A repointed tag would run in CI. The damage is bounded by `permissions: contents: read` and the `pull_request` trigger (not `pull_request_target`). Pinning to full commit SHAs would need a new spec decision.
+- 🔵 open (not actionable): the `dod` step (`ci.yml:55-63`) stops on a failing gate because GitHub runs `shell: bash` with `-eo pipefail`. The script does not set `-e` itself. The plan's evidence ran the step under those same flags, so on CI it behaves as the plan says.
+- 🔵 open (not actionable): no DoD step lints `ci.yml` (no actionlint or YAML check). A bad later edit shows only on a CI run. The plan's Risks accept this.
+
+Verification on the tree (orchestrator run, 2026-11-22):
+- Red state (coder, before the copy): `diff <probe>/.github/workflows/ci.yml .github/workflows/ci.yml` → `diff: .github/workflows/ci.yml: No such file or directory`, rc=2.
+- `diff <probe>/.github/workflows/ci.yml .github/workflows/ci.yml` → no output, rc=0.
+- `(set -o pipefail; mkdir -p target && cargo make dod 2>&1 | tee target/dod.log)` → rc=0. `sed $'s/\x1b\\[[0-9;]*m//g' target/dod.log | grep -E '^ *(warning|error)'` → no output, grep rc=1 (clean).
+- `git status --porcelain` → only the plan file and `?? .github/`. No `.gitattributes`, `rustfmt.toml`, `.rustfmt.toml` or `clippy.toml`.
+- Reviewer also ran `cargo deny check` → `advisories ok, bans ok, licenses ok, sources ok`.
+
+## Deviations
+
+- 2026-11-22: Not committed. The execute instruction did not say to commit, so the commit `ci(repo): run the Definition-of-Done gate and cargo-deny on GitHub Actions` is left to the author.
+- 2026-11-22: Acceptance §10 item 7 (all three `dod` legs and the `deny` job green on the first pull request) is not shown by this run. Pushing is the author's act, as the plan's Proof says.
