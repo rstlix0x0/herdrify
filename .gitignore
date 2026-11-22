@@ -25,3 +25,6 @@ rustc-ice-*.txt
 
 # Claude Code personal overrides
 .claude/settings.local.json
+
+# claudestacks handoff session reports (agent run artifacts)
+.airsstack/
