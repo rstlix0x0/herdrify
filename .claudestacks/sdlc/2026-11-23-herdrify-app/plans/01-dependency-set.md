@@ -1,5 +1,5 @@
 ---
-status: approved
+status: done
 created: 2026-11-23
 built-on: aab842c3c7d3
 ---
@@ -61,3 +61,13 @@ Commit `build(herdrify-app): add the tokio, serde, serde_json and thiserror depe
 ## Proof
 
 - `cargo deny check` and `cargo make dod` both pass.
+
+## Review findings
+
+- 🔵 `crates/herdrify-app/Cargo.toml:14` — the four normal dependencies stay unused until later
+  plans add code; no DoD step detects an unused dependency. Expected for a manifest-only plan;
+  no change.
+- Reviewer verdict: compliant, `blocking: none`. Re-ran `cargo make dod` (exit 0, warning/error
+  grep empty) and `cargo deny check` (advisories ok, bans ok, licenses ok, sources ok).
+- `cargo tree -p herdrify-app --depth 1 -e normal` → `serde v1.0.229`, `serde_json v1.0.154`,
+  `thiserror v2.0.21`, `tokio v1.54.1`; `cargo tree -d` → `warning: nothing to print.`

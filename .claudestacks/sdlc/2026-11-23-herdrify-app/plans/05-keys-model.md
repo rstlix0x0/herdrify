@@ -1,5 +1,5 @@
 ---
-status: approved
+status: done
 created: 2026-11-23
 depends-on: [04]
 built-on: aab842c3c7d3
@@ -121,3 +121,45 @@ Commit `feat(herdrify-app): add the keys model`.
 ## Proof
 
 - `cargo make dod` is green.
+
+## Review findings
+
+Reviewer verdict: compliant with amendments. It re-ran `cargo make dod`: exit 0, warning/error grep
+empty; `cargo test -p herdrify-app files::keys` 23/23. `blocking: keys.rs:183-187`.
+
+Fixed:
+- 🟡 (blocking) `files/keys.rs:183-187` — the `Action` doc said a hand-built `Other` string
+  "reads back as that form". Probes showed `Other(":x")` and `Other("")` are refused on read
+  (`invalid keys file: ":x" is not a key action: its command name is empty at line 4 column 3`),
+  `Run{a:b, None}` reads back as `Run{a, Some("b")}`, and `Other({"command":"x"})` reads back
+  as `Command`. The doc now lists every case where a hand-built action reads back as another
+  form or is refused, pinned by `action_built_by_hand_can_read_back_as_another_form` and
+  `action_built_by_hand_can_be_written_as_text_that_is_refused`. Re-run:
+  `cargo test -p herdrify-app files::keys` → `test result: ok. 25 passed; 0 failed`;
+  `cargo make dod` → exit 0, `Build Done in 21.63 seconds`; warning/error grep printed nothing.
+
+Open (non-blocking, not fixed):
+- 🟡 `keys.rs:294-299` — rule order untested: `{"command":"","args":7}` is `Other` because the
+  `args` check runs before the empty-command refusal; no test pins that order.
+- 🟡 `keys.rs:390-392` (with `:45-47`) — `Keys` can hold both `Section::Global` and
+  `Section::Other("global")`; `to_json` writes `"global"` twice and re-parsing keeps one
+  (`back == k` false). Undocumented.
+- 🔵 `keys.rs:89-101` — `Section::new(impl AsRef<str>)` copies an owned `String` again on the
+  serde path.
+- 🔵 `keys.rs:295-300` — `from_object` clones the name before removing `command`.
+- 🔵 `keys.rs:411-415,443-447` — `Keys::get` and `Keys::sections` have no `# Examples` of their own.
+- 🔵 `files/mod.rs:17-18` — the keys responsibilities line omits `KeyActionError`.
+- 🔵 `Section` uses `#[serde(from = "String", into = "String")]` rather than hand-written
+  Serialize/Deserialize; same behaviour, guarded by `section_is_a_json_object_key` and
+  `section_writes_back_as_read`.
+- 🔵 Unplanned `impl FromStr for Action`: without it the public `KeyActionError` is returned by
+  no public API.
+
+## Deviations
+
+- 2026-11-23 — `keys_parse_the_agents_md_example` was built as `keys_parse_the_documented_example`
+  (no file references in source). The text matches the 0.1.17 AGENTS.md:522-527 byte for byte.
+- 2026-11-23 — `IntoIterator` is implemented for owned `Keys` only: clippy
+  `into_iter_without_iter` (-D warnings) rejected `IntoIterator for &Keys` without an `iter`
+  method, and `sections()` already iterates by reference.
+- 2026-11-23 — One review for the whole plan, and no per-task commits (as in plans 02–04).

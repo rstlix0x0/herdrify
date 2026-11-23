@@ -1,5 +1,5 @@
 ---
-status: approved
+status: done
 created: 2026-11-23
 depends-on: [02]
 built-on: aab842c3c7d3
@@ -227,3 +227,50 @@ green. Commit `feat(herdrify-app): add the layout node and Layout`.
 ## Proof
 
 - Plan 06 runs the three shipped layouts end to end. `cargo make dod` is green.
+
+## Review findings
+
+Reviewer verdict: compliant with amendments, `blocking: none`. It re-ran `cargo make dod`: exit 0,
+warning/error grep empty; `cargo test -p herdrify-app files` gave 64 passed, plus 58 doctests.
+The probe crate was in the session scratchpad.
+
+Open (non-blocking, not fixed):
+- 🟡 `files/layout/content.rs:27` — a known key repeated inside an untagged object falls to
+  `Other` silently: `{"mod":"a","mod":"b"}` → `Other({"mod":"b"})` (same for `Paint`, `Size`).
+  `Layout::parse` refuses a repeated named field only on a node; its doc reads wider.
+- 🟡 `files/layout/node.rs:3` — an explicit `null` on any optional field reads as `None` and is
+  dropped on write (`"gap":null`, `"header":null`, `"theme":null`, `"props":null`,
+  `"pane":null` do not round-trip JSON-equal). Docs say every field is kept; no test pins it.
+- 🟡 `files/layout/node.rs:224` — a public `extra` map can hold a key that a named or flattened
+  field also writes; `to_json` then writes it twice and `Layout::parse` refuses its own output
+  (`invalid layout file: duplicate field `gap` at line 4 column 7`). Unguarded and undocumented.
+- 🔵 `content.rs:314` (and paint, floating, look, node) — `read_back`/`fail` test helpers are
+  copied into five files.
+- 🔵 `look.rs:26` — `look.rs` and `node.rs` import from each other (the `Padding` deviation).
+- 🔵 `look.rs:306,331` — `return Ok(fail("…")?);` instead of `return Err(...)`.
+- 🔵 `node.rs:56` — the `# Errors` list of `Layout::parse` is too narrow (any node lacking
+  `type`; invalid values such as `"#12"` are refused too).
+- 🔵 `node.rs:74` — doctests use `.unwrap_err()` (also in the plan 02 doctests).
+- 🔵 `node.rs:91` — "alphabetical" `extra` order is serde_json's byte order and holds only
+  without `serde_json/preserve_order`; no test with two extra keys pins it.
+- 🔵 `node.rs:108` — the `to_json` fallback is unreachable (checked), but would write `"\n"`.
+- 🔵 `node.rs:286` — `Node::row`, `Node::column`, `Node::stack` and `Layout::new` have no
+  `# Examples` (a unit test covers them).
+- 🔵 `paint.rs:100` — struct variants of `Paint`, `Content` and `ThemeChoice` are not
+  `#[non_exhaustive]`. The reviewer judged this correct: marking them would make the
+  variants without helpers unbuildable outside the crate. The cost is that a later field
+  addition is semver-major.
+- 🔵 Unplanned helper `ThemeChoice::by_appearance` (used by the `ThemeChoice` doctest).
+
+## Deviations
+
+- 2026-11-23 — `Look.terminal_padding` (Task 4) needs `Padding`, which Files-that-change places
+  in `node.rs`, created by Task 5. Task 4 created `node.rs` holding only `Padding`, and Task 5
+  extended it. The final module tree matches the plan.
+- 2026-11-23 — `Content::Tab.pane` is `Option<Box<PaneFrame>>`, not `Option<PaneFrame>`: clippy
+  `large_enum_variant` under `-D warnings` rejected the unboxed field. Serialization is unchanged.
+- 2026-11-23 — Test names `pane_frame_parses_the_agents_md_example` and
+  `floating_block_parses_the_agents_md_example` were built as `*_documented_example`, keeping
+  file references out of source. The JSON is the same (AGENTS.md:383-387 and :413, checked by the
+  reviewer).
+- 2026-11-23 — One review for the whole plan, and no per-task commits (as in plan 02).

@@ -11,5 +11,14 @@ license.workspace      = true
 repository.workspace   = true
 authors.workspace      = true
 
+[dependencies]
+tokio      = { workspace = true, features = ["process"] }
+serde      = { workspace = true }
+serde_json = { workspace = true }
+thiserror  = { workspace = true }
+
+[dev-dependencies]
+tokio = { workspace = true, features = ["macros", "rt-multi-thread", "time"] }
+
 [lints]
 workspace = true

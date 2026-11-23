@@ -1,5 +1,5 @@
 ---
-status: approved
+status: done
 created: 2026-11-23
 depends-on: [03]
 built-on: aab842c3c7d3
@@ -71,3 +71,26 @@ green. Commit `feat(herdrify-app): add the theme model`.
 ## Proof
 
 - `cargo make dod` is green.
+
+## Review findings
+
+Reviewer verdict: compliant, `blocking: none`. It re-ran `cargo make dod`: exit 0, warning/error
+grep empty, herdrify-app 74 unit tests and 62 doctests ok. `cargo test -p herdrify-app
+files::theme` gave 10 passed. The probe crate (rustc 1.94.1, serde_json =1.0.154) was in the
+session scratchpad.
+
+Open (non-blocking, not fixed):
+- 🟡 `files/theme.rs:67` — a 17-colour `ansi` array is refused with detail `trailing characters
+  at line 1 column 238`, which does not name the length; no test pins the over-16 case.
+- 🔵 `theme.rs:30-31` — the `extra` collision doc says "written twice". That is true only when the
+  named field is present; an absent optional field's key is taken over by `extra` (probe:
+  `cursor: None` plus `extra["cursor"]` reads back as `Some`).
+- 🔵 `theme.rs:55` — nothing guards `#[non_exhaustive]` (same for the layout types).
+- 🔵 `theme.rs:70` — a colour name repeated in `colors` keeps its last value silently; no test.
+- 🔵 `theme.rs:117` — "a repeated unknown key keeps its last value" is true but untested here.
+- 🔵 `theme.rs:184` — redundant `use crate::files::FileKind;` in `mod tests`.
+
+## Deviations
+
+- 2026-11-23 — No commit: the instruction to execute did not ask for commits. The plan's commit
+  message is left for the author.

@@ -1,5 +1,5 @@
 ---
-status: approved
+status: done
 created: 2026-11-23
 depends-on: [01]
 built-on: aab842c3c7d3
@@ -171,3 +171,43 @@ green. Commit `feat(herdrify-app): add FileError`.
 ## Proof
 
 - Every rule in spec §4.2–4.4 has a named test. `cargo make dod` is green.
+
+## Review findings
+
+Reviewer verdict: compliant with the plan, `blocking: none`. It re-ran `cargo make dod`: exit 0,
+warning/error grep empty, 18 unit tests and 22 doctests passing.
+
+Open (non-blocking, not fixed):
+- 🟡 `files/number.rs:17-18,43,124-129` — the `as_f64` comment ("the fallback is never taken")
+  and the doc line "1e3 becomes 1000.0" hold only while no crate in the final build enables
+  serde_json's `arbitrary_precision`. The reviewer's probe against serde_json 1.0.154 with the
+  feature on: `1e400` → `as_f64()` NaN; `1e3` → `1e+3`. The docs should state that condition.
+- ❓ `files/color.rs:1-6` — the module doc says "a theme holds only the literal form"; the
+  reviewer could not check this against the plan alone.
+- ❓ `files/identifiers.rs:1-18` — the module doc says herdr-app refuses "a mod name with a
+  space in it"; an external claim with no proof here.
+- 🔵 `files/color.rs:244` — test name `color_parses_the_spec_examples` (the plan's name) contains
+  workflow vocabulary.
+- 🔵 `files/error.rs:68` — `#[non_exhaustive]` has no effect on a struct with only private fields.
+- 🔵 `files/error.rs:101-105` — `FileError::detail()`, `Color::as_str` and `HexColor::as_str`
+  have no doctest of their own.
+- 🔵 `files/identifiers.rs:62-66` — the macro-generated doctest uses `"herdrify-host"` for all
+  eight names.
+- 🔵 `files/identifiers.rs:108-112` — no unit test pins the name newtypes' `Display`.
+- 🔵 `files/identifiers.rs:177` — unused `T: fmt::Debug` bound on a test helper.
+- 🔵 `files/number.rs:33-38` — `NumberError` derives `PartialEq` over an `f64` that is NaN in the
+  main case.
+- 🔵 `files/number.rs:58` — derived equality follows `serde_json::Number` (`268 != 268.0`,
+  `0.0 == -0.0`); undocumented.
+
+Coder choices the reviewer accepted: `Number::as_f64() -> f64`; `HexColor::new("")` gives
+`NotHex` while `Color::new("")` gives `Empty`; `FileError::file()` is a `const fn` (clippy
+`missing_const_for_fn`).
+
+## Deviations
+
+- 2026-11-23 — One review for the whole plan instead of one per task. Every task edits
+  `files/mod.rs`, so the tasks ran one at a time, and a per-task reviewer re-running the DoD
+  would have raced the next task's coder. Each coder ran the DoD green before the next started.
+- 2026-11-23 — No per-task commits: the instruction to execute did not ask for commits. The
+  plan's commit messages are left for the author.
