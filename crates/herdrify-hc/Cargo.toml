@@ -3,6 +3,8 @@ name        = "herdrify-hc"
 description = "Async client for herdr-core: JSON-RPC over hc connect."
 version     = "0.1.0"
 readme      = "README.md"
+keywords    = ["herdr", "json-rpc", "terminal", "async", "client"]
+categories  = ["api-bindings", "asynchronous"]
 
 edition.workspace      = true
 rust-version.workspace = true
