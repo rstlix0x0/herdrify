@@ -1,0 +1,13 @@
+    Updating crates.io index
+herdr-protocol #herdr #terminal #protocol #codec
+Transport-neutral legacy Herdr and herdr-core framing, typed APIs, events, and desktop documents
+version: 0.2.3
+license: MIT
+rust-version: 1.100
+documentation: https://docs.rs/herdr-protocol
+repository: https://github.com/kosumic/whip
+crates.io: https://crates.io/crates/herdr-protocol/0.2.3
+dependencies:
+ +serde@1
+ +serde_json@1
+ +thiserror@2

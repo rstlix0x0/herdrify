@@ -1,0 +1,84 @@
+$ rustc -V
+rustc 1.94.1 (e408947bf 2026-03-25)
+$ default core pid (read only):
+73079
+$ cargo run -q -- /tmp/hfyr3C59
+== R4 serde_json::from_value error Display (no hc)
+from_value::<Sample>({"cols":-1}) = Err("invalid value: integer `-1`, expected u32")
+from_value::<Sample>({"cols":4294967296}) = Err("invalid value: integer `4294967296`, expected u32")
+from_value::<Sample>({"cols":"x"}) = Err("invalid type: string \"x\", expected u32")
+from_value::<Sample>({}) = Err("missing field `cols`")
+== R1 channel 0 past 256 KiB without any CREDIT: 6 concurrent rpc.discover
+hello reply framed=true
+-> +0ms ch=0 {"id":1,"jsonrpc":"2.0","method":"rpc.discover","params":{}}
+-> +0ms ch=0 {"id":2,"jsonrpc":"2.0","method":"rpc.discover","params":{}}
+-> +0ms ch=0 {"id":3,"jsonrpc":"2.0","method":"rpc.discover","params":{}}
+-> +0ms ch=0 {"id":4,"jsonrpc":"2.0","method":"rpc.discover","params":{}}
+-> +0ms ch=0 {"id":5,"jsonrpc":"2.0","method":"rpc.discover","params":{}}
+-> +0ms ch=0 {"id":6,"jsonrpc":"2.0","method":"rpc.discover","params":{}}
+ch0 replies=6 ch0 payload bytes=415110 (256 KiB = 262144) core CREDIT frames=0; client sent 0 CREDIT
+== R2 terminal.attach with cols 0 / rows 0, and RESIZE 0x0 on a live attach
+-> +71ms ch=0 {"id":10,"jsonrpc":"2.0","method":"terminal.run","params":{"argv":["sh"],"name":"rev-sh"}}
+<- +360ms ch=0 {"id":10,"jsonrpc":"2.0","result":{"address":"t1","argv":["sh"],"cols":200,"created_ms":1795359409499,"cwd":"/Users/hiraq/.herdr/worktrees/herdrify/herdrify-hc/.claudestacks/sdlc/2026-11-22-herdrify-hc/evidence/probe-review","die_with_parent":false,"exit_code":null,"finished_ms":null,"identity":"ghostty","keep":false,"labels":{},"name":"rev-sh","notify":true,"parent":null,"pid":84642,"reason":null…[554 bytes]
+-> +361ms ch=0 {"id":11,"jsonrpc":"2.0","method":"terminal.attach","params":{"cols":0,"rows":0,"terminal":"rev-sh"}}
+<- +362ms ch=0 {"id":11,"jsonrpc":"2.0","result":{"automatic_input":true,"channel":1,"resize_notifications":false,"terminal":{"address":"t1","argv":["sh"],"cols":200,"created_ms":1795359409499,"cwd":"/Users/hiraq/.herdr/worktrees/herdrify/herdrify-hc/.claudestacks/sdlc/2026-11-22-herdrify-hc/evidence/probe-review","die_with_parent":false,"exit_code":null,"finished_ms":null,"identity":"ghostty","keep":false,"labe…[631 bytes]
+-> +362ms ch=0 {"id":12,"jsonrpc":"2.0","method":"terminal.attach","params":{"cols":0,"rows":5,"terminal":"rev-sh"}}
+<- +362ms (other) ch=1 kind=0 len=365
+<- +362ms ch=0 {"id":12,"jsonrpc":"2.0","result":{"automatic_input":true,"channel":2,"resize_notifications":false,"terminal":{"address":"t1","argv":["sh"],"cols":200,"created_ms":1795359409499,"cwd":"/Users/hiraq/.herdr/worktrees/herdrify/herdrify-hc/.claudestacks/sdlc/2026-11-22-herdrify-hc/evidence/probe-review","die_with_parent":false,"exit_code":null,"finished_ms":null,"identity":"ghostty","keep":false,"labe…[631 bytes]
+-> +363ms ch=0 {"id":13,"jsonrpc":"2.0","method":"terminal.attach","params":{"cols":80,"rows":24,"terminal":"rev-sh"}}
+<- +363ms (other) ch=2 kind=0 len=365
+<- +363ms ch=0 {"id":13,"jsonrpc":"2.0","result":{"automatic_input":true,"channel":3,"resize_notifications":false,"terminal":{"address":"t1","argv":["sh"],"cols":80,"created_ms":1795359409499,"cwd":"/Users/hiraq/.herdr/worktrees/herdrify/herdrify-hc/.claudestacks/sdlc/2026-11-22-herdrify-hc/evidence/probe-review","die_with_parent":false,"exit_code":null,"finished_ms":null,"identity":"ghostty","keep":false,"label…[629 bytes]
+first attach channel=Some(1); valid attach channel=3
+-> RESIZE 0x0 on ch=3
+-> +864ms ch=0 {"id":14,"jsonrpc":"2.0","method":"terminal.get","params":{"terminal":"rev-sh"}}
+<- +864ms (other) ch=3 kind=0 len=248
+<- +864ms (other) ch=1 kind=0 len=16
+<- +864ms (other) ch=2 kind=0 len=16
+<- +864ms (other) ch=3 kind=0 len=16
+<- +864ms ch=0 {"id":14,"jsonrpc":"2.0","result":{"address":"t1","argv":["sh"],"cols":80,"created_ms":1795359409499,"cwd":"/Users/hiraq/.herdr/worktrees/herdrify/herdrify-hc/.claudestacks/sdlc/2026-11-22-herdrify-hc/evidence/probe-review","die_with_parent":false,"exit_code":null,"finished_ms":null,"foreground":{"argv":["sh"],"cwd":"/Users/hiraq/.herdr/worktrees/herdrify/herdrify-hc/.claudestacks/sdlc/2026-11-22-…[730 bytes]
+after RESIZE 0x0: terminal cols=80 rows=24 (connection alive: true)
+== R3 empty identifier values not probed before
+-> +864ms ch=0 {"id":100,"jsonrpc":"2.0","method":"machine.connect","params":{"machine":""}}
+<- +864ms ch=0 {"error":{"code":-32000,"data":{"hint":"no machines yet: hc machine add <ssh-target>","kind":"machine_unknown"},"message":"unknown machine \"\""},"id":100,"jsonrpc":"2.0"}
+-> +864ms ch=0 {"id":101,"jsonrpc":"2.0","method":"machine.rename","params":{"machine":"","new_name":"x"}}
+<- +864ms ch=0 {"error":{"code":-32000,"data":{"hint":"no machines yet: hc machine add <ssh-target>","kind":"machine_unknown"},"message":"unknown machine \"\""},"id":101,"jsonrpc":"2.0"}
+-> +864ms ch=0 {"id":102,"jsonrpc":"2.0","method":"machine.rm","params":{"machine":""}}
+<- +864ms ch=0 {"error":{"code":-32000,"data":{"hint":"no machines yet: hc machine add <ssh-target>","kind":"machine_unknown"},"message":"unknown machine \"\""},"id":102,"jsonrpc":"2.0"}
+-> +865ms ch=0 {"id":103,"jsonrpc":"2.0","method":"terminal.run","params":{"argv":["true"],"on":""}}
+<- +865ms ch=0 {"error":{"code":-32000,"data":{"hint":"no machines yet: hc machine add <ssh-target>","kind":"machine_unknown"},"message":"unknown machine \"\""},"id":103,"jsonrpc":"2.0"}
+-> +865ms ch=0 {"id":104,"jsonrpc":"2.0","method":"terminal.run","params":{"argv":["true"],"cwd":""}}
+<- +879ms ch=0 {"id":104,"jsonrpc":"2.0","result":{"address":"t2","argv":["true"],"cols":200,"created_ms":1795359410026,"cwd":"/Users/hiraq/.herdr/worktrees/herdrify/herdrify-hc/.claudestacks/sdlc/2026-11-22-herdrify-hc/evidence/probe-review/","die_with_parent":false,"exit_code":null,"finished_ms":null,"identity":"ghostty","keep":false,"labels":{},"name":null,"notify":true,"parent":null,"pid":84643,"reason":null…[554 bytes]
+-> +879ms ch=0 {"id":105,"jsonrpc":"2.0","method":"terminal.run","params":{"argv":["true"],"env":{"":"x"}}}
+<- +891ms ch=0 {"id":105,"jsonrpc":"2.0","result":{"address":"t3","argv":["true"],"cols":200,"created_ms":1795359410040,"cwd":"/Users/hiraq/.herdr/worktrees/herdrify/herdrify-hc/.claudestacks/sdlc/2026-11-22-herdrify-hc/evidence/probe-review","die_with_parent":false,"exit_code":null,"finished_ms":null,"identity":"ghostty","keep":false,"labels":{},"name":null,"notify":true,"parent":null,"pid":84644,"reason":null,…[553 bytes]
+-> +891ms ch=0 {"id":106,"jsonrpc":"2.0","method":"terminal.run","params":{"argv":["true"],"parent":""}}
+<- +891ms ch=0 {"error":{"code":-32602,"data":{"hint":"see `hc schema`","kind":"invalid_params"},"message":"bad terminal address \"\""},"id":106,"jsonrpc":"2.0"}
+-> +892ms ch=0 {"id":107,"jsonrpc":"2.0","method":"terminal.get","params":{"caller":"","terminal":"rev-sh"}}
+<- +901ms ch=0 {"id":107,"jsonrpc":"2.0","result":{"address":"t1","argv":["sh"],"cols":80,"created_ms":1795359409499,"cwd":"/Users/hiraq/.herdr/worktrees/herdrify/herdrify-hc/.claudestacks/sdlc/2026-11-22-herdrify-hc/evidence/probe-review","die_with_parent":false,"exit_code":null,"finished_ms":null,"foreground":{"argv":["sh"],"cwd":"/Users/hiraq/.herdr/worktrees/herdrify/herdrify-hc/.claudestacks/sdlc/2026-11-22…[731 bytes]
+-> +901ms ch=0 {"id":108,"jsonrpc":"2.0","method":"terminal.put","params":{"data":"aGVsbG8=","name":"","terminal":"rev-sh"}}
+<- +902ms ch=0 {"id":108,"jsonrpc":"2.0","result":{"bytes":5,"path":"/tmp/hfyr3C59/state/herdr-core/hfy-rev/files/t1/file"}}
+-> +902ms ch=0 {"id":109,"jsonrpc":"2.0","method":"terminal.keys","params":{"keys":[""],"terminal":"rev-sh"}}
+<- +902ms ch=0 {"error":{"code":-32602,"data":{"hint":"see `hc schema`","kind":"invalid_params"},"message":"unknown key \"\" (try enter, esc, up, ctrl+c, alt+x, f5, a)"},"id":109,"jsonrpc":"2.0"}
+-> +902ms ch=0 {"id":110,"jsonrpc":"2.0","method":"machine.add","params":{"name":"m2","session":"","via":"false"}}
+<- +903ms ch=0 {"error":{"code":-32602,"data":{"hint":"see `hc schema`","kind":"invalid_params"},"message":"bad name \"\": use 1-32 of a-z 0-9 - _ . starting with a letter or digit, not shaped like an id (t7)"},"id":110,"jsonrpc":"2.0"}
+-> +903ms ch=0 {"id":111,"jsonrpc":"2.0","method":"events.subscribe","params":{"children_of":""}}
+<- +903ms ch=0 {"error":{"code":-32602,"data":{"hint":"see `hc schema`","kind":"invalid_params"},"message":"bad terminal address \"\""},"id":111,"jsonrpc":"2.0"}
+-> +903ms ch=0 {"id":112,"jsonrpc":"2.0","method":"","params":{}}
+<- +903ms ch=0 {"error":{"code":-32601,"data":{"hint":"see `hc schema`","kind":"unknown_method"},"message":"unknown method \"\""},"id":112,"jsonrpc":"2.0"}
+-> +903ms ch=0 {"id":200,"jsonrpc":"2.0","method":"server.stop","params":{}}
+<- +912ms (other) ch=1 kind=2 len=80
+<- +912ms (other) ch=2 kind=2 len=80
+<- +912ms (other) ch=3 kind=2 len=80
+<- +923ms ch=0 {"id":200,"jsonrpc":"2.0","result":{"stopped":true}}
+exit: 0
+$ default core pid after:
+73079
+$ leftover hfy-rev processes:
+none
+name = "serde"
+version = "1.0.229"
+--
+name = "serde_json"
+version = "1.0.154"
+--
+name = "tokio"
+version = "1.54.1"

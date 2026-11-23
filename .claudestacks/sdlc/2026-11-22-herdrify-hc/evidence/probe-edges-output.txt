@@ -1,0 +1,86 @@
+$ rustc -V
+rustc 1.94.1 (e408947bf 2026-03-25)
+$ default core pid (read only):
+73079
+$ cargo run -q -- /tmp/hfyeR17t
+== E1 hello
+-> {"id":1,"jsonrpc":"2.0","method":"hello","params":{"generation":1}}
+<- {"id":1,"jsonrpc":"2.0","result":{"core":{"id":"c64c46988baf3c8c9fc9b8cbfa3e071c","name":"hiraqs-macbook-air"},"features":["framed","attach","events","status","shell","resize_notifications","automatic_input","restart_environment"],"framed":false,"generation":1,"keeps_running_after_logout":null,"login_session":{"gui":true,"id":100002,"user":501},"logout_linger_user":null,"methods":["hello","server.status","server.stop","server.restart","terminal.run","templates.list","terminal.list","terminal.get","terminal.kill","terminal.rm","terminal.keep","terminal.label","terminal.read","terminal.attach","…[887 bytes]
+== E2 terminal.run neither argv nor line
+-> {"id":2,"jsonrpc":"2.0","method":"terminal.run","params":{}}
+<- {"id":2,"jsonrpc":"2.0","result":{"address":"t1","argv":["/bin/zsh","-l"],"cols":200,"created_ms":1795357584402,"cwd":"/Users/hiraq/.herdr/worktrees/herdrify/herdrify-hc/.claudestacks/sdlc/2026-11-22-herdrify-hc/evidence/probe-edges","die_with_parent":false,"exit_code":null,"finished_ms":null,"identity":"ghostty","keep":false,"labels":{},"name":null,"notify":true,"parent":null,"pid":65822,"reason":null,"reported":false,"rm":false,"rows":120,"screen":"exact","signal":null,"state":"live","status":null,"status_ms":null,"template":null,"title":"","turn":0}}
+== E3 terminal.run both argv and line
+-> {"id":3,"jsonrpc":"2.0","method":"terminal.run","params":{"argv":["true"],"line":"true"}}
+<- {"error":{"code":-32602,"data":{"hint":"see `hc schema`","kind":"invalid_params"},"message":"give argv or line, not both"},"id":3,"jsonrpc":"2.0"}
+== E4 terminal.run argv empty
+-> {"id":4,"jsonrpc":"2.0","method":"terminal.run","params":{"argv":[]}}
+<- {"id":4,"jsonrpc":"2.0","result":{"address":"t2","argv":["/bin/zsh","-l"],"cols":200,"created_ms":1795357584435,"cwd":"/Users/hiraq/.herdr/worktrees/herdrify/herdrify-hc/.claudestacks/sdlc/2026-11-22-herdrify-hc/evidence/probe-edges","die_with_parent":false,"exit_code":null,"finished_ms":null,"identity":"ghostty","keep":false,"labels":{},"name":null,"notify":true,"parent":null,"pid":65824,"reason":null,"reported":false,"rm":false,"rows":120,"screen":"exact","signal":null,"state":"live","status":null,"status_ms":null,"template":null,"title":"","turn":0}}
+== E5 terminal.run line empty
+-> {"id":5,"jsonrpc":"2.0","method":"terminal.run","params":{"line":""}}
+<- {"id":5,"jsonrpc":"2.0","result":{"address":"t3","argv":["sh","-c",""],"cols":200,"created_ms":1795357584445,"cwd":"/Users/hiraq/.herdr/worktrees/herdrify/herdrify-hc/.claudestacks/sdlc/2026-11-22-herdrify-hc/evidence/probe-edges","die_with_parent":false,"exit_code":null,"finished_ms":null,"identity":"ghostty","keep":false,"labels":{},"name":null,"notify":true,"parent":null,"pid":65828,"reason":null,"reported":false,"rm":false,"rows":120,"screen":"exact","signal":null,"state":"live","status":null,"status_ms":null,"template":null,"title":"","turn":0}}
+== E6 machine.exec neither
+-> {"id":6,"jsonrpc":"2.0","method":"machine.exec","params":{}}
+<- {"error":{"code":-32602,"data":{"hint":"see `hc schema`","kind":"invalid_params"},"message":"give either argv or line"},"id":6,"jsonrpc":"2.0"}
+== E7 machine.exec both
+-> {"id":7,"jsonrpc":"2.0","method":"machine.exec","params":{"argv":["true"],"line":"true"}}
+<- {"error":{"code":-32602,"data":{"hint":"see `hc schema`","kind":"invalid_params"},"message":"give either argv or line"},"id":7,"jsonrpc":"2.0"}
+== E8 terminal.get terminal empty
+-> {"id":8,"jsonrpc":"2.0","method":"terminal.get","params":{"terminal":""}}
+<- {"error":{"code":-32602,"data":{"hint":"see `hc schema`","kind":"invalid_params"},"message":"bad terminal address \"\""},"id":8,"jsonrpc":"2.0"}
+== E9 terminal.get terminal whitespace
+-> {"id":9,"jsonrpc":"2.0","method":"terminal.get","params":{"terminal":"  "}}
+<- {"error":{"code":-32000,"data":{"hint":"see `hc ls --all`","kind":"not_found"},"message":"no terminal \"  \""},"id":9,"jsonrpc":"2.0"}
+== E10 doc.get name empty
+-> {"id":10,"jsonrpc":"2.0","method":"doc.get","params":{"name":""}}
+<- {"error":{"code":-32602,"data":{"hint":"see `hc schema`","kind":"invalid_params"},"message":"bad name \"\": use 1-32 of a-z 0-9 - _ . starting with a letter or digit, not shaped like an id (t7)"},"id":10,"jsonrpc":"2.0"}
+== E11 doc.get name with space
+-> {"id":11,"jsonrpc":"2.0","method":"doc.get","params":{"name":"a b"}}
+<- {"error":{"code":-32602,"data":{"hint":"see `hc schema`","kind":"invalid_params"},"message":"bad name \"a b\": use 1-32 of a-z 0-9 - _ . starting with a letter or digit, not shaped like an id (t7)"},"id":11,"jsonrpc":"2.0"}
+== E12 terminal.run then label with empty key
+-> {"id":12,"jsonrpc":"2.0","method":"terminal.run","params":{"argv":["sh"],"name":"edge-sh"}}
+<- {"id":12,"jsonrpc":"2.0","result":{"address":"t4","argv":["sh"],"cols":200,"created_ms":1795357584458,"cwd":"/Users/hiraq/.herdr/worktrees/herdrify/herdrify-hc/.claudestacks/sdlc/2026-11-22-herdrify-hc/evidence/probe-edges","die_with_parent":false,"exit_code":null,"finished_ms":null,"identity":"ghostty","keep":false,"labels":{},"name":"edge-sh","notify":true,"parent":null,"pid":65831,"reason":null,"reported":false,"rm":false,"rows":120,"screen":"exact","signal":null,"state":"live","status":null,"status_ms":null,"template":null,"title":"","turn":0}}
+== E13 terminal.label empty key
+-> {"id":13,"jsonrpc":"2.0","method":"terminal.label","params":{"labels":{"":"x"},"terminal":"edge-sh"}}
+<- {"error":{"code":-32602,"data":{"hint":"see `hc schema`","kind":"invalid_params"},"message":"bad label key \"\""},"id":13,"jsonrpc":"2.0"}
+== E14 terminal.label key with =
+-> {"id":14,"jsonrpc":"2.0","method":"terminal.label","params":{"labels":{"a=b":"x"},"terminal":"edge-sh"}}
+<- {"error":{"code":-32602,"data":{"hint":"see `hc schema`","kind":"invalid_params"},"message":"bad label key \"a=b\""},"id":14,"jsonrpc":"2.0"}
+== E15 terminal.run name empty
+-> {"id":15,"jsonrpc":"2.0","method":"terminal.run","params":{"argv":["true"],"name":""}}
+<- {"error":{"code":-32602,"data":{"hint":"see `hc schema`","kind":"invalid_params"},"message":"bad name \"\": use 1-32 of a-z 0-9 - _ . starting with a letter or digit, not shaped like an id (t7)"},"id":15,"jsonrpc":"2.0"}
+== E16 terminal.run duplicate name
+-> {"id":16,"jsonrpc":"2.0","method":"terminal.run","params":{"argv":["sh"],"name":"edge-sh"}}
+<- {"error":{"code":-32000,"data":{"hint":"pick another name, or kill the one holding it","kind":"name_taken"},"message":"a live terminal is already named \"edge-sh\""},"id":16,"jsonrpc":"2.0"}
+== E17 terminal.keys empty list
+-> {"id":17,"jsonrpc":"2.0","method":"terminal.keys","params":{"keys":[],"terminal":"edge-sh"}}
+<- {"id":17,"jsonrpc":"2.0","result":{"status":null,"turn":0}}
+== E18 terminal.send empty text
+-> {"id":18,"jsonrpc":"2.0","method":"terminal.send","params":{"terminal":"edge-sh","text":""}}
+<- {"id":18,"jsonrpc":"2.0","result":{"started":null,"status":null,"turn":0}}
+== E19 file.read path empty
+-> {"id":19,"jsonrpc":"2.0","method":"file.read","params":{"path":""}}
+<- {"error":{"code":-32602,"data":{"hint":"see `hc schema`","kind":"invalid_params"},"message":"/Users/hiraq/.herdr/worktrees/herdrify/herdrify-hc/.claudestacks/sdlc/2026-11-22-herdrify-hc/evidence/probe-edges/ is not a regular file"},"id":19,"jsonrpc":"2.0"}
+== E20 file.read relative path no cwd
+-> {"id":20,"jsonrpc":"2.0","method":"file.read","params":{"path":"rel.txt"}}
+<- {"error":{"code":-32000,"data":{"hint":"check the path, or hc exec ls","kind":"not_found"},"message":"no file /Users/hiraq/.herdr/worktrees/herdrify/herdrify-hc/.claudestacks/sdlc/2026-11-22-herdrify-hc/evidence/probe-edges/rel.txt"},"id":20,"jsonrpc":"2.0"}
+== E21 terminal.kill edge-sh
+-> {"id":21,"jsonrpc":"2.0","method":"terminal.kill","params":{"terminal":"edge-sh"}}
+<- {"id":21,"jsonrpc":"2.0","result":{"address":"t4","argv":["sh"],"cols":200,"created_ms":1795357584458,"cwd":"/Users/hiraq/.herdr/worktrees/herdrify/herdrify-hc/.claudestacks/sdlc/2026-11-22-herdrify-hc/evidence/probe-edges","die_with_parent":false,"exit_code":null,"finished_ms":1795357585502,"identity":"ghostty","keep":false,"labels":{},"name":"edge-sh","notify":true,"parent":null,"pid":65831,"reason":"killed","reported":false,"rm":false,"rows":120,"screen":"exact","signal":1,"state":"finished","status":null,"status_ms":null,"template":null,"title":"","turn":0}}
+== E22 terminal.run size 0x0
+-> {"id":22,"jsonrpc":"2.0","method":"terminal.run","params":{"argv":["true"],"size":{"cols":0,"rows":0}}}
+<- {"error":{"code":-32602,"data":{"hint":"see `hc schema`","kind":"invalid_params"},"message":"size.cols and size.rows must be at least 1"},"id":22,"jsonrpc":"2.0"}
+== E23 terminal.wait no terminal no children
+-> {"id":23,"jsonrpc":"2.0","method":"terminal.wait","params":{}}
+<- {"error":{"code":-32602,"data":{"hint":"see `hc schema`","kind":"invalid_params"},"message":"give a terminal, or children"},"id":23,"jsonrpc":"2.0"}
+== E24 doc.set value null version 0
+-> {"id":24,"jsonrpc":"2.0","method":"doc.set","params":{"name":"edgedoc","value":null,"version":0}}
+<- {"id":24,"jsonrpc":"2.0","result":{"version":1}}
+== E25 server.stop
+-> {"id":25,"jsonrpc":"2.0","method":"server.stop","params":{}}
+<- {"id":25,"jsonrpc":"2.0","result":{"stopped":true}}
+hc connect exit: Ok(ExitStatus(unix_wait_status(0)))
+exit: 0
+$ default core pid after:
+73079
+$ leftover hfy-edge processes:
+none

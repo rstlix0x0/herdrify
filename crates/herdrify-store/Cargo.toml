@@ -3,6 +3,7 @@ name        = "herdrify-store"
 description = "The herdrify home: config, lock, installed components, cache and state."
 version     = "0.0.0"
 readme      = "README.md"
+publish     = false
 
 edition.workspace      = true
 rust-version.workspace = true

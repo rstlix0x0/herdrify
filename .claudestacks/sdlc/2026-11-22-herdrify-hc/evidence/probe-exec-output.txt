@@ -1,0 +1,12 @@
+$ cargo run -q
+hc --version: hc 0.1.21
+serde_json 1.0.154; isolated dir /tmp/hfyx33248, HC_SESSION=hfy-exec
+SEND {"id":0,"jsonrpc":"2.0","method":"hello","params":{"generation":1}}
+RECV hello version="0.1.21"
+SEND {"id":1,"jsonrpc":"2.0","method":"machine.exec","params":{"argv":["echo","hi"]}}
+RECV {"id":1,"jsonrpc":"2.0","result":{"code":0,"ms":6,"signal":null,"stderr":"","stdout":"aGkK","timed_out":false,"truncated":false}}
+SEND {"id":2,"jsonrpc":"2.0","method":"machine.exec","params":{"line":"printf 'a\\nb'; echo err >&2; exit 3"}}
+RECV {"id":2,"jsonrpc":"2.0","result":{"code":3,"ms":15,"signal":null,"stderr":"ZXJyCg==","stdout":"YQpi","timed_out":false,"truncated":false}}
+hc connect exit: Some(0)
+hc server stop (HC_SESSION=hfy-exec) exit: Some(0)
+exit=0

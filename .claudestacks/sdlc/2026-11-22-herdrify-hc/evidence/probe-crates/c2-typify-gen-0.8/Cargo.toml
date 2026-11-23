@@ -1,0 +1,12 @@
+[package]
+name = "c2-typify-gen-0-8"
+version = "0.0.0"
+edition = "2024"
+publish = false
+
+[workspace]
+
+[dependencies]
+typify = { version = "=0.8.0", default-features = false }
+schemars = "0.8.22"
+serde_json = "1"

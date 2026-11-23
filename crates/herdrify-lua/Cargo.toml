@@ -3,6 +3,7 @@ name        = "herdrify-lua"
 description = "Runs herdrify components under the airsl Lua sandbox."
 version     = "0.0.0"
 readme      = "README.md"
+publish     = false
 
 edition.workspace      = true
 rust-version.workspace = true

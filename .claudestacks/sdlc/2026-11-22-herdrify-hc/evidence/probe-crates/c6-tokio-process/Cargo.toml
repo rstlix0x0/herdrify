@@ -1,0 +1,11 @@
+[package]
+name = "c6-tokio-process"
+version = "0.0.0"
+edition = "2024"
+rust-version = "1.94"
+publish = false
+
+[workspace]
+
+[dependencies]
+tokio = { version = "1.54.1", features = ["process", "io-util", "rt", "macros", "sync", "time"] }

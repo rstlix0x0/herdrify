@@ -1,0 +1,109 @@
+$ cargo run -q --bin params -- ../upstream-v0.1.21-schema-hc.openrpc.json
+hello . calls_you : string|null -- What that core calls this one (`rohan`), so news about `t7` reaches it as `rohan/t7`.
+hello . core : CoreInfo|null -- Another core dialing in: who it is. Its terminals may then be parents of terminals here, and hear from them.
+hello . features : array[string] default=[] -- Features supported by a core dialing in, including relaying size notifications.
+hello . framed : boolean default=false -- Switch this connection to framed mode after the reply.
+hello . generation : integer|null<uint32> min=0 -- Protocol generation the caller speaks.
+server.restart . environment : object|null{str:string} -- Replacement environment for the next core; requires PATH. Omit to preserve this core's environment. Normal sta
+terminal.run . argv : array[string] default=[] -- Program and arguments, or a template name and its task. With neither argv nor line: that machine's own shell.
+terminal.run . caller : string|null -- Who is calling (`HC_TERMINAL_ID` inside a terminal).
+terminal.run . cwd : string|null -- Working directory (default: where hc runs; through the API, the core's; with --on, that machine's home).
+terminal.run . die_with_parent : boolean default=false -- Ignored: children end with their parent unless `outlive_parent`.
+terminal.run . display : Display|null -- The caller's colors and cell size, answering the program's display queries from its start. Omitted: Ghostty's 
+terminal.run . env : object{str:string} default={} -- Override the core's environment and terminal identity. Omit terminal identity variables to use the core's defa
+terminal.run . keep : boolean default=false -- Replace lost programs with a shell in place, never re-run the original command.
+terminal.run . labels : object{str:string} default={} -- Labels, key=value (repeatable).
+terminal.run . line : string|null -- A shell line instead of argv, run by that machine's shell (`sh -c`; Windows `%COMSPEC% /d /s /c`). The CLI sen
+terminal.run . name : string|null -- Name, unique among live terminals: 1-32 of a-z 0-9 - _ .
+terminal.run . no_notify : boolean default=false -- Don't type notes about it into its parent.
+terminal.run . no_parent : boolean default=false -- No parent, even when started from a terminal.
+terminal.run . on : string|null -- Run it on another machine (see `hc machine ls`); its address is `machine/t7`.
+terminal.run . outlive_parent : boolean default=false -- Keep it running when its parent's program ends (by default it ends too).
+terminal.run . parent : string|null -- Parent terminal (default: the terminal it is started from).
+terminal.run . rm : boolean default=false -- Remove it right after it exits (once a waiting parent has the exit code).
+terminal.run . size : InitialSize|null -- Initial size before the program starts. Omitted: the configured headless size (default 200 columns by 120 rows
+terminal.run . timeout : number|null<double> -- Seconds before a wait checks in, leaving it running (default: config `wait_timeout`, else 180).
+terminal.run . wait : boolean default=false -- Then wait until it is not working, like `terminal.wait`, and return its output (the CLI waits unless --bg).
+terminal.list . all : boolean default=false -- Include finished terminals.
+terminal.list . labels : object{str:string} default={} -- Only terminals carrying all of these labels (repeatable).
+terminal.get . caller : string|null -- Who is calling; a parent looking at its child has seen its news.
+terminal.get . terminal* : string -- The terminal: `t7`, a name, or `machine/t7`.
+terminal.kill . caller : string|null -- Who is calling; a parent looking at its child has seen its news.
+terminal.kill . terminal* : string -- The terminal: `t7`, a name, or `machine/t7`.
+terminal.rm . caller : string|null -- Who is calling; a parent looking at its child has seen its news.
+terminal.rm . terminal* : string -- The terminal: `t7`, a name, or `machine/t7`.
+terminal.keep . keep* : boolean -- Keep this live terminal after loss. Existing streams end with the loss reason; reattach after `restarted`.
+terminal.keep . terminal* : string -- The terminal: `t7`, a name, or `machine/t7`.
+terminal.label . labels* : object{str:string} -- Labels to set, key=value; `key=` removes one.
+terminal.label . terminal* : string -- The terminal: `t7`, a name, or `machine/t7`.
+terminal.read . caller : string|null -- 
+terminal.read . lines : integer<uint> min=0 default=0 -- Lines of history above the screen.
+terminal.read . terminal* : string -- The terminal: `t7`, a name, or `machine/t7`.
+terminal.attach . caller : string|null default=null -- Who is calling (`HC_TERMINAL_ID` inside a terminal): never itself.
+terminal.attach . cols* : integer<uint16> min=0 -- The viewer's size in cells.
+terminal.attach . display : Display -- The viewer's own colors and cell size, used to answer display queries.
+terminal.attach . history : integer<uint> min=0 default=0 -- Scrollback lines to show first (main screen only).
+terminal.attach . observe : boolean default=false -- Watch only: never type or resize.
+terminal.attach . resize_notifications : boolean default=false -- Observer understands core-to-viewer RESIZE before replacement paints.
+terminal.attach . resumed : boolean default=false -- Back after a dropped line: sets the size only once active again.
+terminal.attach . rows* : integer<uint16> min=0 -- 
+terminal.attach . terminal* : string -- The terminal: `t7`, a name, or `machine/t7`.
+terminal.send . caller : string|null -- Who is sending (`HC_TERMINAL_ID`, else the calling process's parent), so a bare wait from the same caller wait
+terminal.send . force : boolean default=false -- Type even if the program is blocked (it may answer its dialog).
+terminal.send . if : IdleOrWorking|null -- Only type if the status is exactly this.
+terminal.send . terminal* : string -- The terminal: `t7`, a name, or `machine/t7`.
+terminal.send . text* : string -- Pasted, then submitted with Enter.
+terminal.send . timeout : number|null<double> -- With wait: seconds before it checks in (default: config, else 180).
+terminal.send . wait : boolean default=false -- Then wait for the turn this send started.
+terminal.wait . caller : string|null -- See `terminal.send`.
+terminal.wait . children : Children|null -- Wait on children instead: all = until none is working, any = next news or a message to you.  `all`: until none
+terminal.wait . output : string|null -- For programs, not agents: end when output printed after the wait started contains this text (plain text, escap
+terminal.wait . terminal : string|null -- The terminal; with `children`, whose children (default: the caller).
+terminal.wait . timeout : number|null<double> -- Seconds before it checks in (default: config `wait_timeout`, else 180).
+terminal.keys . caller : string|null -- 
+terminal.keys . keys* : array[string] -- Key names: enter, esc, tab, up, ctrl+c, alt+x, f5, a, ...
+terminal.keys . terminal* : string -- The terminal: `t7`, a name, or `machine/t7`.
+terminal.interrupt . terminal* : string -- The terminal: `t7`, a name, or `machine/t7`.
+terminal.interrupt . timeout : number|null<double> -- Seconds to watch for an effect (default 10).
+terminal.put . data* : string -- Its bytes, base64; at most 8 MB raw.
+terminal.put . name* : string -- The file's name, kept so `.png` stays `.png` (CLI: the local file to send).
+terminal.put . terminal* : string -- The terminal: `t7`, a name, or `machine/t7`.
+machine.exec . argv : array[string] -- Program and arguments, run as given (no shell).
+machine.exec . cwd : string|null -- Working directory (default: where hc runs; through the API, the core's; with --on, that machine's home).
+machine.exec . env : object{str:string} default={} -- Set on top of the core's environment, key=value (repeatable).
+machine.exec . input : string|null -- Bytes for its stdin, base64, at most 8 MB raw (without: stdin is closed).
+machine.exec . line : string|null -- A shell line instead of argv, run by that machine's shell (`sh -c`; Windows `%COMSPEC% /d /s /c`). The CLI sen
+machine.exec . on : string|null -- Run it on another machine (see `hc machine ls`).
+machine.exec . timeout : number|null<double> -- Seconds before it and everything it started are ended (default 60, at most 600).
+file.read . cwd : string|null -- Where a relative path starts (default: where hc runs; through the API, the core's; with --on, that machine's h
+file.read . limit : integer|null<uint> min=0 -- At most this many lines (default: all, up to 8 MB).
+file.read . offset : integer|null<uint> min=0 -- The first line to give, from 1.
+file.read . on : string|null -- On another machine (see `hc machine ls`).
+file.read . path* : string -- The file: absolute, or from `cwd`.
+file.write . cwd : string|null -- Where a relative path starts (default: where hc runs; through the API, the core's; with --on, that machine's h
+file.write . data* : string -- Its new content, base64, at most 8 MB raw (CLI: what is piped in).
+file.write . on : string|null -- On another machine (see `hc machine ls`).
+file.write . path* : string -- The file: absolute, or from `cwd`.
+file.edit . cwd : string|null -- Where a relative path starts (default: where hc runs; through the API, the core's; with --on, that machine's h
+file.edit . edits* : array[Edit] -- Replacements, all made or none (CLI: --old/--new pairs).
+file.edit . on : string|null -- On another machine (see `hc machine ls`).
+file.edit . path* : string -- The file: absolute, or from `cwd`.
+doc.get . name* : string -- Document name, using the terminal name rules.
+doc.get . on : string|null -- Another machine; omitted for this core.
+doc.set . name* : string -- 
+doc.set . on : string|null -- 
+doc.set . value* : any -- Any JSON value, at most 1 MiB when serialized; null deletes it.
+doc.set . version* : integer<uint64> min=0 -- Current version from doc.get; zero for a name never written.
+events.subscribe . children_of : string|null -- Only children of this terminal.
+events.subscribe . labels : object{str:string} default={} -- Only terminals carrying all of these labels (repeatable).
+events.subscribe . terminal : string|null -- Only this terminal.
+machine.add . name : string|null -- What to call it here (default: the target's host).
+machine.add . session : string|null -- The hc session on that machine (default: its default).
+machine.add . target : string|null -- How ssh reaches it: `vps`, `can@10.0.0.7`, `can@10.0.0.7:2222`, a Host from ~/.ssh/config.
+machine.add . temporary : boolean default=false -- Mark it short-lived (a sandbox for a task), so clients can show it apart from machines that stay. hc treats it
+machine.add . via : string|null -- Reach it with this command instead of ssh: it is given a shell line to run there as its last argument, like ss
+machine.connect . machine* : string -- The machine's name.
+machine.rename . machine* : string -- The machine's name now.
+machine.rename . new_name* : string -- Its new name. Addresses with the old one stop working.
+machine.rm . machine* : string -- The machine's name.
+exit: 0

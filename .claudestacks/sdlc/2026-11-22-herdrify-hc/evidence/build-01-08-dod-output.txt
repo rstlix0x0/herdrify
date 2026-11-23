@@ -1,0 +1,396 @@
+[cargo-make] INFO - cargo make 0.37.24
+[cargo-make] INFO - 
+[cargo-make] INFO - Build File: Makefile.toml
+[cargo-make] INFO - Task: dod
+[cargo-make] INFO - Profile: development
+[cargo-make] INFO - Execute Command: "cargo" "fmt" "--all" "--" "--check"
+[cargo-make] INFO - Execute Command: "cargo" "clippy" "--workspace" "--all-targets" "--all-features" "--" "-D" "warnings"
+    Finished ]8;;https://doc.rust-lang.org/cargo/reference/profiles.html#default-profiles\`dev` profile [unoptimized + debuginfo]]8;;\ target(s) in 0.08s
+[cargo-make] INFO - Execute Command: "cargo" "doc" "--workspace" "--all-features" "--no-deps"
+    Finished ]8;;https://doc.rust-lang.org/cargo/reference/profiles.html#default-profiles\`dev` profile [unoptimized + debuginfo]]8;;\ target(s) in 0.06s
+   Generated ]8;;file://hiraqs-macbook-air.local/Users/hiraq/.herdr/worktrees/herdrify/herdrify-hc/target/doc/herdrify_app/index.html\/Users/hiraq/.herdr/worktrees/herdrify/herdrify-hc/target/doc/herdrify_app/index.html]8;;\ and 8 other files
+[cargo-make] INFO - Execute Command: "cargo" "test" "--workspace" "--all-targets" "--all-features"
+    Finished ]8;;https://doc.rust-lang.org/cargo/reference/profiles.html#default-profiles\`test` profile [unoptimized + debuginfo]]8;;\ target(s) in 0.03s
+     Running unittests src/lib.rs (target/debug/deps/herdrify_app-16c538324803a235)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running unittests src/main.rs (target/debug/deps/herdrify-c0294371166057dc)
+
+running 1 test
+test tests::version_line_names_the_command_and_its_package_version ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running unittests src/lib.rs (target/debug/deps/herdrify_core-b1ab8da68b6243b8)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running unittests src/lib.rs (target/debug/deps/herdrify_git-335c46b23a4ec91f)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running unittests src/lib.rs (target/debug/deps/herdrify_hc-7dca46f6773d6f09)
+
+running 208 tests
+test port::transport_error::tests::a_frame_error_converts_into_the_frame_variant ... ok
+test port::transport_error::tests::transport_error_is_send_sync_static ... ok
+test port::transport_error::tests::io_display ... ok
+test port::transport_error::tests::frame_is_transparent ... ok
+test port::transport_error::tests::spawn_display ... ok
+test protocol::empty_value_error::tests::empty_value_error_is_send_sync_static ... ok
+test protocol::empty_value_error::tests::empty_value_error_display_names_the_value ... ok
+test protocol::base64_bytes::tests::base64_bytes_decodes_what_it_encodes ... ok
+test protocol::base64_bytes::tests::base64_bytes_refuses_invalid_input ... ok
+test protocol::base64_bytes::tests::base64_bytes_encodes_with_padding ... ok
+test protocol::envelope::tests::request_id_is_a_number ... ok
+test protocol::envelope::tests::request_serializes_with_object_params ... ok
+test protocol::envelope::tests::classifies_a_notification ... ok
+test protocol::envelope::tests::a_null_result_is_a_success ... ok
+test protocol::envelope::tests::the_jsonrpc_member_is_not_required ... ok
+test protocol::envelope::tests::refuses_json_that_is_not_json_rpc ... ok
+test protocol::envelope::tests::odd_response_ids_are_not_json_rpc ... ok
+test protocol::envelope::tests::classifies_an_error_response_with_null_id ... ok
+test protocol::envelope::tests::classifies_a_result_response ... ok
+test protocol::frame::tests::control_reader_refuses_wrong_length ... ok
+test protocol::frame::tests::control_payloads_round_trip ... ok
+test protocol::frame::tests::encode_writes_the_nine_byte_header ... ok
+test protocol::frame::tests::frame_error_display_too_large ... ok
+test protocol::frame::tests::kind_bytes_map_both_ways ... ok
+test protocol::frame_decoder::tests::a_refused_decoder_does_not_buffer_later_pushes ... ok
+test protocol::frame_decoder::tests::decodes_a_frame_split_across_every_byte ... ok
+test protocol::frame_decoder::tests::decodes_several_frames_from_one_push ... ok
+test protocol::frame_decoder::tests::decodes_the_rest_of_a_frame_after_the_buffer_was_compacted ... ok
+test protocol::frame_decoder::tests::oversized_header_poisons_the_decoder ... ok
+test protocol::frame_decoder::tests::reports_partial_bytes ... ok
+test protocol::frame_decoder::tests::with_bytes_starts_from_bytes_already_read ... ok
+test protocol::frame_error::tests::bad_control_payload_names_the_kind_in_upper_case ... ok
+test protocol::frame_error::tests::frame_error_is_send_sync_static ... ok
+test protocol::frame_error::tests::too_large_names_the_length ... ok
+test protocol::hello::tests::hello_is_the_hello_method ... ok
+test protocol::hello::tests::hello_params_serialize_the_client_request ... ok
+test protocol::hello::tests::hello_params_serialize_every_setter ... ok
+test protocol::hello::tests::hello_result_decodes_the_live_reply ... ok
+test protocol::hello::tests::invalid_version_names_the_text ... ok
+test protocol::hello::tests::hello_result_reads_absent_optionals_as_none ... ok
+test protocol::hello::tests::version_table_below_floor ... ok
+test protocol::hello::tests::precedence_ignores_build_and_ranks_pre_releases ... ok
+test protocol::hello::tests::version_table_accepted ... ok
+test protocol::hello::tests::version_table_invalid ... ok
+test protocol::identifiers::tests::doc_version_is_a_transparent_integer ... ok
+test protocol::identifiers::tests::each_refusing_newtype_refuses_empty_with_its_what_word ... ok
+test protocol::identifiers::tests::accepting_newtypes_round_trip ... ok
+test protocol::identifiers::tests::accepting_newtypes_accept_empty ... ok
+test protocol::identifiers::tests::refusing_newtype_deserialization_goes_through_new ... ok
+test protocol::identifiers::tests::refusing_newtype_parsing_matches_new ... ok
+test protocol::identifiers::tests::refusing_newtypes_accept_values_the_core_refuses ... ok
+test protocol::line::tests::an_empty_push_changes_nothing ... ok
+test protocol::line::tests::counts_complete_lines_and_partial_bytes ... ok
+test protocol::line::tests::hands_leftover_bytes_to_the_frame_decoder ... ok
+test protocol::line::tests::new_allows_empty_text ... ok
+test protocol::line::tests::new_keeps_text_without_a_newline ... ok
+test protocol::line::tests::new_refuses_a_newline_and_names_the_first_one ... ok
+test protocol::line::tests::reports_a_partial_line ... ok
+test protocol::identifiers::tests::accepting_newtypes_are_keys_and_display_their_text ... ok
+test protocol::identifiers::tests::refusing_newtypes_are_keys_and_display_their_text ... ok
+test protocol::line::tests::splits_on_newline_only ... ok
+test protocol::line::tests::yields_lines_across_chunks ... ok
+test protocol::line_error::tests::display_names_the_byte_index ... ok
+test protocol::line_error::tests::line_error_is_send_sync_static ... ok
+test protocol::methods::argv::tests::argv_of_one_element_has_no_args ... ok
+test protocol::methods::argv::tests::argv_refuses_an_empty_list ... ok
+test protocol::methods::argv::tests::argv_splits_program_and_args ... ok
+test protocol::methods::doc::tests::doc_get_required_only ... ok
+test protocol::methods::doc::tests::doc_set_allows_null ... ok
+test protocol::methods::events::tests::events_subscribe_serializes_every_filter ... ok
+test protocol::methods::file::tests::file_write_encodes_data ... ok
+test protocol::methods::file::tests::file_read_and_edit_required_only ... ok
+test protocol::methods::machine::tests::machine_exec_commands ... ok
+test protocol::methods::machine::tests::machine_add_targets ... ok
+test protocol::methods::rpc::tests::rpc_request_has_no_params_and_its_wire_name ... ok
+test protocol::methods::machine::tests::machine_list_connect_rename_rm ... ok
+test protocol::methods::machine::tests::machine_file_doc_every_setter ... ok
+test protocol::methods::seconds::tests::seconds_serializes_fractional_seconds ... ok
+test protocol::methods::server::tests::method_names_match_the_wire ... ok
+test protocol::methods::server::tests::server_and_templates_params_serialize_as_empty_objects ... ok
+test protocol::methods::server::tests::server_restart_serializes_environment ... ok
+test protocol::methods::templates::tests::templates_request_has_no_params_and_its_wire_name ... ok
+test protocol::methods::terminal::tests::terminal_attach_required_only ... ok
+test protocol::methods::terminal::tests::label_remove_serializes_as_empty_string ... ok
+test protocol::methods::terminal::tests::terminal_keep_serializes_the_boolean ... ok
+test protocol::methods::terminal::tests::terminal_keys_allows_an_empty_list ... ok
+test protocol::methods::terminal::tests::interaction_every_setter ... ok
+test protocol::methods::terminal::tests::terminal_lifecycle_every_setter ... ok
+test protocol::methods::terminal::tests::terminal_lifecycle_required_only ... ok
+test protocol::methods::terminal::tests::terminal_put_encodes_data ... ok
+test protocol::methods::terminal::tests::terminal_run_argv_and_line ... ok
+test protocol::methods::terminal::tests::terminal_run_shell_sends_no_command ... ok
+test protocol::methods::terminal::tests::terminal_wait_targets ... ok
+test protocol::methods::terminal::tests::terminal_send_allows_empty_text ... ok
+test protocol::methods::terminal::tests::terminal_run_every_setter ... ok
+test protocol::ndjson::tests::ndjson_yields_packed_lines ... ok
+test protocol::ndjson::tests::ndjson_joins_a_line_split_across_frames ... ok
+test protocol::notification::tests::a_foreground_event_without_data_reads_as_no_foreground ... ok
+test protocol::notification::tests::decodes_observed_events ... ok
+test protocol::notification::tests::a_removed_event_ignores_its_data ... ok
+test protocol::notification::tests::decodes_the_doc_event ... ok
+test protocol::notification::tests::event_carries_its_envelope ... ok
+test protocol::notification::tests::malformed_notifications_are_invalid_notification ... ok
+test protocol::notification::tests::mismatched_event_data_is_invalid_event ... ok
+test protocol::notification::tests::status_event_with_null_status ... ok
+test protocol::notification::tests::heartbeat_missed_and_other ... ok
+test protocol::notification::tests::decodes_the_remaining_types ... ok
+test protocol::notification::tests::unknown_event_type_is_kept ... ok
+test protocol::protocol_error::tests::protocol_error_display_texts ... ok
+test protocol::protocol_error::tests::protocol_error_is_send_sync_static ... ok
+test protocol::protocol_error::tests::source_chains_to_the_json_error_and_through_frame ... ok
+test protocol::rpc_error::tests::a_named_kind_equals_other_holding_the_same_word ... ok
+test protocol::rpc_error::tests::other_kinds_are_equal_only_when_the_words_are ... ok
+test protocol::rpc_error::tests::rpc_error_decodes_a_live_reply ... ok
+test protocol::rpc_error::tests::every_error_kind_decodes ... ok
+test protocol::rpc_error::tests::rpc_error_is_send_sync_static ... ok
+test protocol::rpc_error::tests::rpc_error_keeps_the_hint ... ok
+test protocol::rpc_error::tests::rpc_error_without_data_keeps_the_refusal ... ok
+test protocol::rpc_error::tests::unknown_error_kind_is_other ... ok
+test protocol::types::attach_result::tests::attach_result_round_trips_a_live_reply ... ok
+test protocol::types::children::tests::closed_enums_round_trip_and_refuse_unknown ... ok
+test protocol::types::attach_result::tests::round_trips_a_populated_value ... ok
+test protocol::types::core_info::tests::round_trips_a_populated_value ... ok
+test protocol::types::display_facts::tests::display_facts_cell_has_two_items ... ok
+test protocol::types::display_facts::tests::optional_fields_read_absent_and_null_as_none ... ok
+test protocol::types::display_facts::tests::round_trips_a_populated_value ... ok
+test protocol::types::doc_get_result::tests::doc_get_result_reads_an_unwritten_doc ... ok
+test protocol::types::doc_get_result::tests::round_trips_a_populated_value ... ok
+test protocol::types::doc_set_result::tests::round_trips_a_populated_value ... ok
+test protocol::types::edit::tests::file_types_round_trip ... ok
+test protocol::types::end_reason::tests::a_named_word_equals_other_holding_the_same_word ... ok
+test protocol::types::end_reason::tests::open_enums_keep_unknown_words ... ok
+test protocol::types::end_reason::tests::open_enums_round_trip_every_known_word ... ok
+test protocol::types::end_reason::tests::other_words_are_equal_only_when_the_words_are ... ok
+test protocol::types::environment::tests::environment_accepts_an_empty_name ... ok
+test protocol::types::exec_result::tests::exec_result_refuses_invalid_base64 ... ok
+test protocol::types::exec_result::tests::exec_result_decodes_base64_output ... ok
+test protocol::types::exec_result::tests::round_trips_a_populated_value ... ok
+test protocol::types::file_read_result::tests::file_types_round_trip ... ok
+test protocol::types::file_result::tests::file_types_round_trip ... ok
+test protocol::types::exec_result::tests::optional_fields_read_absent_and_null_as_none ... ok
+test protocol::types::first_message::tests::optional_fields_read_absent_and_null_as_none ... ok
+test protocol::types::first_message::tests::round_trips_a_populated_value ... ok
+test protocol::types::foreground::tests::round_trips_a_populated_value ... ok
+test protocol::types::holder_info::tests::round_trips_a_populated_value ... ok
+test protocol::types::idle_or_working::tests::closed_enums_round_trip_and_refuse_unknown ... ok
+test protocol::types::initial_size::tests::initial_size_refuses_zero ... ok
+test protocol::types::initial_size::tests::round_trips_a_populated_value ... ok
+test protocol::types::interrupt_result::tests::round_trips_a_populated_value ... ok
+test protocol::types::keys_result::tests::optional_fields_read_absent_and_null_as_none ... ok
+test protocol::types::keys_result::tests::round_trips_a_populated_value ... ok
+test protocol::types::keys_result::tests::status_is_a_status_word ... ok
+test protocol::types::labels::tests::labels_refuse_an_empty_value ... ok
+test protocol::types::login_session::tests::optional_fields_read_absent_and_null_as_none ... ok
+test protocol::types::login_session::tests::round_trips_a_populated_value ... ok
+test protocol::types::list_result::tests::list_result_round_trips_a_live_reply ... ok
+test protocol::types::machine::tests::optional_fields_read_absent_and_null_as_none ... ok
+test protocol::types::list_result::tests::round_trips_a_populated_value ... ok
+test protocol::types::machine::tests::machine_types_round_trip ... ok
+test protocol::types::machine_view::tests::optional_fields_read_absent_and_null_as_none ... ok
+test protocol::types::machine_list_result::tests::machine_types_round_trip ... ok
+test protocol::types::machine_view::tests::machine_types_round_trip ... ok
+test protocol::types::put_result::tests::round_trips_a_populated_value ... ok
+test protocol::types::read_result::tests::optional_fields_read_absent_and_null_as_none ... ok
+test protocol::types::read_result::tests::round_trips_a_populated_value ... ok
+test protocol::types::remove_result::tests::round_trips_a_populated_value ... ok
+test protocol::frame::tests::encode_accepts_16777216_and_refuses_16777217 ... ok
+test protocol::types::run_result::tests::optional_fields_read_absent_and_null_as_none ... ok
+test protocol::types::send_result::tests::optional_fields_read_absent_and_null_as_none ... ok
+test protocol::types::run_result::tests::run_result_carries_output_and_wait ... ok
+test protocol::types::send_result::tests::round_trips_a_populated_value ... ok
+test protocol::types::status::tests::optional_fields_read_absent_and_null_as_none ... ok
+test protocol::types::status::tests::round_trips_a_populated_value ... ok
+test protocol::types::send_result::tests::status_is_a_status_word ... ok
+test protocol::types::status_result::tests::optional_fields_read_absent_and_null_as_none ... ok
+test protocol::types::status_result::tests::round_trips_a_populated_value ... ok
+test protocol::types::status_result::tests::status_result_round_trips_a_live_reply ... ok
+test protocol::types::status_word::tests::a_named_word_equals_other_holding_the_same_word ... ok
+test protocol::types::status_word::tests::open_enums_keep_unknown_words ... ok
+test protocol::types::status_word::tests::open_enums_round_trip_every_known_word ... ok
+test protocol::types::status_word::tests::other_words_are_equal_only_when_the_words_are ... ok
+test protocol::types::stop_result::tests::round_trips_a_populated_value ... ok
+test protocol::types::stop_result::tests::stop_result_reads_stopped_true ... ok
+test protocol::types::subscribe_result::tests::subscribe_result_channel_is_optional ... ok
+test protocol::types::template_info::tests::round_trips_a_populated_value ... ok
+test protocol::types::template_info::tests::optional_fields_read_absent_and_null_as_none ... ok
+test protocol::types::templates_result::tests::round_trips_a_populated_value ... ok
+test protocol::types::subscribe_result::tests::round_trips_a_populated_value ... ok
+test protocol::types::terminal_state::tests::a_named_word_equals_other_holding_the_same_word ... ok
+test protocol::types::subscribe_result::tests::optional_fields_read_absent_and_null_as_none ... ok
+test protocol::types::terminal::tests::terminal_round_trips_a_live_record ... ok
+test protocol::types::terminal::tests::optional_fields_read_absent_and_null_as_none ... ok
+test protocol::types::terminal_state::tests::open_enums_keep_unknown_words ... ok
+test protocol::types::terminal_state::tests::open_enums_round_trip_every_known_word ... ok
+test protocol::types::terminal_state::tests::other_words_are_equal_only_when_the_words_are ... ok
+test protocol::types::wait_reason::tests::a_named_word_equals_other_holding_the_same_word ... ok
+test protocol::types::terminal::tests::round_trips_a_populated_value ... ok
+test protocol::types::wait_reason::tests::open_enums_keep_unknown_words ... ok
+test protocol::types::wait_reason::tests::open_enums_round_trip_every_known_word ... ok
+test protocol::types::wait_reason::tests::other_words_are_equal_only_when_the_words_are ... ok
+test protocol::types::wait_result::tests::optional_fields_read_absent_and_null_as_none ... ok
+test protocol::types::wait_result::tests::status_is_a_status_word ... ok
+test protocol::types::wait_result::tests::round_trips_a_populated_value ... ok
+test protocol::types::wait_result::tests::wait_result_round_trips_a_live_reply ... ok
+test protocol::types::wait_result::tests::wait_result_children_nest ... ok
+test protocol::frame_decoder::tests::accepts_a_16777216_byte_payload ... ok
+test protocol::ndjson::tests::ndjson_cap_counts_only_the_unfinished_line ... ok
+test protocol::ndjson::tests::ndjson_refuses_a_partial_line_over_16_mib ... ok
+
+test result: ok. 208 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.12s
+
+     Running tests/method_outputs.rs (target/debug/deps/method_outputs-964ae05841d038c1)
+
+running 1 test
+test every_method_reads_its_reply_into_the_schema_type ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests/schema_coverage.rs (target/debug/deps/schema_coverage-b7b0a37d6032a075)
+
+running 6 tests
+test instance_stops_at_a_cycle ... ok
+test instance_fills_every_property ... ok
+test method_names_equal_the_fixture ... ok
+test instance_applies_the_value_rules ... ok
+test params_match_the_fixture_names ... ok
+test schema_types_round_trip_fixture_instances ... ok
+
+test result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.01s
+
+     Running unittests src/lib.rs (target/debug/deps/herdrify_herdr-ecf92a7ada7dcc93)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running unittests src/lib.rs (target/debug/deps/herdrify_lua-86c1d955b62b216b)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running unittests src/lib.rs (target/debug/deps/herdrify_store-8ebf5b4e3bac9d62)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running unittests src/lib.rs (target/debug/deps/herdrify_testkit-55b65d4df408a5c3)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+[cargo-make] INFO - Execute Command: "cargo" "test" "--workspace" "--all-features" "--doc"
+    Finished ]8;;https://doc.rust-lang.org/cargo/reference/profiles.html#default-profiles\`test` profile [unoptimized + debuginfo]]8;;\ target(s) in 0.01s
+   Doc-tests herdrify_app
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+   Doc-tests herdrify_core
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+   Doc-tests herdrify_git
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+   Doc-tests herdrify_hc
+
+running 49 tests
+test crates/herdrify-hc/src/port/transport_error.rs - port::transport_error::TransportError (line 26) ... ok
+test crates/herdrify-hc/src/protocol/empty_value_error.rs - protocol::empty_value_error::EmptyValueError (line 23) ... ok
+test crates/herdrify-hc/src/protocol/frame.rs - protocol::frame::Focus (line 150) ... ok
+test crates/herdrify-hc/src/protocol/envelope.rs - protocol::envelope::RequestId (line 32) ... ok
+test crates/herdrify-hc/src/lib.rs - (line 12) ... ok
+test crates/herdrify-hc/src/protocol/envelope.rs - protocol::envelope::Request (line 63) ... ok
+test crates/herdrify-hc/src/protocol/frame.rs - protocol::frame::Channel (line 34) ... ok
+test crates/herdrify-hc/src/protocol/envelope.rs - protocol::envelope::Incoming (line 98) ... ok
+test crates/herdrify-hc/src/protocol/frame_decoder.rs - protocol::frame_decoder::FrameDecoder (line 29) ... ok
+test crates/herdrify-hc/src/protocol/frame.rs - protocol::frame::Frame (line 171) ... ok
+test crates/herdrify-hc/src/protocol/frame.rs - protocol::frame::FrameKind (line 73) ... ok
+test crates/herdrify-hc/src/protocol/frame_error.rs - protocol::frame_error::FrameError (line 23) ... ok
+test crates/herdrify-hc/src/protocol/hello.rs - protocol::hello::HelloParams (line 63) ... ok
+test crates/herdrify-hc/src/protocol/hello.rs - protocol::hello::Generation (line 36) ... ok
+test crates/herdrify-hc/src/protocol/hello.rs - protocol::hello::CoreVersion (line 200) ... ok
+test crates/herdrify-hc/src/protocol/identifiers.rs - protocol::identifiers::DocVersion (line 242) ... ok
+test crates/herdrify-hc/src/protocol/identifiers.rs - protocol::identifiers::DocName::new (line 42) ... ok
+test crates/herdrify-hc/src/protocol/hello.rs - protocol::hello::InvalidCoreVersion (line 179) ... ok
+test crates/herdrify-hc/src/protocol/identifiers.rs - protocol::identifiers::CallerId::new (line 176) ... ok
+test crates/herdrify-hc/src/protocol/identifiers.rs - protocol::identifiers::LabelKey::new (line 42) ... ok
+test crates/herdrify-hc/src/protocol/identifiers.rs - protocol::identifiers::LabelValue::new (line 42) ... ok
+test crates/herdrify-hc/src/protocol/identifiers.rs - protocol::identifiers::FileName::new (line 176) ... ok
+test crates/herdrify-hc/src/protocol/identifiers.rs - protocol::identifiers::KeyName::new (line 42) ... ok
+test crates/herdrify-hc/src/protocol/identifiers.rs - protocol::identifiers::MachineName::new (line 42) ... ok
+test crates/herdrify-hc/src/protocol/identifiers.rs - protocol::identifiers::MethodName::new (line 42) ... ok
+test crates/herdrify-hc/src/protocol/identifiers.rs - protocol::identifiers::SessionName::new (line 42) ... ok
+test crates/herdrify-hc/src/protocol/identifiers.rs - protocol::identifiers::RemotePath::new (line 176) ... ok
+test crates/herdrify-hc/src/protocol/line.rs - protocol::line::Line (line 28) ... ok
+test crates/herdrify-hc/src/protocol/identifiers.rs - protocol::identifiers::TerminalAddress::new (line 176) ... ok
+test crates/herdrify-hc/src/protocol/identifiers.rs - protocol::identifiers::TerminalName::new (line 42) ... ok
+test crates/herdrify-hc/src/protocol/identifiers.rs - protocol::identifiers::TerminalRef::new (line 42) ... ok
+test crates/herdrify-hc/src/protocol/line_error.rs - protocol::line_error::LineError (line 19) ... ok
+test crates/herdrify-hc/src/protocol/line.rs - protocol::line::LineDecoder (line 78) ... ok
+test crates/herdrify-hc/src/protocol/ndjson.rs - protocol::ndjson::NdjsonDecoder (line 24) ... ok
+test crates/herdrify-hc/src/protocol/notification.rs - protocol::notification::Notification (line 172) ... ok
+test crates/herdrify-hc/src/protocol/methods/argv.rs - protocol::methods::argv::Argv (line 26) ... ok
+test crates/herdrify-hc/src/protocol/rpc_error.rs - protocol::rpc_error::ErrorKind (line 35) ... ok
+test crates/herdrify-hc/src/protocol/rpc_error.rs - protocol::rpc_error::RpcError (line 137) ... ok
+test crates/herdrify-hc/src/protocol/protocol_error.rs - protocol::protocol_error::UnexpectedReply (line 26) ... ok
+test crates/herdrify-hc/src/protocol/types/end_reason.rs - protocol::types::end_reason::EndReason (line 28) ... ok
+test crates/herdrify-hc/src/protocol/protocol_error.rs - protocol::protocol_error::ProtocolError (line 53) ... ok
+test crates/herdrify-hc/src/protocol/notification.rs - protocol::notification::Seq (line 39) ... ok
+test crates/herdrify-hc/src/protocol/types/children.rs - protocol::types::children::Children (line 21) ... ok
+test crates/herdrify-hc/src/protocol/types/environment.rs - protocol::types::environment::Environment (line 24) ... ok
+test crates/herdrify-hc/src/protocol/types/idle_or_working.rs - protocol::types::idle_or_working::IdleOrWorking (line 21) ... ok
+test crates/herdrify-hc/src/protocol/types/wait_reason.rs - protocol::types::wait_reason::WaitReason (line 29) ... ok
+test crates/herdrify-hc/src/protocol/types/labels.rs - protocol::types::labels::Labels (line 27) ... ok
+test crates/herdrify-hc/src/protocol/types/status_word.rs - protocol::types::status_word::StatusWord (line 28) ... ok
+test crates/herdrify-hc/src/protocol/types/terminal_state.rs - protocol::types::terminal_state::TerminalState (line 28) ... ok
+
+test result: ok. 49 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.04s
+
+all doctests ran in 1.20s; merged doctests compilation took 0.69s
+   Doc-tests herdrify_herdr
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+   Doc-tests herdrify_lua
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+   Doc-tests herdrify_store
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+   Doc-tests herdrify_testkit
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+[cargo-make] INFO - Build Done in 3.30 seconds.
