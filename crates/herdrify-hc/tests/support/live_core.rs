@@ -27,9 +27,9 @@ use std::sync::mpsc;
 use std::thread;
 use std::time::{Duration, Instant};
 
-use herdrify_hc::ProcessTransport;
 use herdrify_hc::adapter::ProcessTransportBuilder;
 use herdrify_hc::protocol::SessionName;
+use herdrify_hc::{HerdrCore, HerdrCoreBuilder, ProcessTransport};
 
 /// The number of cores this process has started, so no two share a session or a directory.
 static STARTED: AtomicU32 = AtomicU32::new(0);
@@ -209,6 +209,18 @@ impl LiveCore {
     #[must_use]
     pub fn transport(&self) -> ProcessTransportBuilder {
         let mut builder = ProcessTransport::hc_connect().session(self.session.clone());
+        for (key, value) in isolation(&self.dir) {
+            builder = match value {
+                Some(value) => builder.env(key, value),
+                None => builder.env_remove(key),
+            };
+        }
+        builder
+    }
+
+    /// The `HerdrCore` builder for `hc connect` on this core, with the isolated environment set.
+    pub fn herdr_core(&self) -> HerdrCoreBuilder {
+        let mut builder = HerdrCore::builder().session(self.session.as_str());
         for (key, value) in isolation(&self.dir) {
             builder = match value {
                 Some(value) => builder.env(key, value),

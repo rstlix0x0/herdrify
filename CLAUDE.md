@@ -5,8 +5,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ## Status
 
 The Cargo workspace exists: nine crates, no features yet. `herdrify-hc` is implemented: the async
-SDK for herdr-core, at 0.1.0 (typed client for all 32 methods, `ProcessTransport` over `hc connect`,
-event and attach streams). The other crates are still stubs. The architecture is decided:
+SDK for herdr-core, at 0.1.0 (`HerdrCore` entrypoint over a typed client for all 32 methods,
+`ProcessTransport` over `hc connect`, event and attach streams). The other crates are still stubs. The architecture is decided:
 
 - **Approved ADRs** in `.claudestacks/sdlc/adrs/` (0001–0007). They are sealed and are the
   authority. A changed decision is a new superseding ADR, written with `/claudestacks-sdlc:adr`.
@@ -29,7 +29,7 @@ cargo make deny                                # supply chain: advisories, licen
 cargo run -q -p herdrify-cli                   # prints the command's name and version
 ```
 
-`cargo make dod` also runs the `herdrify-hc` live tests (`crates/herdrify-hc/tests/live.rs`). They
+`cargo make dod` also runs the `herdrify-hc` live tests (`crates/herdrify-hc/tests/live*.rs`). They
 run when `hc` is on `PATH` and skip otherwise. Each starts a throwaway isolated core (its own
 session and scratch directory, no inherited `HC_*` variables) and never touches the default session.
 

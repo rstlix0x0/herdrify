@@ -25,7 +25,7 @@ mod attach;
 mod client;
 mod error;
 #[cfg(test)]
-mod memory_link;
+pub mod memory_link;
 mod pending;
 mod router;
 mod stream;
