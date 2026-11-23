@@ -1,0 +1,149 @@
+== version: herdr-app 0.1.17
+
+== window ready after 629.287959ms
+
+do space.new {"argv":["sh","-c","sleep 600"],"name":"hzprobe"} | exit=Some(0) | {"space":"sp791801470e39e979233f19213e2f5b3b","tab":"tbac537ebad46b69af5db7cafb14f4a078","terminal":"t1"}
+hc run --parent t1 | exit=Some(0) | {"address":"t2","agent":"sh","cwd":"/Users/hiraq/Projects/herdrify/.claude/worktrees/herdrify-app/.claudestacks/sdlc/2026-11-23-herdrify-app/evidence","parent":"t1","state":"live","turn":0} 
+do space.new {"focus":false,"name":"gone"} | exit=Some(0) | {"space":"sp2a0bb93f9f02acc72a052ee32127cc7b","tab":"tb7d7fff994473a829082aae30a4f3dc7c","terminal":"t3"}
+do space.close {"confirmed":true,"id":"sp2a0bb93f9f02acc72a052ee32127cc7b"} | exit=Some(0) | {"ok":true}
+== LS1 sub_agents and recent | herdr-app ls | exit=Some(0) stderr=""
+{
+  "spaces": [
+    {
+      "id": "sp791801470e39e979233f19213e2f5b3b",
+      "name": "hzprobe",
+      "folder": "/Users/hiraq",
+      "machine": null,
+      "active": true,
+      "tabs": [
+        {
+          "id": "tbac537ebad46b69af5db7cafb14f4a078",
+          "name": "1",
+          "active": true,
+          "settled": false,
+          "terminals": [
+            {
+              "terminal": "t1",
+              "pane": "p13436eac9efd61a6971094912e82edd7",
+              "status": null,
+              "app": null,
+              "name": null,
+              "sub_agents": [
+                "t2"
+              ]
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "recent": [
+    {
+      "name": "gone",
+      "folder": "/Users/hiraq"
+    }
+  ]
+}
+
+== ST1 errors after broken files | herdr-app status | exit=Some(0) stderr=""
+{
+  "zoom": 1.0,
+  "font_size": 14.0,
+  "ui_font_size": 13.0,
+  "space": "sp791801470e39e979233f19213e2f5b3b",
+  "tab": "tbac537ebad46b69af5db7cafb14f4a078",
+  "focused_pane": "p13436eac9efd61a6971094912e82edd7",
+  "layout": "main",
+  "agent": null,
+  "floats": {},
+  "overlays": [
+    "frame-welcome"
+  ],
+  "errors": []
+}
+
+do mod.open {"name":"broken"} | exit=Some(0) | {"ok":true}
+== ST2 errors after opening the broken mod | herdr-app status | exit=Some(0) stderr=""
+{
+  "zoom": 1.0,
+  "font_size": 14.0,
+  "ui_font_size": 13.0,
+  "space": "sp791801470e39e979233f19213e2f5b3b",
+  "tab": "tbac537ebad46b69af5db7cafb14f4a078",
+  "focused_pane": "p13436eac9efd61a6971094912e82edd7",
+  "layout": "main",
+  "agent": null,
+  "floats": {},
+  "overlays": [
+    "frame-welcome",
+    "broken"
+  ],
+  "errors": [
+    "mod broken: Unexpected token '('\n    at /private/tmp/hzw/mods/broken/main.js?v=8:1:1\n"
+  ]
+}
+
+do layout.switch {"name":"win98"} | exit=Some(0) | {"ok":true}
+== ST3 floats on win98 | herdr-app status | exit=Some(0) stderr=""
+{
+  "zoom": 1.0,
+  "font_size": 22.86,
+  "ui_font_size": 13.0,
+  "space": "sp791801470e39e979233f19213e2f5b3b",
+  "tab": "tbac537ebad46b69af5db7cafb14f4a078",
+  "focused_pane": "p13436eac9efd61a6971094912e82edd7",
+  "layout": "win98",
+  "agent": null,
+  "floats": {
+    "clippy": {
+      "edge": "left",
+      "align": "end",
+      "vertical": true,
+      "dragging": false,
+      "hovered": false
+    }
+  },
+  "overlays": [
+    "frame-welcome",
+    "broken",
+    "win98"
+  ],
+  "errors": [
+    "mod broken: Unexpected token '('\n    at /private/tmp/hzw/mods/broken/main.js?v=8:1:1\n"
+  ]
+}
+
+do terminal.peek {"terminal":"t1"} | exit=Some(0) | {"ok":true}
+== ST4 overlays while peeking | herdr-app status | exit=Some(0) stderr=""
+{
+  "zoom": 1.0,
+  "font_size": 22.86,
+  "ui_font_size": 13.0,
+  "space": "sp791801470e39e979233f19213e2f5b3b",
+  "tab": "tbac537ebad46b69af5db7cafb14f4a078",
+  "focused_pane": "p13436eac9efd61a6971094912e82edd7",
+  "layout": "win98",
+  "agent": null,
+  "floats": {
+    "clippy": {
+      "edge": "left",
+      "align": "end",
+      "vertical": true,
+      "dragging": false,
+      "hovered": false
+    }
+  },
+  "overlays": [
+    "frame-welcome",
+    "broken",
+    "win98",
+    "layout"
+  ],
+  "errors": [
+    "mod broken: Unexpected token '('\n    at /private/tmp/hzw/mods/broken/main.js?v=8:1:1\n"
+  ]
+}
+
+do app.quit {} | exit=Some(0) | {"ok":true}
+== quit: Ok(Ok(ExitStatus(unix_wait_status(0))))
+== core stop: "{\"stopped\":true}"

@@ -1,0 +1,18 @@
+$ /usr/bin/grep --version
+grep (BSD grep, GNU compatible) 2.6.0-FreeBSD
+$ printf '%s
+' <case> | /usr/bin/grep -iwE 'adrs?|specs?|plans? [0-9]+|milestones?|claudestacks|phases? [0-9]+|tasks? [0-9]+'
+cargo run --example inspect    -> none
+specific                       -> none
+a readr value                  -> none
+respect the order              -> none
+see the spec                   -> match
+see the specs                  -> match
+per ADR 0002                   -> match
+per the ADRs                   -> match
+Plan 3 says                    -> match
+see plan 03                    -> match
+Task 12                        -> match
+Phase 10                       -> match
+the milestone                  -> match
+claudestacks-sdlc              -> match

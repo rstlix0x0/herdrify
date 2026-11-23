@@ -1,0 +1,532 @@
+== version: herdr-app 0.1.17
+== B0 before: person's core `hc ls --json` exit=Some(0) bytes=1550 mentions_hzprobe=false
+
+== L1 launched `herdr-app` (no args), child pid=Some(46785)
+
+== L3 isolated window answering status: true after 3.136006334s
+
+== S1 status
+$ herdr-app "status"
+exit=Some(0)
+stdout={
+  "zoom": 1.0,
+  "font_size": 14.0,
+  "ui_font_size": 13.0,
+  "space": null,
+  "tab": null,
+  "focused_pane": null,
+  "layout": "main",
+  "agent": null,
+  "floats": {},
+  "overlays": [
+    "frame-welcome"
+  ],
+  "errors": []
+}
+stderr=""
+
+== S2 ls
+$ herdr-app "ls"
+exit=Some(0)
+stdout={
+  "spaces": [],
+  "recent": []
+}
+stderr=""
+
+== D1 space.new (JSON object)
+$ herdr-app "do" "space.new" "{\"name\":\"hzprobe\",\"argv\":[\"sh\",\"-c\",\"echo hzprobe; sleep 120\"]}"
+exit=Some(0)
+stdout={
+  "space": "sp4d80e9accb1a78823eee8347162b2503",
+  "tab": "tb1712451605a01972ccf469418128a69c",
+  "terminal": "t1"
+}
+stderr=""
+
+== D2 tab.new (JSON object)
+$ herdr-app "do" "tab.new" "{\"name\":\"t2\"}"
+exit=Some(0)
+stdout={
+  "space": "sp4d80e9accb1a78823eee8347162b2503",
+  "tab": "tbd6de6ab8d7b1f7c2d4b89923db24ca92",
+  "terminal": "t2"
+}
+stderr=""
+
+== D3 tab.new (flags)
+$ herdr-app "do" "tab.new" "--name" "flagtab" "--focus" "false"
+exit=Some(0)
+stdout={
+  "space": "sp4d80e9accb1a78823eee8347162b2503",
+  "tab": "tb969f2c103f3d563868498b4f22fcf16c",
+  "terminal": "t3"
+}
+stderr=""
+
+== D4 tab.next (no args)
+$ herdr-app "do" "tab.next"
+exit=Some(0)
+stdout={
+  "ok": true
+}
+stderr=""
+
+== D5 tab.next (empty object)
+$ herdr-app "do" "tab.next" "{}"
+exit=Some(0)
+stdout={
+  "ok": true
+}
+stderr=""
+
+== D6 layout.toggle
+$ herdr-app "do" "layout.toggle" "{\"id\":\"sidebar\"}"
+exit=Some(0)
+stdout={
+  "ok": true
+}
+stderr=""
+
+== D7 layout.toggle back
+$ herdr-app "do" "layout.toggle" "{\"id\":\"sidebar\"}"
+exit=Some(0)
+stdout={
+  "ok": true
+}
+stderr=""
+
+== D8 pane.split shorthand
+$ herdr-app "do" "pane.split:right"
+exit=Some(0)
+stdout={
+  "pane": "pd2eb3577b9bfa2fa39f53cbc44b69b91",
+  "terminal": "t4"
+}
+stderr=""
+
+[2m2026-11-23T11:27:57.073902Z[0m [33m WARN[0m [2mherdr_app::window[0m[2m:[0m unknown command "no.such"
+== E1 unknown command
+$ herdr-app "do" "no.such" "{}"
+exit=Some(1)
+stdout={
+  "error": "unknown command \"no.such\": see `herdr-app commands`; a mod's are <mod>.<command> and need the mod loaded"
+}
+stderr=""
+
+== E2 unknown argument
+$ herdr-app "do" "tab.new" "{\"bogus\":1}"
+exit=Some(1)
+stdout={
+  "error": "tab.new: unknown argument(s): bogus; valid arguments: name, space, folder, argv, task, mod, props, focus"
+}
+stderr=""
+
+== E3 wrong type (name: number)
+$ herdr-app "do" "tab.new" "{\"name\":5}"
+exit=Some(0)
+stdout={
+  "space": "sp4d80e9accb1a78823eee8347162b2503",
+  "tab": "tb9b01c9815f7659069cd625917e7a5794",
+  "terminal": "t5"
+}
+stderr=""
+
+[2m2026-11-23T11:27:57.287223Z[0m [33m WARN[0m [2mherdr_app::window[0m[2m:[0m tab.new focus is true or false
+== E4 wrong type (focus: string)
+$ herdr-app "do" "tab.new" "{\"focus\":\"no\"}"
+exit=Some(1)
+stdout={
+  "error": "tab.new focus is true or false"
+}
+stderr=""
+
+[2m2026-11-23T11:27:57.332481Z[0m [33m WARN[0m [2mherdr_app::window[0m[2m:[0m space.rename needs name (empty: automatic)
+== E5 missing required (space.rename name)
+$ herdr-app "do" "space.rename" "{}"
+exit=Some(1)
+stdout={
+  "error": "space.rename needs name (empty: automatic)"
+}
+stderr=""
+
+== E6 target id not a string
+$ herdr-app "do" "pane.focus" "{\"pane\":7}"
+exit=Some(1)
+stdout={
+  "error": "pane.focus: argument pane must be a string (or null to omit it)"
+}
+stderr=""
+
+[2m2026-11-23T11:27:57.396544Z[0m [33m WARN[0m [2mherdr_app::window[0m[2m:[0m no such pane
+== E7 target id unknown
+$ herdr-app "do" "pane.focus" "{\"pane\":\"p-nope\"}"
+exit=Some(1)
+stdout={
+  "error": "no such pane"
+}
+stderr=""
+
+== E8 args JSON not an object
+$ herdr-app "do" "tab.new" "[1]"
+exit=Some(2)
+stdout=
+stderr="herdr-app: expected --<arg>, got \"[1]\"\n"
+
+== E9 null means omitted
+$ herdr-app "do" "tab.new" "{\"name\":null,\"focus\":false}"
+exit=Some(0)
+stdout={
+  "space": "sp4d80e9accb1a78823eee8347162b2503",
+  "tab": "tb34af48b0853377ff39c9a37d75bd5032",
+  "terminal": "t6"
+}
+stderr=""
+
+== S3 ls after
+$ herdr-app "ls"
+exit=Some(0)
+stdout={
+  "spaces": [
+    {
+      "id": "sp4d80e9accb1a78823eee8347162b2503",
+      "name": "hzprobe",
+      "folder": "/Users/hiraq",
+      "machine": null,
+      "active": true,
+      "tabs": [
+        {
+          "id": "tb1712451605a01972ccf469418128a69c",
+          "name": "1",
+          "active": false,
+          "settled": false,
+          "terminals": [
+            {
+              "terminal": "t1",
+              "pane": "p2183710f6bb5cb8eab358648fe062fd1",
+              "status": null,
+              "app": null,
+              "name": null,
+              "sub_agents": []
+            },
+            {
+              "terminal": "t4",
+              "pane": "pd2eb3577b9bfa2fa39f53cbc44b69b91",
+              "status": null,
+              "app": null,
+              "name": null,
+              "sub_agents": []
+            }
+          ]
+        },
+        {
+          "id": "tb9b01c9815f7659069cd625917e7a5794",
+          "name": "2",
+          "active": true,
+          "settled": false,
+          "terminals": [
+            {
+              "terminal": "t5",
+              "pane": "p8eb17687da703c11f262dfc8e948036c",
+              "status": null,
+              "app": null,
+              "name": null,
+              "sub_agents": []
+            }
+          ]
+        },
+        {
+          "id": "tbd6de6ab8d7b1f7c2d4b89923db24ca92",
+          "name": "t2",
+          "active": false,
+          "settled": false,
+          "terminals": [
+            {
+              "terminal": "t2",
+              "pane": "p49b4bf9545db5499b57af283338d171a",
+              "status": null,
+              "app": null,
+              "name": null,
+              "sub_agents": []
+            }
+          ]
+        },
+        {
+          "id": "tb969f2c103f3d563868498b4f22fcf16c",
+          "name": "flagtab",
+          "active": false,
+          "settled": false,
+          "terminals": [
+            {
+              "terminal": "t3",
+              "pane": "paef36cd852135efaffc42b3392ca346a",
+              "status": null,
+              "app": null,
+              "name": null,
+              "sub_agents": []
+            }
+          ]
+        },
+        {
+          "id": "tb34af48b0853377ff39c9a37d75bd5032",
+          "name": "5",
+          "active": false,
+          "settled": false,
+          "terminals": [
+            {
+              "terminal": "t6",
+              "pane": "p81e65a453d773f497d5ef2d69f1e904a",
+              "status": null,
+              "app": null,
+              "name": null,
+              "sub_agents": []
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "recent": []
+}
+stderr=""
+
+== S4 status after
+$ herdr-app "status"
+exit=Some(0)
+stdout={
+  "zoom": 1.0,
+  "font_size": 14.0,
+  "ui_font_size": 13.0,
+  "space": "sp4d80e9accb1a78823eee8347162b2503",
+  "tab": "tb9b01c9815f7659069cd625917e7a5794",
+  "focused_pane": "p8eb17687da703c11f262dfc8e948036c",
+  "layout": "main",
+  "agent": null,
+  "floats": {},
+  "overlays": [
+    "frame-welcome"
+  ],
+  "errors": []
+}
+stderr=""
+
+== I1 during: isolated core `hc ls --json` exit=Some(0) mentions_hzprobe=true stdout_bytes=609 stderr=""
+
+== B1 during: person's core `hc ls --json` exit=Some(0) bytes=1550 mentions_hzprobe=false
+
+== Q1 app.quit
+$ herdr-app "do" "app.quit"
+exit=Some(0)
+stdout={
+  "ok": true
+}
+stderr=""
+
+[2m2026-11-23T11:27:57.806982Z[0m [33m WARN[0m [2mgpui_shell::engine::quickjs::scheduler[0m[2m:[0m a reload stranded script tasks that will never settle (2 cx.timer.every(ms, fn)); re-register background work from init()
+[2m2026-11-23T11:27:57.807008Z[0m [33m WARN[0m [2mgpui_shell::engine::quickjs::scheduler[0m[2m:[0m a reload stranded script tasks that will never settle (1 cx.timer.every(ms, fn)); re-register background work from init()
+[2m2026-11-23T11:27:57.807025Z[0m [33m WARN[0m [2mgpui_shell::engine::quickjs::scheduler[0m[2m:[0m a reload stranded script tasks that will never settle (1 cx.timer.every(ms, fn)); re-register background work from init()
+== Q2 launcher wait after quit: Ok(Ok(ExitStatus(unix_wait_status(0))))
+
+== Q4 status after quit
+$ herdr-app "status"
+exit=Some(2)
+stdout=
+stderr="herdr-app: no Herdr window at /tmp/hza/herdr-app.sock: Connection refused (os error 61)\n"
+
+== B2 after: person's core `hc ls --json` exit=Some(0) bytes=1550 mentions_hzprobe=false
+
+== Z1 isolated `hc server stop` exit=Some(0) stdout="{\"stopped\":true}\n" stderr=""
+
+== F files the isolated window wrote in /tmp/hza:
+  AGENTS.md
+  data/
+    agents/
+    frame-welcome/
+    pane/
+    spaces/
+    tabs/
+    workspace-chrome/
+    workspace-status/
+  frame/
+    feedback/
+    palette/
+    settings/
+    welcome/
+    whatsnew/
+  gpui-kit.d.ts
+  herdr-app.sock
+  herdr.d.ts
+  icons/
+    LICENSE-LobeHub.txt
+    LICENSE-Lucide.txt
+    LICENSE-oh-my-pi.txt
+    LICENSES.md
+    agent.svg
+    amp.svg
+    ansible.svg
+    antigravity.svg
+    apt.svg
+    astro.svg
+    biome.svg
+    brew.svg
+    bun.svg
+    caddy.svg
+    cargo.svg
+    claude.svg
+    cmake.svg
+    codex.svg
+    command-code.svg
+    composer.svg
+    copilot.svg
+    crush.svg
+    curl.svg
+    cursor.svg
+    dart.svg
+    deno.svg
+    django-admin.svg
+    dnf.svg
+    docker.svg
+    dotnet.svg
+    dsh-tui.svg
+    electron.svg
+    emacs.svg
+    erl.svg
+    esbuild.svg
+    eslint.svg
+    expo.svg
+    fastapi.svg
+    ffmpeg.svg
+    flask.svg
+    flutter.svg
+    fly.svg
+    gcloud.svg
+    gemini.svg
+    gh.svg
+    ghci.svg
+    git.svg
+    glab.svg
+    go.svg
+    goose.svg
+    gradle.svg
+    grok.svg
+    helm.svg
+    hermes.svg
+    htop.svg
+    hx.svg
+    iex.svg
+    java.svg
+    jest.svg
+    julia.svg
+    jupyter.svg
+    kimi.svg
+    kiro.svg
+    kotlin.svg
+    kubectl.svg
+    lazygit.svg
+    less.svg
+    lua.svg
+    make.svg
+    mastracode.svg
+    mongosh.svg
+    muse.svg
+    mvn.svg
+    mysql.svg
+    nano.svg
+    netlify.svg
+    next.svg
+    nginx.svg
+    nix.svg
+    node.svg
+    npm.svg
+    nuxt.svg
+    nvim.svg
+    ocaml.svg
+    ollama.svg
+    omp.svg
+    opencode.svg
+    pacman.svg
+    perl.svg
+    php.svg
+    pi.svg
+    pig.svg
+    pnpm.svg
+    podman.svg
+    poetry.svg
+    prettier.svg
+    prime-agent.svg
+    prisma.svg
+    program.svg
+    psql.svg
+    pytest.svg
+    python.svg
+    qoder.svg
+    r.svg
+    redis-cli.svg
+    rg.svg
+    ruby.svg
+    ruff.svg
+    scala.svg
+    shell.svg
+    sqlite3.svg
+    ssh.svg
+    supabase.svg
+    swift.svg
+    tauri.svg
+    terraform.svg
+    tmux.svg
+    tsc.svg
+    turbo.svg
+    uv.svg
+    vercel.svg
+    vim.svg
+    vite.svg
+    vitest.svg
+    webpack.svg
+    wrangler.svg
+    yarn.svg
+    zig.svg
+  installed.json
+  keys.json
+  layouts/
+    .state/
+    main.json
+    terminals.json
+    win98.json
+    win98.svg
+  mods/
+    agents/
+    changes/
+    confirm/
+    files/
+    help/
+    machine-add/
+    menu/
+    new-menu/
+    pane/
+    peek/
+    picker/
+    prompt/
+    spaces/
+    tabs/
+    terminals-bar/
+    terminals-pane/
+    toast/
+    win98/
+    workspace-chrome/
+    workspace-status/
+    worktree/
+  settings.json
+  shared.json
+  telemetry/
+    id
+    queue/
+    today.json
+  themes/
+    atom-one-dark.json
+    win98.json
+  update-notes-media/
+    ac6feb6e6624de974bbf9d5add0469a77859582da39b050eba9507f0120b52d7
+    ee888692b8a21e478820f65feb45dcd025379c69d17aba36ee0a290c2865c9f9
+  update-notes.json
+  view.json
+  window.json

@@ -1,0 +1,15 @@
+warning: field `0` is never read
+  --> src/main.rs:12:14
+   |
+12 | struct Error(String);
+   |        ----- ^^^^^^
+   |        |
+   |        field in this struct
+   |
+   = help: consider removing this field
+   = note: `Error` has a derived impl for the trait `Debug`, but this is intentionally ignored during dead code analysis
+   = note: `#[warn(dead_code)]` (part of `#[warn(unused)]`) on by default
+
+argv = ["do", "tab.next", "{}"]
+spawned call result = Ok(Ack { ok: true })
+refused call result = Err(Error("invalid name"))

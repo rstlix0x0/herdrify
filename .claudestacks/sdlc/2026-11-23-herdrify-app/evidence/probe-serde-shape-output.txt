@@ -1,0 +1,20 @@
+S1 main.json: round trip JSON-equal: true
+S1 main.json: keys left in extra (any depth): {"active", "background", "children", "content", "divider", "gap", "hidden", "max", "min", "padding", "resizable", "terminal_padding", "titlebar", "traffic_lights", "type", "window_drag"}
+S1 main.json: root look: Look { theme: None, font_size: None, terminal_opacity: None }
+S1 terminals.json: round trip JSON-equal: true
+S1 terminals.json: keys left in extra (any depth): {"background", "children", "colors", "content", "gap", "padding", "titlebar", "traffic_lights", "type", "window_drag"}
+S1 terminals.json: root look: Look { theme: Some(String("graphite")), font_size: Some(Number(15)), terminal_opacity: None }
+S1 win98.json: round trip JSON-equal: true
+S1 win98.json: keys left in extra (any depth): {"background", "children", "content", "font", "padding", "preview", "resizable", "terminal_padding", "titlebar", "traffic_lights", "type", "ui_font", "window_drag"}
+S1 win98.json: root look: Look { theme: Some(String("win98")), font_size: Some(Number(22.857)), terminal_opacity: Some(Number(0.0)) }
+S2 in : {"type":"block","content":{},"size":{"px":120.0},"font_size":15,"terminal_opacity":0.0}
+S2 out: {"type":"block","content":{},"size":{"px":120.0},"font_size":15,"terminal_opacity":0.0,"content":{},"type":"block"}
+S3 {"type":"grid","id":"g"} -> Err("unknown variant `grid`, expected one of `block`, `row`, `column`, `stack` at line 1 column 24")
+S3 {"id":"g"} -> Err("missing field `type` at line 1 column 10")
+S4 {"type":"block","content":{},"font_size":"big"} -> Err("invalid type: string \"big\", expected a JSON number at line 1 column 47")
+S5 main.json: JSON-equal=true duplicate_keys_in_text=false extra_keys={"background", "divider", "gap", "hidden", "max", "min", "padding", "resizable", "terminal_padding", "titlebar", "traffic_lights", "window_drag"}
+S5 terminals.json: JSON-equal=true duplicate_keys_in_text=false extra_keys={"background", "colors", "gap", "padding", "titlebar", "traffic_lights", "window_drag"}
+S5 win98.json: JSON-equal=true duplicate_keys_in_text=false extra_keys={"background", "floating", "font", "padding", "preview", "resizable", "terminal_padding", "titlebar", "traffic_lights", "ui_font", "window_drag"}
+S5 in : {"type":"block","content":{},"size":{"px":120.0},"font_size":15,"terminal_opacity":0.0,"zz":1}
+S5 out: {"type":"block","content":{},"size":{"px":120.0},"font_size":15,"terminal_opacity":0.0,"zz":1}
+S5 unknown type {"type":"grid","id":"g"} -> Ok(Other("grid"))
