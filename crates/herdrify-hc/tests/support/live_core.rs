@@ -180,7 +180,12 @@ impl LiveCore {
             Err(error) if error.kind() == io::ErrorKind::NotFound => return Ok(()),
             Err(error) => return Err(error),
         };
-        if !metadata.is_dir() || !owned_by_current_user(&metadata)? {
+        #[cfg(unix)]
+        let owned = owned_by_current_user(&metadata)?;
+        // Elsewhere the temporary directory is already private to the user.
+        #[cfg(not(unix))]
+        let owned = true;
+        if !metadata.is_dir() || !owned {
             return Err(io::Error::new(
                 io::ErrorKind::PermissionDenied,
                 format!(
@@ -226,18 +231,24 @@ impl LiveCore {
     }
 }
 
-/// Creates `dir`, failing when it exists, and closes it to other users where the platform allows.
+/// Creates `dir`, failing when it exists, closed to other users.
+#[cfg(unix)]
 fn create_private_dir(dir: &Path) -> io::Result<()> {
-    let mut builder = std::fs::DirBuilder::new();
-    #[cfg(unix)]
-    std::os::unix::fs::DirBuilderExt::mode(&mut builder, 0o700);
-    builder.create(dir)
+    use std::os::unix::fs::DirBuilderExt;
+
+    std::fs::DirBuilder::new().mode(0o700).create(dir)
+}
+
+/// Creates `dir`, failing when it exists. The temporary directory is already private to the user.
+#[cfg(not(unix))]
+fn create_private_dir(dir: &Path) -> io::Result<()> {
+    std::fs::create_dir(dir)
 }
 
 /// Whether `metadata` belongs to the user running this process.
 ///
-/// Unix only: the owner of a file this process creates is the current user, so that is what
-/// `metadata` is compared with. Elsewhere the temporary directory is already private to the user.
+/// The owner of a file this process creates is the current user, so that is what `metadata` is
+/// compared with.
 #[cfg(unix)]
 fn owned_by_current_user(metadata: &std::fs::Metadata) -> io::Result<bool> {
     use std::os::unix::fs::MetadataExt;
@@ -251,11 +262,6 @@ fn owned_by_current_user(metadata: &std::fs::Metadata) -> io::Result<bool> {
     drop(file);
     std::fs::remove_file(&probe)?;
     Ok(owner? == metadata.uid())
-}
-
-#[cfg(not(unix))]
-fn owned_by_current_user(_metadata: &std::fs::Metadata) -> io::Result<bool> {
-    Ok(true)
 }
 
 impl Drop for LiveCore {

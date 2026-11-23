@@ -254,19 +254,12 @@ impl FrameSource for ProcessSource {
 mod tests {
     use std::error::Error;
     use std::ffi::OsStr;
-    use std::io;
-    use std::time::Duration;
-
-    use tokio::time::timeout;
 
     use super::ProcessTransport;
-    use crate::port::{FrameSink, FrameSource, Transport, TransportError};
-    use crate::protocol::{Argv, Channel, Frame, Line, SessionName};
+    use crate::port::TransportError;
+    use crate::protocol::{Argv, SessionName};
 
     type TestResult = Result<(), Box<dyn Error>>;
-
-    /// How long a test waits for a child that should already have answered.
-    const PATIENCE: Duration = Duration::from_secs(5);
 
     fn argv(words: &[&str]) -> Result<Argv, Box<dyn Error>> {
         Ok(Argv::new(
@@ -332,58 +325,71 @@ mod tests {
         Ok(())
     }
 
+    /// Tests that run a real child process (`cat`, `sleep`), so only on Unix.
     #[cfg(unix)]
-    #[tokio::test]
-    async fn close_gives_the_child_eof() -> TestResult {
-        let transport = ProcessTransport::from_argv(argv(&["cat"])?).spawn()?;
-        let (mut sink, mut source) = transport.into_framed();
-        sink.close().await?;
-        let end = timeout(PATIENCE, source.recv()).await??;
-        assert_eq!(end, None);
-        Ok(())
-    }
+    mod child {
+        use std::io;
+        use std::time::Duration;
 
-    #[cfg(unix)]
-    #[tokio::test]
-    async fn lines_and_frames_round_trip_through_cat() -> TestResult {
-        let mut transport = ProcessTransport::from_argv(argv(&["cat"])?).spawn()?;
-        let line = Line::new("{}")?;
-        timeout(PATIENCE, transport.send_line(line.clone())).await??;
-        let echoed = timeout(PATIENCE, transport.recv_line()).await??;
-        assert_eq!(echoed, Some(line));
+        use tokio::time::timeout;
 
-        let (mut sink, mut source) = transport.into_framed();
-        let frame = Frame::credit(Channel::new(1), 5);
-        timeout(PATIENCE, sink.send(frame.clone())).await??;
-        let echoed = timeout(PATIENCE, source.recv()).await??;
-        assert_eq!(echoed, Some(frame));
-        timeout(PATIENCE, sink.close()).await??;
-        Ok(())
-    }
+        use super::{TestResult, argv};
+        use crate::adapter::ProcessTransport;
+        use crate::port::{FrameSink, FrameSource, Transport, TransportError};
+        use crate::protocol::{Channel, Frame, Line};
 
-    #[cfg(unix)]
-    #[tokio::test]
-    async fn dropping_the_sink_kills_a_child_that_ignores_its_input() -> TestResult {
-        let transport = ProcessTransport::from_argv(argv(&["sleep", "30"])?).spawn()?;
-        let (sink, mut source) = transport.into_framed();
-        drop(sink);
-        let end = timeout(PATIENCE, source.recv()).await??;
-        assert_eq!(end, None);
-        Ok(())
-    }
+        /// How long a test waits for a child that should already have answered.
+        const PATIENCE: Duration = Duration::from_secs(5);
 
-    #[cfg(unix)]
-    #[tokio::test]
-    async fn send_after_close_is_a_broken_pipe_and_close_twice_is_a_no_op() -> TestResult {
-        let transport = ProcessTransport::from_argv(argv(&["cat"])?).spawn()?;
-        let (mut sink, _source) = transport.into_framed();
-        sink.close().await?;
-        sink.close().await?;
-        let refused = sink.send(Frame::credit(Channel::new(1), 5)).await;
-        let Err(TransportError::Io(source)) = refused else {
-            return Err("a send after close must be an I/O error".into());
-        };
-        assert_eq!(source.kind(), io::ErrorKind::BrokenPipe);
-        Ok(())
+        #[tokio::test]
+        async fn close_gives_the_child_eof() -> TestResult {
+            let transport = ProcessTransport::from_argv(argv(&["cat"])?).spawn()?;
+            let (mut sink, mut source) = transport.into_framed();
+            sink.close().await?;
+            let end = timeout(PATIENCE, source.recv()).await??;
+            assert_eq!(end, None);
+            Ok(())
+        }
+
+        #[tokio::test]
+        async fn lines_and_frames_round_trip_through_cat() -> TestResult {
+            let mut transport = ProcessTransport::from_argv(argv(&["cat"])?).spawn()?;
+            let line = Line::new("{}")?;
+            timeout(PATIENCE, transport.send_line(line.clone())).await??;
+            let echoed = timeout(PATIENCE, transport.recv_line()).await??;
+            assert_eq!(echoed, Some(line));
+
+            let (mut sink, mut source) = transport.into_framed();
+            let frame = Frame::credit(Channel::new(1), 5);
+            timeout(PATIENCE, sink.send(frame.clone())).await??;
+            let echoed = timeout(PATIENCE, source.recv()).await??;
+            assert_eq!(echoed, Some(frame));
+            timeout(PATIENCE, sink.close()).await??;
+            Ok(())
+        }
+
+        #[tokio::test]
+        async fn dropping_the_sink_kills_a_child_that_ignores_its_input() -> TestResult {
+            let transport = ProcessTransport::from_argv(argv(&["sleep", "30"])?).spawn()?;
+            let (sink, mut source) = transport.into_framed();
+            drop(sink);
+            let end = timeout(PATIENCE, source.recv()).await??;
+            assert_eq!(end, None);
+            Ok(())
+        }
+
+        #[tokio::test]
+        async fn send_after_close_is_a_broken_pipe_and_close_twice_is_a_no_op() -> TestResult {
+            let transport = ProcessTransport::from_argv(argv(&["cat"])?).spawn()?;
+            let (mut sink, _source) = transport.into_framed();
+            sink.close().await?;
+            sink.close().await?;
+            let refused = sink.send(Frame::credit(Channel::new(1), 5)).await;
+            let Err(TransportError::Io(source)) = refused else {
+                return Err("a send after close must be an I/O error".into());
+            };
+            assert_eq!(source.kind(), io::ErrorKind::BrokenPipe);
+            Ok(())
+        }
     }
 }
