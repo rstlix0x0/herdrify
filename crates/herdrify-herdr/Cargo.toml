@@ -3,6 +3,7 @@ name        = "herdrify-herdr"
 description = "Writes herdrify files into the Herdr home and drives herdr-app and herdr-core."
 version     = "0.0.0"
 readme      = "README.md"
+publish     = false
 
 edition.workspace      = true
 rust-version.workspace = true

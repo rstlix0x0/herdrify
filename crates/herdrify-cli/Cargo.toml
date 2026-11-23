@@ -3,6 +3,7 @@ name        = "herdrify-cli"
 description = "The herdrify command."
 version     = "0.0.0"
 readme      = "README.md"
+publish     = false
 
 edition.workspace      = true
 rust-version.workspace = true

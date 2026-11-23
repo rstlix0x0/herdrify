@@ -4,7 +4,7 @@ All notable changes to `herdrify-hc` are recorded here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and the crate follows
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [0.1.0] - Unreleased
+## [0.1.0] - 2026-11-23
 
 First release: an async client for herdr-core, tested against `hc` 0.1.21.
 
@@ -40,4 +40,4 @@ First release: an async client for herdr-core, tested against `hc` 0.1.21.
   `files-and-exec`. They use `HerdrCore`; `connect --client` shows the same with the `Client`.
 - Minimum supported Rust version: 1.94.
 
-[0.1.0]: https://github.com/rstlix0x0/herdrify/tree/main/crates/herdrify-hc
+[0.1.0]: https://github.com/rstlix0x0/herdrify/releases/tag/herdrify-hc-v0.1.0
