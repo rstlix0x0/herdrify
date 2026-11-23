@@ -757,10 +757,14 @@ On any failure the transport is dropped. `Client<T>` is `Clone` through an inter
   - What is held without credit is bounded: frames not yet taken stay inside the core's window,
     and taken bytes are bounded by one frame of complete lines plus a partial line of at most
     16 MiB.
-  - Example: one 101-byte DATA frame holds a stale event line (39 bytes plus `\n`), then a line
-    to deliver (59 bytes plus `\n`), then the first byte of the next line. The first `next()`
-    takes the frame, enqueues CREDIT 101, drops the stale event and returns the notification. The
-    last byte stays buffered until a later frame completes its line.
+  - Example: after `Missed { seq: 10 }`, one 133-byte DATA frame holds a stale event line
+    `{"method":"event","params":{"seq":9,"type":"removed"}}` (54 bytes plus `\n`), then a line to
+    deliver `{"method":"event","params":{"seq":11,"type":"title","data":{"title":"abc"}}}` (76 bytes
+    plus `\n`), then the first byte of the next line. The first `next()` takes the frame, enqueues
+    CREDIT 133, drops the stale event and returns the notification. The last byte stays buffered
+    until a later frame completes its line. The shortest event line whose envelope decodes is 48
+    bytes, so a stale line cannot be shorter (`evidence/probe-credit-example-output.txt:4-7`, run by
+    `credit_follows_frames`, `:8-9`).
 - **Cancel safety.** `next()` is cancel-safe. Its only await is the receive from the stream
   handle. Taking a frame, enqueuing its CREDIT and buffering its bytes happen together with no
   await between them, and complete lines not yet returned stay buffered for the next call. A
