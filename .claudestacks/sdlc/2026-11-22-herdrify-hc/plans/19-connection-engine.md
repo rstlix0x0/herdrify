@@ -1,5 +1,5 @@
 ---
-status: approved
+status: done
 created: 2026-11-23
 depends-on: [06, 08]
 built-on: cba93d6df53e
@@ -175,3 +175,26 @@ crates/herdrify-hc/tests/client_fake.rs             — create: connect refusals
 - The four spec §2 grep checks print nothing.
 - `cargo test -p herdrify-hc` passes.
 - The Definition of Done is green.
+
+## Review findings
+
+- 🟡 `client.rs:234` a call waiting for its write ack hung forever after the connection ended (reviewer probe: `close_reason=Some("peer closed: ...")`, call unresolved after 2 s) — fixed: `call_raw` polls the ack and the reply entry together; test `end_resolves_calls_whose_write_never_completes` (old code: `Error: Elapsed(())`, `13 passed; 1 failed`; fixed: `14 passed`).
+- 🟡 `client.rs:210` reverting the `Entry` drop guard failed nothing — fixed: `refused_calls_leave_no_pending_entry`, `dropped_call_leaves_no_pending_entry` (guard disabled: `4 passed; 2 failed`).
+- 🟡 `router.rs:61` source `Io` → `TransportFailed` untested — fixed: `source_io_error_is_a_transport_failure`.
+- 🟡 `writer.rs:77` router outlives the last `Client` until the peer ends its stream — declined: this is the stated lifetime (the writer closes the sink, then the router reads EOF and ends); the `Client` doc at `client.rs:44` was corrected to say so.
+- 🟡 Task 2 proof: `null_id_error_and_channel_zero_notification_are_discarded` did not assert `close_reason()` is `None` — fixed.
+- ❓ the four §2 grep checks — run by the orchestrator: all four print nothing.
+- 🔵 `client.rs:58` no compile-time `Send + Sync` check — fixed: `client_is_send_sync_static`.
+- 🔵 `client.rs:101` `connect` panics outside a runtime — fixed: `# Panics`.
+- 🔵 `error.rs:168` `EndRecord::record` bool used only by tests — fixed: returns `()`.
+- 🔵 `memory_link.rs:16` trailing empty `//!` — fixed.
+- 🔵 `router.rs:86`, `client.rs:272` import order — fixed.
+- 🔵 `pending.rs:84` record-before-fail ordering guarded only by a comment — accepted: a race no test can pin; the comment is accurate.
+- After fixes: `cargo test -p herdrify-hc connection` 24 passed; `--test client_fake` 14 passed; `cargo make dod` exit 0, 255 lib tests; log grep prints nothing.
+
+## Deviations
+
+- 2026-11-23 — Crate-private items use `pub(super)`, not `pub(crate)`: inside a private module `pub(crate)` fails clippy `redundant_pub_crate` and `pub` fails `unreachable_pub` (`cargo make dod`, clippy step).
+- 2026-11-23 — `Pending::end` records the end and then fails every entry, so the writer and the router share one ordering; the writer stops the router through an `AbortHandle` on a write failure.
+- 2026-11-23 — An encoding failure for a crate-defined method name (unreachable) maps to `Error::Transport(Io(..))` via a private `unencodable` helper: no panic path, no new `Error` variant.
+- 2026-11-23 — Not committed: the instruction to execute did not ask for commits; the change is left staged.

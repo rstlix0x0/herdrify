@@ -1,5 +1,5 @@
 ---
-status: approved
+status: done
 created: 2026-11-23
 depends-on: [19]
 built-on: cba93d6df53e
@@ -109,3 +109,30 @@ The futures are built, never awaited (spec §9.4). A non-`Send` future fails the
 - `cargo test -p herdrify-hc --test client_fake` passes.
 - The four spec §2 grep checks print nothing.
 - The Definition of Done is green.
+
+## Review findings
+
+- 🟡 (blocking) `client_fake.rs:538,551` and `hello.rs:477,486` held the author's machine hostname — fixed: replaced with `host`, with a note beside each constant; `grep -rni 'hiraq\|macbook' crates/` prints nothing.
+- 🟡 `client.rs:260` private `call` had no colocated test — fixed: `call_decodes_a_good_reply_into_the_method_output`, `call_names_the_method_when_the_result_does_not_decode` (passed on first run; the behaviour already existed).
+- 🟡 Task 1 `rpc_discover` reply not verbatim from a probe — accepted and documented: the probes recorded only its size, so the constant is the upstream 0.1.21 schema's `info`/`openrpc` with empty `methods`; its doc says so.
+- 🟡 unrecorded deviations — recorded below.
+- 🔵 `client.rs:290` unverifiable "replies and then ends the connection" on `server_restart` — fixed: doc quotes the schema description.
+- 🔵 `client.rs:401` `terminal_wait` default omitted config `wait_timeout` — fixed.
+- 🔵 `client.rs:424,447` "a" → "an" — fixed.
+- 🔵 `client_fake.rs:12,524,526-536` module and constant docs overclaimed "recorded" — fixed.
+- 🔵 `client_fake.rs:576` restart reuses the `server.stop` reply — documented on the test (restart's result type is `StopResult`).
+- 🔵 `client_fake.rs:662` error reply recorded for `file.read` used on `server.restart` — fixed: test calls `file_read` with the recorded params.
+- 🔵 `client_fake.rs:938` hand-written put reply — fixed: shares the recorded `PUT_RESULT`; sends 5 bytes, asserts `AP/+AX8=`.
+- 🔵 Task 4 as `#[tokio::test]` — accepted (deviation below).
+- 🔵 `undecodable_result_is_decode_error` payload fails on missing fields — accepted: the plan prescribes the payload.
+- 🔵 coder test count — noted: 37 tests added (29 request/reply + 8 extra).
+- After fixes: `--test client_fake` 51 passed; `connection` 26 passed; `cargo make dod` exit 0; log grep prints nothing.
+
+## Deviations
+
+- 2026-11-23 — `rpc_discover`'s canned reply is assembled from the upstream 0.1.21 OpenRPC schema, not a recorded reply: no evidence file records the reply body (probe-review R1 records only its size).
+- 2026-11-23 — Recorded `cwd` values use the neutral `/work/probe-methods` prefix and the core name is `host`, so no personal path or hostname ships in the crate.
+- 2026-11-23 — `server_restart_request_and_reply` answers with the recorded `server.stop` reply; no restart reply was recorded.
+- 2026-11-23 — Task 4's Send test is `#[tokio::test]`: building a connected `Client` needs a runtime.
+- 2026-11-23 — `src/protocol/hello.rs` (outside the file list) was edited to remove the hostname.
+- 2026-11-23 — Not committed: the instruction to execute did not ask for commits; the change is left staged.

@@ -1,8 +1,9 @@
 ---
-status: approved
+status: done
 created: 2026-11-23
 depends-on: [19]
 built-on: cba93d6df53e
+disproves: cba93d6df53e
 ---
 
 # Events Subscription Implementation Plan
@@ -161,3 +162,29 @@ crates/herdrify-hc/tests/client_fake.rs        — modify: subscription tests
 - `cargo test -p herdrify-hc` passes.
 - The four spec §2 grep checks print nothing.
 - The Definition of Done is green.
+
+## Review findings
+
+- 🟡 `router.rs:111` a reply naming channel 0 or a channel in use opened a broken route (reviewer probe: a channel-0 subscription never yields and its drop sends CLOSE on the RPC channel; reuse overwrote the first route) — fixed: refused as `Error::Decode` ("channel 0 carries calls, not streams" / "channel N is already open for another stream"), nothing opened or sent; tests `a_reply_naming_channel_zero_opens_nothing`, `a_reply_naming_a_channel_in_use_leaves_the_first_route_alone`, `channel_zero_is_refused_and_opens_nothing`, `a_channel_in_use_is_refused_and_the_first_subscription_keeps_working`, `a_channel_whose_handle_is_gone_can_be_opened_again` (all failed before the fix).
+- 🟡 `router.rs:71` end-then-drop-routes order unguarded — fixed: `the_end_is_recorded_before_the_routes_drop` (multi-thread; order swapped: "the route ended before the end was fully handled").
+- 🟡 `subscription.rs:128` cancel safety unguarded — fixed: `cancelling_next_with_a_frame_queued_loses_nothing` (with `yield_now().await` inserted: `left: []`, `right: [10]`).
+- 🔵 `client.rs:228` `# Streams` names `Client::terminal_attach` before it exists — accepted: the plan asks for it; plain code text, and plan 22 adds the method.
+- 🔵 `client.rs:256` `opening: bool` — fixed: `Option<Opening>`.
+- 🔵 `client.rs:544` "closed again" on the non-u32 case — fixed.
+- 🔵 `client.rs:563` wrong "router is gone" comment — fixed: the arm returns the unusable-channel `Decode`.
+- 🔵 `router.rs:131` long doc line — fixed.
+- 🔵 `router.rs:141` dead-route removal unguarded — fixed: `a_route_whose_handle_is_gone_is_removed`.
+- 🔵 `subscription.rs:40` two bools for a three-state lifecycle — fixed: `enum Phase`.
+- 🔵 `subscription.rs:164` silent saturation — fixed: comment says it is unreachable.
+- 🔵 `writer.rs:87` wrong lifetime comment — fixed.
+- 🔵 `credit_follows_frames` byte sizes — see Deviations.
+- 🔵 `close()` returns `Err(Closed)` when the connection ends before the acknowledgement — see Deviations.
+- After fixes: `connection` 51 passed; `--test client_fake` 76 passed ×3; `cargo make dod` exit 0; log grep prints nothing.
+
+## Deviations
+
+- 2026-11-23 — Spec §6.3's credit example (a 39-byte stale event line plus `\n`, a 59-byte line, CREDIT 101) cannot be built: the shortest event line whose envelope decodes is 48 bytes (`printf '%s' '{"method":"event","params":{"seq":9,"type":"x"}}' | wc -c` → `48`). `credit_follows_frames` keeps the shape (stale line, delivered line, 1 byte of the next) with 54- and 76-byte lines and asserts CREDIT equals the frame length. `disproves` set on the spec's fingerprint.
+- 2026-11-23 — `Subscription::close()` returns `Err(Closed)` if the connection ends before the CLOSE acknowledgement (a stalled write never acknowledges). This needed `EndRecord::wait_ended` (a `Notify`) in `connection/error.rs`, outside the file list, and an `end` field on the opening handle.
+- 2026-11-23 — `Subscription::seq()` returns `Seq`, `channel()` returns `Channel`, `terminals()` returns `&[Terminal]`; `Pending::complete` became `take`, with the router building the answer.
+- 2026-11-23 — A stream reply naming channel 0 or a channel in use is refused as `Error::Decode`; no new `Error` variant.
+- 2026-11-23 — Not committed: the instruction to execute did not ask for commits; the change is left staged.

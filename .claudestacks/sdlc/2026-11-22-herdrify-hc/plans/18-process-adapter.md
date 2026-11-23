@@ -1,5 +1,5 @@
 ---
-status: approved
+status: done
 created: 2026-11-23
 depends-on: [05, 17]
 built-on: cba93d6df53e
@@ -73,3 +73,22 @@ crates/herdrify-hc/src/lib.rs              — modify: ProcessTransport re-expor
 
 - `grep -rn 'crate::connection' crates/herdrify-hc/src/adapter` prints nothing.
 - The Definition of Done is green.
+
+## Review findings
+
+- 🟡 (blocking) `process.rs:72,78,145` `builder`/`from_argv`/`session` took references, not the plan's values — fixed: the builder stores `Argv`, `Option<SessionName>` and the env edits and assembles the `Command` at spawn; no lint suppression. `hc_connect` uses a new `pub(crate) const fn Argv::from_parts` (test `argv_from_parts_matches_new`), so it has no panic path.
+- 🟡 `adapter/mod.rs:8` Responsibilities list missed the process types — fixed.
+- 🟡 `process.rs:87-93,201-209` line and frame I/O untested — fixed: `lines_and_frames_round_trip_through_cat`.
+- 🟡 `process.rs:152-158` `spawn` panics outside a runtime, undocumented — fixed: `# Panics` section.
+- 🟡 `process.rs:169` reverting `kill_on_drop` failed nothing — fixed: `dropping_the_sink_kills_a_child_that_ignores_its_input` (spawns `sleep 30`; with `kill_on_drop(false)`: `Error: Elapsed(())`, 7 passed, 1 failed).
+- 🔵 `kill_on_drop` doc overclaimed — fixed: "the child it started, though not any process that child started in turn".
+- 🔵 unreachable "was not piped" branches wrapped a made-up error as `Spawn` — fixed: one let-else returning `TransportError::Io`.
+- 🔵 send after close and double close untested — fixed: `send_after_close_is_a_broken_pipe_and_close_twice_is_a_no_op`.
+- 🔵 `env_and_env_remove_are_recorded` returned `()` — fixed: returns `Result`.
+- 🔵 double destructure in `missing_program_is_spawn_error` — fixed. The fix round added a `NotFound` kind assertion; removed again, since the plan says the kind is not asserted.
+- After fixes: `cargo make dod` EXIT=0; 231 lib tests, 4 adapter_stream, 7 schema_coverage, 51 doctests passed; log grep prints nothing.
+
+## Deviations
+
+- 2026-11-23 — `src/protocol/methods/argv.rs` gained `pub(crate) const fn Argv::from_parts`, outside the plan's file list, so `hc_connect()` builds `["hc","connect"]` without a panic path.
+- 2026-11-23 — Not committed: the instruction to execute did not ask for commits; the change is left staged.

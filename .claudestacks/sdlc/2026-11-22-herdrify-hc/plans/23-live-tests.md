@@ -1,5 +1,5 @@
 ---
-status: approved
+status: done
 created: 2026-11-23
 depends-on: [07, 18, 20, 22]
 built-on: cba93d6df53e
@@ -133,3 +133,25 @@ Each must be equal to the fixture (A8). On a difference, the failure message nam
 - `grep -n '"hc"' crates/herdrify-hc/tests/*.rs crates/herdrify-hc/tests/support/*.rs` matches only `tests/support/live_core.rs`, so every `hc` spawn goes through the isolated environment. The default session is never addressed, not even to read it.
 - Without `hc`: the same tests pass by skipping.
 - The Definition of Done is green.
+
+## Review findings
+
+- 🟡 `live.rs:99` nothing proved the test reached its own fresh core — fixed: `live_connect_and_server_status` asserts `(status.live, status.finished) == (0, 0)`.
+- 🟡 `live.rs:522` drift check compared methods by name — fixed: whole-document JSON equality for `hc schema` and `rpc_discover()` against the fixture; the differ only builds the failure message; the offline differ test gained a reordered-methods case.
+- 🟡 `live_core.rs:147` predictable `/tmp` path with an unchecked owner and an `exists`/`create_dir_all` race — fixed: a leftover is stopped and removed only if it is a real directory owned by the current user (else `PermissionDenied`); the directory is created with `DirBuilder::create`, mode 0700. The refusal path has no test (the next path depends on a shared counter).
+- 🟡 `live_core.rs:212` Drop's stop untested — fixed: `live_core_is_stopped_and_removed_on_drop` (`#[cfg(unix)]`) reads the core pid from `server.status`, drops the guard, polls `ps` until the pid is gone, asserts the directory is removed. No mutation run: breaking the stop would leave a stray core.
+- 🔵 comment accuracy `live.rs:5`, `live.rs:53`, `live_core.rs:5`, `:214`, `:216` — fixed.
+- 🔵 isolation setup written three times — fixed: one `isolated_hc(dir)` helper (the transport builder keeps its own loop, a different type).
+- 🔵 `session: String` — fixed: `SessionName`.
+- 🔵 HC_* filter UTF-8 only — fixed: matches on encoded bytes.
+- 🔵 run line printed before connect — fixed: printed after a successful connect, `hfy-live: running against hc core <version>`.
+- 🔵 the plan's proof grep for `"hc"` also matches `tests/schema_coverage.rs:196` — accepted: an `Argv` data value in an offline test, not a spawn.
+- 🔵 offline differ test and extra assertions beyond the plan — accepted: they guard the drift check.
+- After fixes: live run 16 passed, `grep -c 'hfy-live: running'` → 15; skip run 16 passed in 0.00 s; `cargo make dod` exit 0; log grep prints nothing; pid 73079 present after every run; `/tmp/hfy*` count 0; herdr-core count unchanged (3).
+
+## Deviations
+
+- 2026-11-23 — The run line reads `hfy-live: running against hc core <version>` (the version from the hello reply), printed after connect, so `hc --version` is not spawned a second time per test.
+- 2026-11-23 — An extra test `differences_name_each_method_and_schema_that_differs` (offline) and `live_core_is_stopped_and_removed_on_drop` (live) beyond the named proofs.
+- 2026-11-23 — At the start of the build, one bare `hc --version` ran in the shell (read-only, no session, no core touched); pid 73079 was checked right after and was unaffected.
+- 2026-11-23 — Not committed: the instruction to execute did not ask for commits; the change is left staged.

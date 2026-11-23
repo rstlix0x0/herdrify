@@ -1,5 +1,5 @@
 ---
-status: approved
+status: done
 created: 2026-11-23
 depends-on: [21]
 built-on: cba93d6df53e
@@ -125,3 +125,27 @@ After `close()`, `next()` keeps yielding until the core's CLOSE arrives as `Clos
 - `cargo test -p herdrify-hc` passes.
 - The four spec §2 grep checks print nothing.
 - The Definition of Done is green.
+
+## Review findings
+
+- 🟡 (blocking) `client.rs:590,606` a non-object `terminal.attach` reply (`null`, `[]`, `"ok"`, `true`) gave `Protocol(MissingChannel)` instead of `Error::Decode` — fixed: the channel check runs only on an object; `attach_reply_that_is_not_an_object_is_a_decode_error` (before the fix: `null: expected Error::Decode, got Err(Protocol(MissingChannel ...))`).
+- 🟡 `client.rs:606` `"channel":null` untested (mutant M10 survived) — fixed: case added to `attach_reply_without_channel_is_missing_channel`; M10 now fails it.
+- 🟡 `stream.rs:143` the 16777216-byte boundary untested (mutant M13 survived) — fixed: `write_accepts_the_largest_payload_and_refuses_one_byte_more`; M13 now fails it (`287 passed; 1 failed`).
+- 🟡 Task 1 accessors delivered as public fields — kept as public fields (see Deviations); docs say they are the reply as received and writing them changes nothing.
+- 🔵 `attach.rs:47-57` public mutable fields — see the item above.
+- 🔵 `attach.rs:296-300` duplicated `unencodable` — fixed: moved to `connection/error.rs` as `pub(super)`, shared.
+- 🔵 `attach.rs:319-322` double copy through a whole `Frame` — fixed: `resize`/`focus` pass kind and payload straight to `write`.
+- 🔵 `attach.rs:408-419` cancel test uses an mpsc queue, not `memory_link` — accepted: the assertion is as strong.
+- 🔵 `client.rs:60` long doc line — fixed.
+- 🔵 `client.rs:584-585` doc omitted `resumed()` — fixed.
+- 🔵 `stream.rs:135` "a dropped call has already queued its frame" — fixed: "once polled".
+- 🔵 `stream.rs` not in the file list — see Deviations.
+- After fixes: `connection` 57 passed; `--test client_fake` 93 passed ×3; `cargo make dod` exit 0 (288 unit, 4 adapter_stream, 93 client_fake, 7 schema_coverage, 55 doc); log grep prints nothing.
+
+## Deviations
+
+- 2026-11-23 — The plan names both reply accessors `automatic_input()` etc. and a write `automatic_input(&[u8])`; Rust allows only one inherent method of that name. Built the reply values as public fields `terminal`, `channel`, `automatic_input`, `resize_notifications` (spec §6.4 defines them as fields); `automatic_input(&[u8])` is the write, gated by a private flag fixed at construction.
+- 2026-11-23 — A reply object with `channel` absent or `null` is `Protocol(MissingChannel)` (checked on the raw reply, because `AttachResult.channel` is a required `u32`); every other bad reply is `Error::Decode`.
+- 2026-11-23 — `connection/stream.rs` (not in the file list) gained `StreamHandle::write` with the Closed → StreamClosed → PayloadTooLarge order, because the closed-locally state is private to that file; `connection/error.rs` now holds the shared `unencodable` helper.
+- 2026-11-23 — Task 2 and 3 tests were written after the implementation; each guard was mutation-checked instead.
+- 2026-11-23 — Not committed: the instruction to execute did not ask for commits; the change is left staged.

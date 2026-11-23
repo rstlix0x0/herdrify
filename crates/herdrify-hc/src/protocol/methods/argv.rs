@@ -57,6 +57,11 @@ impl Argv {
             .ok_or(EmptyValueError { what: "argv" })
     }
 
+    /// Builds an argv from a program and its arguments, with no emptiness check to fail.
+    pub(crate) const fn from_parts(program: String, args: Vec<String>) -> Self {
+        Self { program, args }
+    }
+
     /// The program: the first element.
     #[must_use]
     pub fn program(&self) -> &str {
@@ -104,6 +109,18 @@ mod tests {
             serde_json::to_string(&argv)?,
             r#"["ssh","box","hc","connect"]"#
         );
+        Ok(())
+    }
+
+    #[test]
+    fn argv_from_parts_matches_new() -> TestResult {
+        let built = Argv::from_parts("hc".to_owned(), vec!["connect".to_owned()]);
+        assert_eq!(
+            built,
+            Argv::new(vec!["hc".to_owned(), "connect".to_owned()])?
+        );
+        assert_eq!(built.program(), "hc");
+        assert_eq!(built.args(), ["connect"]);
         Ok(())
     }
 

@@ -474,7 +474,8 @@ mod tests {
 
     #[test]
     fn hello_result_decodes_the_live_reply() -> TestResult {
-        let wire = r#"{"core":{"id":"fdf328619a6eb255651d94a149cc7181","name":"hiraqs-macbook-air"},"features":["framed","attach","events","status","shell","resize_notifications","automatic_input","restart_environment"],"framed":false,"generation":1,"keeps_running_after_logout":null,"login_session":{"gui":true,"id":100002,"user":501},"logout_linger_user":null,"methods":["hello","server.status","server.stop","server.restart","terminal.run","templates.list","terminal.list","terminal.get","terminal.kill","terminal.rm","terminal.keep","terminal.label","terminal.read","terminal.attach","terminal.send","terminal.wait","terminal.keys","terminal.interrupt","terminal.put","machine.exec","file.read","file.write","file.edit","doc.get","doc.set","events.subscribe","machine.add","machine.list","machine.connect","machine.rename","machine.rm","rpc.discover"],"version":"0.1.21"}"#;
+        // The core name was recorded as the machine's hostname and is replaced with the neutral `host`.
+        let wire = r#"{"core":{"id":"fdf328619a6eb255651d94a149cc7181","name":"host"},"features":["framed","attach","events","status","shell","resize_notifications","automatic_input","restart_environment"],"framed":false,"generation":1,"keeps_running_after_logout":null,"login_session":{"gui":true,"id":100002,"user":501},"logout_linger_user":null,"methods":["hello","server.status","server.stop","server.restart","terminal.run","templates.list","terminal.list","terminal.get","terminal.kill","terminal.rm","terminal.keep","terminal.label","terminal.read","terminal.attach","terminal.send","terminal.wait","terminal.keys","terminal.interrupt","terminal.put","machine.exec","file.read","file.write","file.edit","doc.get","doc.set","events.subscribe","machine.add","machine.list","machine.connect","machine.rename","machine.rm","rpc.discover"],"version":"0.1.21"}"#;
         let result: HelloResult = serde_json::from_str(wire)?;
         assert_eq!(result.version, "0.1.21");
         assert_eq!(result.generation, Generation::ONE);
@@ -483,7 +484,7 @@ mod tests {
             result.core,
             CoreInfo {
                 id: "fdf328619a6eb255651d94a149cc7181".to_owned(),
-                name: "hiraqs-macbook-air".to_owned(),
+                name: "host".to_owned(),
             }
         );
         assert_eq!(result.features.len(), 8);

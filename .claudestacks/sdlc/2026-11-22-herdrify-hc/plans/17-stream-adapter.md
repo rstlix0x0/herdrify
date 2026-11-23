@@ -1,5 +1,5 @@
 ---
-status: approved
+status: done
 created: 2026-11-23
 depends-on: [08]
 built-on: cba93d6df53e
@@ -84,3 +84,22 @@ crates/herdrify-hc/tests/adapter_stream.rs — create: StreamTransport over toki
 
 - `grep -rn 'crate::connection' crates/herdrify-hc/src/adapter` prints nothing.
 - The Definition of Done is green.
+
+## Review findings
+
+- 🟡 `stream.rs:13` docs said end of stream discards partial bytes; the decoder kept them — fixed: decoders reset on a 0-byte read; `recv_line_drops_a_partial_line_for_good`, `recv_drops_a_partial_frame_for_good` (with the resets disabled: `8 passed; 2 failed`).
+- 🟡 `stream.rs:155` no test caught a removed flush — fixed: `send_line_flushes_a_buffering_writer`, `send_flushes_a_buffering_writer` over a 32-byte `BufWriter` (with `flush` removed: `8 passed; 2 failed` after 5.01 s).
+- 🟡 `adapter_stream.rs:54` `hello_line_then_frames_in_one_write` hung on a reverted hand-off — fixed: 5 s timeout; the mutant now fails in 5.00 s.
+- 🟡 `adapter_stream.rs:87` `sink_close_reaches_the_peer_as_eof` hung on a reverted close — fixed: 5 s timeout; the mutant now fails in 5.00 s.
+- 🟡 plan drift "discards the partial bytes" — fixed by the first item.
+- 🔵 `stream.rs:163` 8 KiB stack array per read — fixed: reusable `Vec` filled with `read_buf`.
+- 🔵 `stream.rs:18` pointed at an adapter that did not exist — fixed: reworded.
+- 🔵 `lib.rs:3` root doctest did not name `StreamTransport` — fixed.
+- 🔵 `adapter_stream.rs:51` full path to `Line` — fixed: imported.
+- ❓ `send` cancel safety — fixed: `# Cancel safety` notes on `send_line`/`send` (not cancel safe) and `recv` (cancel safe).
+- After fixes: `cargo test -p herdrify-hc adapter` 10 passed; `--test adapter_stream` 4 passed; `cargo make dod` exit 0; log grep prints nothing.
+
+## Deviations
+
+- 2026-11-23 — Not committed: the instruction to execute did not ask for commits; the change is left staged.
+- 2026-11-23 — Task 2's tests passed on first run (the task makes no source change), so they were never seen failing; the fix round added timeouts and mutation-checked them.
