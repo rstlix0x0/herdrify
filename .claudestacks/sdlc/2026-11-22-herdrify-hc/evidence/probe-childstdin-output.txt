@@ -1,0 +1,2 @@
+after shutdown() with stdin kept alive: cat exited = false
+after drop(stdin): cat exited = Ok(Some(0))
