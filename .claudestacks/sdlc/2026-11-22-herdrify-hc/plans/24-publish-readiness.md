@@ -1,5 +1,5 @@
 ---
-status: approved
+status: done
 created: 2026-11-23
 depends-on: [23]
 built-on: cba93d6df53e
@@ -90,3 +90,27 @@ Neither file names ADRs, specs, plans, milestones or chain paths (`doc-comment-d
 ## Proof
 
 - Every spec §12 acceptance check passes, as listed in Task 3.
+
+## Review findings
+
+- 🟡 `docs/herdr-and-airsl.md:40` the generation-0 refusal was not cited — fixed: cites `probe-plain-output.txt:212,225`; the quote now separates the message ("protocol generation N not supported") from the hint.
+- 🔵 `docs/herdr-and-airsl.md:42` "belongs to nobody else" shown one line earlier — fixed: `:131-138`.
+- 🔵 `docs/herdr-and-airsl.md:43` the `/tmp` success was not in the cited range — fixed: `:25-34,105-122`.
+- 🔵 `README.md:6` "32 typed methods" overcounted — fixed: `hello` through `Client::connect`, `rpc.discover` returns the raw OpenRPC document.
+- 🔵 `README.md:14`, `lib.rs:11` "0.1.21 or newer" never checked — fixed: "tested against hc 0.1.21".
+- 🔵 `README.md:17-28` the README copy of the example is not compiled — accepted: it is byte-identical to the `lib.rs` doctest, which `test-doc` compiles.
+- 🔵 `CLAUDE.md:8` "typed client for all 32 methods" — accepted: summary wording; the README carries the exact statement.
+
+## Acceptance checks (Task 3, 2026-11-23)
+
+- With `hc` 0.1.21 on `PATH`: `cargo make dod` → `DOD_EXIT=0`; log grep prints nothing; `cargo test -p herdrify-hc --test live -- --nocapture 2>&1 | grep -c 'hfy-live: running'` → `15`.
+- Without `hc`: `env PATH="$HOME/.cargo/bin:/usr/bin:/bin" sh -c 'command -v hc; cargo make dod'` printed no `hc` path, `DOD_NOHC_EXIT=0`, log grep prints nothing; the same live grep → `0`.
+- `cargo make deny` → `advisories ok, bans ok, licenses ok, sources ok`.
+- `cargo publish --dry-run --allow-dirty -p herdrify-hc` → exit 0 (`Packaged 73 files, 785.6KiB`, `warning: aborting upload due to dry run`).
+- The four spec §2 grep checks, the `ADR|.claudestacks|milestone` grep and the personal-data grep print nothing.
+- Default core pid 73079 present after every run; `/tmp/hfy*` count 0.
+
+## Deviations
+
+- 2026-11-23 — No commits: the instruction to execute did not ask for them, so Task 1/2's commit and Task 3's clean-tree start did not happen. The change is staged, and the publish dry run used `--allow-dirty` on the staged tree.
+- 2026-11-23 — docs table names the evidence directory once and bare filenames per row; the socket-limit quote leaves out the probing machine's hostname.
