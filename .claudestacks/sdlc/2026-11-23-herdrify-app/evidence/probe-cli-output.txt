@@ -1,0 +1,80 @@
+== V1 version
+$ herdr-app "--version"
+exit=Some(0)
+stdout="herdr-app 0.1.17\n"
+stderr=""
+
+== C1 commands with empty home
+exit=Some(0) stderr="" stdout_bytes=18863
+commands=77 command_keys={"about", "args", "name"} arg_keys={"name", "required"} args_total=100 args_required=25
+unique_names=77
+C2 equal to output with the person's home: true
+C3 equal to saved herdr-app-0.1.17-commands.json: true
+
+== N no window (short home)
+$ HERDR_APP_HOME=/tmp/hzp herdr-app "ls"
+exit=Some(2)
+stdout=""
+stderr="herdr-app: no Herdr window at /tmp/hzp/herdr-app.sock: No such file or directory (os error 2)\n"
+
+== N no window (short home)
+$ HERDR_APP_HOME=/tmp/hzp herdr-app "status"
+exit=Some(2)
+stdout=""
+stderr="herdr-app: no Herdr window at /tmp/hzp/herdr-app.sock: No such file or directory (os error 2)\n"
+
+== N no window (short home)
+$ HERDR_APP_HOME=/tmp/hzp herdr-app "do" "tab.next"
+exit=Some(2)
+stdout=""
+stderr="herdr-app: no Herdr window at /tmp/hzp/herdr-app.sock: No such file or directory (os error 2)\n"
+
+== N no window (short home)
+$ HERDR_APP_HOME=/tmp/hzp herdr-app "do" "tab.next" "{}"
+exit=Some(2)
+stdout=""
+stderr="herdr-app: no Herdr window at /tmp/hzp/herdr-app.sock: No such file or directory (os error 2)\n"
+
+== N no window (short home)
+$ HERDR_APP_HOME=/tmp/hzp herdr-app "do" "no.such" "{}"
+exit=Some(2)
+stdout=""
+stderr="herdr-app: no Herdr window at /tmp/hzp/herdr-app.sock: No such file or directory (os error 2)\n"
+
+== N no window (short home)
+$ HERDR_APP_HOME=/tmp/hzp herdr-app "do" "tab.new" "{not json"
+exit=Some(2)
+stdout=""
+stderr="herdr-app: args are not JSON: key must be a string at line 1 column 2\n"
+
+== N no window (short home)
+$ HERDR_APP_HOME=/tmp/hzp herdr-app "do"
+exit=Some(2)
+stdout=""
+stderr="herdr-app: usage: herdr-app ls | herdr-app commands | herdr-app status | herdr-app shot [file.png] | herdr-app do <command> [--arg value ... | json]\n"
+
+== N long home
+$ HERDR_APP_HOME=/tmp/hzp-a-very-long-directory-name-that-pushes-the-socket-path-over-the-limit-for-unix-sockets herdr-app "status"
+exit=Some(2)
+stdout=""
+stderr="herdr-app: no Herdr window at /tmp/hzp-a-very-long-directory-name-that-pushes-the-socket-path-over-the-limit-for-unix-sockets/herdr-app.sock: path must be shorter than SUN_LEN\n"
+
+== U usage
+$ HERDR_APP_HOME=/tmp/hzp herdr-app "bogus"
+exit=Some(2)
+stdout=""
+stderr="herdr-app: unknown argument \"bogus\"\n\nherdr-app: the Herdr desktop app. With no arguments it opens the window.\n\nUsage:\n  herdr-app                        open the window\n  herdr-app ls                     spaces, their tabs and terminals, in the open window\n  herdr-app do <command> [args]    run a command: --name api --argv '[\"pi\"]', or one JSON object\n  herdr-app feedback <text>        draft feedback for the person to review and send\n  herdr-app commands               every command, its arguments, what it does\n  herdr-app status                 what the window shows, and any errors\n  herdr-app shot [file.png]        save the current window frame (default: herdr-shot.png)\n  herdr-app check <mod folder>     load a mod once and report what's wrong\n  herdr-app --skill                Agent Skill: driving the window, and where hc fits\n  herdr-app --version\n\nThe terminals run in herdr-core (`hc`), which keeps them alive when the\nwindow closes. `hc --help`: start, read, wait on and talk to terminals and\nagents. The app shows them and arranges them in spaces and tabs.\n\nHome: ~/.config/herdr-app (HERDR_APP_HOME picks another).\n"
+
+== U usage
+$ HERDR_APP_HOME=/tmp/hzp herdr-app "ls" "extra"
+exit=Some(2)
+stdout=""
+stderr="herdr-app: usage: herdr-app ls | herdr-app commands | herdr-app status | herdr-app shot [file.png] | herdr-app do <command> [--arg value ... | json]\n"
+
+== U usage
+$ HERDR_APP_HOME=/tmp/hzp herdr-app "--nope"
+exit=Some(2)
+stdout=""
+stderr="herdr-app: unknown argument \"--nope\"\n\nherdr-app: the Herdr desktop app. With no arguments it opens the window.\n\nUsage:\n  herdr-app                        open the window\n  herdr-app ls                     spaces, their tabs and terminals, in the open window\n  herdr-app do <command> [args]    run a command: --name api --argv '[\"pi\"]', or one JSON object\n  herdr-app feedback <text>        draft feedback for the person to review and send\n  herdr-app commands               every command, its arguments, what it does\n  herdr-app status                 what the window shows, and any errors\n  herdr-app shot [file.png]        save the current window frame (default: herdr-shot.png)\n  herdr-app check <mod folder>     load a mod once and report what's wrong\n  herdr-app --skill                Agent Skill: driving the window, and where hc fits\n  herdr-app --version\n\nThe terminals run in herdr-core (`hc`), which keeps them alive when the\nwindow closes. `hc --help`: start, read, wait on and talk to terminals and\nagents. The app shows them and arranges them in spaces and tabs.\n\nHome: ~/.config/herdr-app (HERDR_APP_HOME picks another).\n"
+
+== W files in /tmp/hzp after all runs: []

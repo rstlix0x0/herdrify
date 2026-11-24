@@ -8,6 +8,7 @@
 //! - the identifier newtypes that name terminals, machines, documents and keys, and the version
 //!   number a document carries
 //! - the error a refusing newtype returns for an empty value
+//! - `TransferId`, the identifier of a file transfer, which checks its whole rule when built
 //! - the wire codec: frames and their decoder, lines and their decoder, and the NDJSON decoder
 //!   for stream channels, with the errors they return
 //! - the component schemas of the core as types a reply is read into: records, results, the
@@ -25,7 +26,8 @@
 //! Non-responsibilities:
 //!
 //! - moving bytes or messages between a connection and these types, which the transport does
-//! - deciding which values the core accepts beyond the empty string, which the core decides
+//! - deciding which values the core accepts beyond the empty string, which the core decides; the
+//!   exception is `TransferId`, which enforces the whole rule itself
 //!
 //! This file only lists the submodules and re-exports their items, so it carries no unit tests.
 
@@ -39,6 +41,7 @@ mod line;
 mod methods;
 mod ndjson;
 mod notification;
+mod transfer;
 mod types;
 mod word;
 
@@ -63,19 +66,23 @@ pub use methods::{
     Keep, LabelChange, LabelChanges, MachineAdd, MachineConnect, MachineExec, MachineList,
     MachineRename, MachineRm, MachineTarget, Method, RpcDiscover, ServerRestart, ServerStatus,
     ServerStop, TemplatesList, TerminalAttach, TerminalGet, TerminalInterrupt, TerminalKeep,
-    TerminalKeys, TerminalKill, TerminalLabel, TerminalList, TerminalPut, TerminalRead, TerminalRm,
-    TerminalRun, TerminalSend, TerminalWait, WaitTarget,
+    TerminalKeys, TerminalKill, TerminalLabel, TerminalList, TerminalPut, TerminalPutAbort,
+    TerminalPutBegin, TerminalPutChunk, TerminalPutFinish, TerminalRead, TerminalRm, TerminalRun,
+    TerminalSend, TerminalWait, WaitTarget,
 };
 #[doc(inline)]
 pub use ndjson::NdjsonDecoder;
 #[doc(inline)]
 pub use notification::{Event, EventKind, Notification, Seq};
 #[doc(inline)]
+pub use transfer::{InvalidTransferId, TransferId};
+#[doc(inline)]
 pub use types::{
-    AttachResult, Children, CoreInfo, DisplayFacts, DocGetResult, DocSetResult, Edit, EndReason,
-    Environment, ExecResult, FileReadResult, FileResult, FirstMessage, Foreground, HolderInfo,
-    IdleOrWorking, InitialSize, InterruptResult, KeysResult, Labels, ListResult, LoginSession,
-    Machine, MachineListResult, MachineView, PutResult, ReadResult, RemoveResult, RunResult,
-    SendResult, Status, StatusResult, StatusWord, StopResult, SubscribeResult, TemplateInfo,
-    TemplatesResult, Terminal, TerminalState, WaitReason, WaitResult,
+    AttachResult, Children, CoreInfo, DisplayFacts, DocGetResult, DocSetResult, Edit, EmptyResult,
+    EndReason, Environment, ExecResult, FileReadResult, FileResult, FirstMessage, Foreground,
+    HolderInfo, IdleOrWorking, InitialSize, InterruptResult, KeysResult, Labels, ListResult,
+    LoginSession, Machine, MachineListResult, MachineView, PutBeginResult, PutPieceResult,
+    PutResult, ReadResult, RemoveResult, RunResult, SendResult, Status, StatusResult, StatusWord,
+    StopResult, SubscribeResult, TemplateInfo, TemplatesResult, Terminal, TerminalState,
+    WaitReason, WaitResult,
 };

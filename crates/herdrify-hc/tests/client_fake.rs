@@ -12,6 +12,8 @@
 //!   recorded from herdr-core 0.1.21, except where the constant's doc says otherwise
 //! - event subscriptions: opening, delivery, credit, bad lines, the ways a stream ends and the
 //!   frames that must be sent or withheld when it is closed or dropped
+//! - `TerminalHandle::put_in_pieces`: the requests it sends for each size, and when it aborts
+//! - the `docs` filter, refused before anything is sent on a core older than 0.1.22
 //! - attach streams: opening, output and its credit, resize, the three close reasons, every write,
 //!   the refusals of a write and connection loss
 //! - that `Client`, `Subscription`, `AttachStream` and the futures of their calls are `Send`
@@ -31,19 +33,21 @@ use fake_transport::{FakePeer, FakeTransport, TestError, fake_pair};
 use herdrify_hc::connection::{
     AttachEvent, AttachStream, CloseReason, ConnectionEndKind, Subscription,
 };
+use herdrify_hc::herdr_core::TerminalHandle;
 use herdrify_hc::protocol::{
-    Argv, Channel, Command, DisplayFacts, DocGet, DocName, DocSet, DocVersion, Edit, EndReason,
-    ErrorKind, EventKind, EventsSubscribe, ExecCommand, FileEdit, FileName, FileRead, FileWrite,
-    Focus, Frame, FrameError, FrameKind, Keep, KeyName, LabelChange, LabelChanges, LabelKey,
-    LabelValue, MachineAdd, MachineConnect, MachineExec, MachineList, MachineName, MachineRename,
-    MachineRm, MachineTarget, MethodName, Notification, ProtocolError, RemotePath, RequestId,
-    RpcDiscover, Seq, ServerRestart, ServerStatus, ServerStop, StatusWord, StopResult,
-    TemplatesList, TerminalAttach, TerminalGet, TerminalInterrupt, TerminalKeep, TerminalKeys,
-    TerminalKill, TerminalLabel, TerminalList, TerminalPut, TerminalRead, TerminalRef, TerminalRm,
-    TerminalRun, TerminalSend, TerminalState, TerminalWait, UnexpectedReply, WaitReason,
-    WaitTarget,
+    Argv, Channel, Command, CoreVersion, DisplayFacts, DocGet, DocName, DocSet, DocVersion, Edit,
+    EndReason, ErrorKind, EventKind, EventsSubscribe, ExecCommand, FileEdit, FileName, FileRead,
+    FileWrite, Focus, Frame, FrameError, FrameKind, Keep, KeyName, LabelChange, LabelChanges,
+    LabelKey, LabelValue, MachineAdd, MachineConnect, MachineExec, MachineList, MachineName,
+    MachineRename, MachineRm, MachineTarget, MethodName, Notification, ProtocolError, PutResult,
+    RemotePath, RequestId, RpcDiscover, Seq, ServerRestart, ServerStatus, ServerStop, StatusWord,
+    StopResult, TemplatesList, TerminalAttach, TerminalGet, TerminalInterrupt, TerminalKeep,
+    TerminalKeys, TerminalKill, TerminalLabel, TerminalList, TerminalPut, TerminalPutAbort,
+    TerminalPutBegin, TerminalPutChunk, TerminalPutFinish, TerminalRead, TerminalRef, TerminalRm,
+    TerminalRun, TerminalSend, TerminalState, TerminalWait, TransferId, UnexpectedReply,
+    WaitReason, WaitTarget,
 };
-use herdrify_hc::{Client, Error, TransportError};
+use herdrify_hc::{Client, Error, HerdrCore, HerdrCoreError, TransportError};
 use serde_json::{Value, json};
 use tokio::time::timeout;
 
@@ -73,8 +77,13 @@ fn method(name: &str) -> Result<MethodName, TestError> {
 
 /// A client connected over the fake, and the peer that answered its hello.
 async fn connected() -> Result<(Client<FakeTransport>, FakePeer), TestError> {
+    connected_at("0.1.21").await
+}
+
+/// As [`connected`], with a core that reports `version`.
+async fn connected_at(version: &str) -> Result<(Client<FakeTransport>, FakePeer), TestError> {
     let (transport, mut peer) = fake_pair();
-    peer.reply_line(&hello_reply(&hello_result("0.1.21", true, 1)))?;
+    peer.reply_line(&hello_reply(&hello_result(version, true, 1)))?;
     let client = timeout(PATIENCE, Client::connect(transport)).await??;
     let _hello = peer.line().await?;
     Ok((client, peer))
@@ -988,6 +997,350 @@ async fn terminal_get_not_found() -> TestResult {
     Ok(())
 }
 
+/// The transfer the put-in-pieces tests name.
+const TRANSFER: &str = "0123456789abcdef";
+
+fn transfer() -> Result<TransferId, TestError> {
+    Ok(TransferId::new(TRANSFER)?)
+}
+
+#[tokio::test]
+async fn put_calls_send_their_method_and_params() -> TestResult {
+    let (client, mut peer) = connected_at("0.1.22").await?;
+
+    let begun = answered(
+        &mut peer,
+        client.terminal_put_begin(TerminalPutBegin::new(
+            terminal("t2")?,
+            FileName::new("x.txt"),
+            5,
+            transfer()?,
+        )),
+        "terminal.put_begin",
+        json!({"bytes": 5, "name": "x.txt", "terminal": "t2", "transfer": TRANSFER}),
+        &format!(r#"{{"transfer":"{TRANSFER}"}}"#),
+    )
+    .await?;
+    assert_eq!(begun.transfer.as_str(), TRANSFER);
+
+    let piece = answered(
+        &mut peer,
+        client.terminal_put_chunk(TerminalPutChunk::new(transfer()?, 0, b"hello".to_vec())),
+        "terminal.put_chunk",
+        json!({"data": "aGVsbG8=", "offset": 0, "transfer": TRANSFER}),
+        r#"{"bytes":5}"#,
+    )
+    .await?;
+    assert_eq!(piece.bytes, 5);
+
+    let stored = answered(
+        &mut peer,
+        client.terminal_put_finish(TerminalPutFinish::new(transfer()?)),
+        "terminal.put_finish",
+        json!({"transfer": TRANSFER}),
+        PUT_RESULT,
+    )
+    .await?;
+    assert_eq!(stored.bytes, 5);
+    assert!(stored.path.ends_with("/files/t2/x.txt"));
+
+    answered(
+        &mut peer,
+        client.terminal_put_abort(TerminalPutAbort::new(transfer()?)),
+        "terminal.put_abort",
+        json!({"transfer": TRANSFER}),
+        "{}",
+    )
+    .await?;
+    Ok(())
+}
+
+#[tokio::test]
+async fn put_refusal_keeps_the_core_kind() -> TestResult {
+    let (client, mut peer) = connected().await?;
+    let error = refused(
+        &mut peer,
+        client.terminal_put_begin(TerminalPutBegin::new(
+            terminal("t2")?,
+            FileName::new("x.txt"),
+            5,
+            transfer()?,
+        )),
+        "terminal.put_begin",
+        json!({"bytes": 5, "name": "x.txt", "terminal": "t2", "transfer": TRANSFER}),
+        r#"{"code":-32601,"data":{"kind":"unknown_method"},"message":"unknown method \"terminal.put_begin\""}"#,
+    )
+    .await?;
+    assert_eq!(
+        rpc_kind(error)?,
+        ("terminal.put_begin".to_owned(), ErrorKind::UnknownMethod)
+    );
+    Ok(())
+}
+
+/// What the peer answers one request of a put in pieces with.
+enum Answer {
+    /// A result as the core sends it.
+    Result(String),
+    /// An error object as the core sends it.
+    Refusal(&'static str),
+}
+
+/// The reply of `terminal.put_begin`.
+fn opened() -> Answer {
+    Answer::Result(format!(r#"{{"transfer":"{TRANSFER}"}}"#))
+}
+
+/// The reply of `terminal.put_chunk` once the core holds `bytes` bytes.
+fn held(bytes: u64) -> Answer {
+    Answer::Result(format!(r#"{{"bytes":{bytes}}}"#))
+}
+
+/// The reply of `terminal.put_finish`.
+fn stored() -> Answer {
+    Answer::Result(PUT_RESULT.to_owned())
+}
+
+/// The reply of `terminal.put_abort`.
+fn dropped() -> Answer {
+    Answer::Result("{}".to_owned())
+}
+
+/// The error herdr-core 0.1.22 sent for a piece put to a terminal that ended mid-put (`probe-022`,
+/// step E3): kind `finished`, naming the terminal.
+const TRANSFER_FINISHED: &str = r#"{"code":-32000,"data":{"hint":"nothing there to read it","kind":"finished"},"message":"t3 has finished"}"#;
+
+/// The error herdr-core 0.1.22 sent for a `terminal.put_finish` before all the bytes had arrived
+/// (`probe-022`, step B9): a put begun for 3 bytes and finished with none sent.
+const FINISH_TOO_EARLY: &str = r#"{"code":-32602,"data":{"hint":"see `hc schema`","kind":"invalid_params"},"message":"got 0 of 3 bytes"}"#;
+
+/// A core over the fake, the handle on its terminal `t2`, and the peer.
+async fn put_shell() -> Result<
+    (
+        HerdrCore<FakeTransport>,
+        TerminalHandle<FakeTransport>,
+        FakePeer,
+    ),
+    TestError,
+> {
+    let (transport, mut peer) = fake_pair();
+    peer.reply_line(&hello_reply(&hello_result("0.1.22", true, 1)))?;
+    let core = timeout(PATIENCE, HerdrCore::over(transport)).await??;
+    let _hello = peer.line().await?;
+    let shell = core.terminals().handle("t2")?;
+    Ok((core, shell, peer))
+}
+
+/// Runs `put_in_pieces` of `data` while the peer answers each request in turn with the next of
+/// `answers`, and returns the call's outcome and the requests in the order they arrived.
+async fn put_in_pieces_answered(
+    peer: &mut FakePeer,
+    shell: &TerminalHandle<FakeTransport>,
+    data: Vec<u8>,
+    answers: Vec<Answer>,
+) -> Result<(Result<PutResult, HerdrCoreError>, Vec<Value>), TestError> {
+    let call = shell.put_in_pieces("a.bin", data);
+    let serve = async {
+        let mut seen = Vec::new();
+        for answer in answers {
+            let request = peer.request().await?;
+            let id = request["id"].as_u64().ok_or("no id")?;
+            let reply = match answer {
+                Answer::Result(result) => {
+                    format!(r#"{{"id":{id},"jsonrpc":"2.0","result":{result}}}"#)
+                }
+                Answer::Refusal(error) => {
+                    format!(r#"{{"error":{error},"id":{id},"jsonrpc":"2.0"}}"#)
+                }
+            };
+            peer.push_data(reply.as_bytes())?;
+            seen.push(request);
+        }
+        Ok::<_, TestError>(seen)
+    };
+    let (outcome, seen) = timeout(PATIENCE, async { tokio::join!(call, serve) }).await?;
+    Ok((outcome, seen?))
+}
+
+/// The methods of `requests`, in order.
+fn methods_of(requests: &[Value]) -> Vec<&str> {
+    requests
+        .iter()
+        .filter_map(|request| request["method"].as_str())
+        .collect()
+}
+
+/// The transfer the begin request of a put in pieces chose.
+fn chosen_transfer(requests: &[Value]) -> Result<String, TestError> {
+    let begin = requests.first().ok_or("no request was sent")?;
+    assert_eq!(begin["method"], "terminal.put_begin");
+    Ok(begin["params"]["transfer"]
+        .as_str()
+        .ok_or("no transfer in the begin request")?
+        .to_owned())
+}
+
+/// How many bytes the base64 text `data` of a piece decodes to.
+fn piece_len(data: &Value) -> Result<usize, TestError> {
+    let text = data.as_str().ok_or("a piece has no data")?;
+    Ok(base64::Engine::decode(&base64::engine::general_purpose::STANDARD, text)?.len())
+}
+
+#[tokio::test]
+async fn put_in_pieces_splits_at_one_mebibyte() -> TestResult {
+    for (len, pieces) in [(0_usize, 0_usize), (1, 1), (1_048_576, 1), (1_048_577, 2)] {
+        let (_core, shell, mut peer) = put_shell().await?;
+        let mut answers = vec![opened()];
+        answers.extend((0..pieces).map(|_| held(0)));
+        answers.push(stored());
+        let (outcome, requests) =
+            put_in_pieces_answered(&mut peer, &shell, vec![7; len], answers).await?;
+
+        assert_eq!(outcome?.bytes, 5, "{len}");
+        let mut expected = vec!["terminal.put_begin"];
+        expected.extend((0..pieces).map(|_| "terminal.put_chunk"));
+        expected.push("terminal.put_finish");
+        assert_eq!(methods_of(&requests), expected, "{len}");
+
+        let transfer = chosen_transfer(&requests)?;
+        assert_eq!(transfer.len(), 32);
+        assert_eq!(
+            requests[0]["params"],
+            json!({"bytes": len, "name": "a.bin", "terminal": "t2", "transfer": transfer})
+        );
+        let mut sent = 0;
+        for (piece, request) in requests[1..=pieces].iter().enumerate() {
+            assert_eq!(request["params"]["transfer"], transfer.as_str());
+            assert_eq!(request["params"]["offset"], piece * 1_048_576, "{len}");
+            sent += piece_len(&request["params"]["data"])?;
+        }
+        assert_eq!(sent, len);
+        let finish = requests.last().ok_or("no request")?;
+        assert_eq!(finish["params"], json!({"transfer": transfer}));
+    }
+    Ok(())
+}
+
+#[tokio::test]
+async fn put_in_pieces_aborts_after_a_refused_piece() -> TestResult {
+    let (_core, shell, mut peer) = put_shell().await?;
+    let answers = vec![opened(), Answer::Refusal(TRANSFER_FINISHED), dropped()];
+    let (outcome, requests) =
+        put_in_pieces_answered(&mut peer, &shell, vec![1, 2, 3], answers).await?;
+
+    let error = outcome.err().ok_or("the put succeeded")?;
+    assert_eq!(
+        error.refusal().map(|refusal| refusal.kind.to_string()),
+        Some("finished".to_owned())
+    );
+    assert_eq!(
+        methods_of(&requests),
+        [
+            "terminal.put_begin",
+            "terminal.put_chunk",
+            "terminal.put_abort"
+        ]
+    );
+    let transfer = chosen_transfer(&requests)?;
+    assert_eq!(requests[2]["params"], json!({"transfer": transfer}));
+    peer.nothing_sent().await?;
+    Ok(())
+}
+
+#[tokio::test]
+async fn put_in_pieces_aborts_after_a_refused_finish() -> TestResult {
+    let (_core, shell, mut peer) = put_shell().await?;
+    let answers = vec![
+        opened(),
+        held(3),
+        Answer::Refusal(FINISH_TOO_EARLY),
+        dropped(),
+    ];
+    let (outcome, requests) =
+        put_in_pieces_answered(&mut peer, &shell, vec![1, 2, 3], answers).await?;
+
+    let error = outcome.err().ok_or("the put succeeded")?;
+    assert_eq!(
+        error.refusal().map(|refusal| refusal.kind.clone()),
+        Some(ErrorKind::InvalidParams)
+    );
+    assert_eq!(
+        methods_of(&requests),
+        [
+            "terminal.put_begin",
+            "terminal.put_chunk",
+            "terminal.put_finish",
+            "terminal.put_abort"
+        ]
+    );
+    let transfer = chosen_transfer(&requests)?;
+    assert_eq!(requests[3]["params"], json!({"transfer": transfer}));
+    Ok(())
+}
+
+#[tokio::test]
+async fn put_in_pieces_sends_no_abort_when_begin_is_refused() -> TestResult {
+    let (_core, shell, mut peer) = put_shell().await?;
+    let answers = vec![Answer::Refusal(MACHINE_UNKNOWN)];
+    let (outcome, requests) = put_in_pieces_answered(&mut peer, &shell, vec![1], answers).await?;
+
+    let error = outcome.err().ok_or("the put succeeded")?;
+    assert_eq!(
+        error.refusal().map(|refusal| refusal.kind.clone()),
+        Some(ErrorKind::MachineUnknown)
+    );
+    assert_eq!(methods_of(&requests), ["terminal.put_begin"]);
+    peer.nothing_sent().await?;
+    Ok(())
+}
+
+#[tokio::test]
+async fn put_in_pieces_aborts_when_begin_does_not_decode() -> TestResult {
+    let (_core, shell, mut peer) = put_shell().await?;
+    let answers = vec![Answer::Result(r#"{"transfer":"x"}"#.to_owned()), dropped()];
+    let (outcome, requests) = put_in_pieces_answered(&mut peer, &shell, vec![1], answers).await?;
+
+    assert!(matches!(
+        outcome,
+        Err(HerdrCoreError::Call(error)) if matches!(*error, Error::Decode { .. })
+    ));
+    assert_eq!(
+        methods_of(&requests),
+        ["terminal.put_begin", "terminal.put_abort"]
+    );
+    let transfer = chosen_transfer(&requests)?;
+    assert_eq!(requests[1]["params"], json!({"transfer": transfer}));
+    Ok(())
+}
+
+#[tokio::test]
+async fn put_in_pieces_ignores_a_failed_abort() -> TestResult {
+    // herdr-core 0.1.22 answers every `terminal.put_abort` with `{}`, even for an unknown put, so
+    // no recorded abort refusal exists; the refusal of the abort here is an arbitrary one.
+    let (_core, shell, mut peer) = put_shell().await?;
+    let answers = vec![
+        opened(),
+        Answer::Refusal(TRANSFER_FINISHED),
+        Answer::Refusal(MACHINE_UNKNOWN),
+    ];
+    let (outcome, requests) = put_in_pieces_answered(&mut peer, &shell, vec![1], answers).await?;
+
+    let error = outcome.err().ok_or("the put succeeded")?;
+    assert_eq!(
+        error.refusal().map(|refusal| refusal.kind.to_string()),
+        Some("finished".to_owned())
+    );
+    assert_eq!(
+        methods_of(&requests),
+        [
+            "terminal.put_begin",
+            "terminal.put_chunk",
+            "terminal.put_abort"
+        ]
+    );
+    Ok(())
+}
+
 fn machine(name: &str) -> Result<MachineName, TestError> {
     Ok(MachineName::new(name)?)
 }
@@ -1276,6 +1629,17 @@ async fn client_and_its_futures_are_send() -> TestResult {
     assert_send(&client.terminal_interrupt(TerminalInterrupt::new(terminal("t1")?)));
     let put = TerminalPut::new(terminal("t1")?, FileName::new("x"), Vec::new());
     assert_send(&client.terminal_put(put));
+    assert_send(&client.terminal_put_begin(TerminalPutBegin::new(
+        terminal("t1")?,
+        FileName::new("x"),
+        0,
+        transfer()?,
+    )));
+    assert_send(&client.terminal_put_chunk(TerminalPutChunk::new(transfer()?, 0, Vec::new())));
+    assert_send(&client.terminal_put_finish(TerminalPutFinish::new(transfer()?)));
+    assert_send(&client.terminal_put_abort(TerminalPutAbort::new(transfer()?)));
+    let (_core, shell, _core_peer) = put_shell().await?;
+    assert_send(&shell.put_in_pieces("x", Vec::new()));
 
     let exec = MachineExec::new(ExecCommand::Line(String::new()));
     assert_send(&client.machine_exec(exec));
@@ -1478,6 +1842,85 @@ async fn a_channel_in_use_is_refused_and_the_first_subscription_keeps_working() 
     drop(first);
     assert_eq!(peer.frame().await?, event_close());
     peer.nothing_sent().await
+}
+
+/// The error `events_subscribe` returns for `docs` on a core that reports `version`, with the
+/// connection ended first when `ended`. Fails if the client sent anything.
+async fn docs_refusal(version: &str, ended: bool) -> Result<Error, TestError> {
+    let (client, mut peer) = connected_at(version).await?;
+    if ended {
+        peer.end();
+        wait_ended(&client).await?;
+    }
+    let params = EventsSubscribe::new().docs([DocName::new("probe")?]);
+    let outcome = timeout(PATIENCE, client.events_subscribe(params)).await?;
+    peer.nothing_sent().await?;
+    outcome.err().ok_or_else(|| "subscribe succeeded".into())
+}
+
+/// Asserts that `error` is `NeedsNewerCore` for the docs filter on a core that reported `found`.
+fn assert_needs_docs_core(error: &Error, found: &str) -> TestResult {
+    match error {
+        Error::NeedsNewerCore {
+            option,
+            needs,
+            found: seen,
+        } => {
+            assert_eq!(*option, "events.subscribe docs");
+            assert_eq!(*needs, CoreVersion::parse("0.1.22")?);
+            assert_eq!(*seen, CoreVersion::parse(found)?);
+            Ok(())
+        }
+        other => Err(format!("expected NeedsNewerCore, got {other:?}").into()),
+    }
+}
+
+#[tokio::test]
+async fn docs_on_0_1_21_is_refused_before_sending() -> TestResult {
+    let error = docs_refusal("0.1.21", false).await?;
+    assert_needs_docs_core(&error, "0.1.21")?;
+    assert_eq!(
+        error.to_string(),
+        "events.subscribe docs needs herdr-core 0.1.22 or newer; this core is 0.1.21"
+    );
+    Ok(())
+}
+
+#[tokio::test]
+async fn docs_on_a_0_1_22_prerelease_is_refused() -> TestResult {
+    let error = docs_refusal("0.1.22-rc.1", false).await?;
+    assert_needs_docs_core(&error, "0.1.22-rc.1")
+}
+
+#[tokio::test]
+async fn docs_on_0_1_22_is_sent() -> TestResult {
+    let (client, mut peer) = connected_at("0.1.22").await?;
+    let result = json!({"channel": EVENT_CHANNEL, "seq": 1, "terminals": []});
+    let reply = |id| json!({"id": id, "jsonrpc": "2.0", "result": result}).to_string();
+    let params = EventsSubscribe::new().docs([DocName::new("probe")?]);
+    let _subscription = exchange(
+        &mut peer,
+        client.events_subscribe(params),
+        "events.subscribe",
+        json!({"docs": ["probe"]}),
+        reply,
+    )
+    .await??;
+    Ok(())
+}
+
+#[tokio::test]
+async fn subscribe_without_docs_on_0_1_21_is_sent() -> TestResult {
+    let (client, mut peer) = connected_at("0.1.21").await?;
+    let result = json!({"channel": EVENT_CHANNEL, "seq": 1, "terminals": []});
+    let _subscription = subscribe(&client, &mut peer, &result).await??;
+    Ok(())
+}
+
+#[tokio::test]
+async fn docs_guard_runs_before_the_closed_check() -> TestResult {
+    let error = docs_refusal("0.1.21", true).await?;
+    assert_needs_docs_core(&error, "0.1.21")
 }
 
 #[tokio::test]

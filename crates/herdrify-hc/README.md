@@ -5,7 +5,7 @@ the transport is a trait you can replace, so tests can run against a fake.
 
 - `HerdrCore`, one entrypoint: it starts `hc connect` (or `ssh <host> hc connect`, or a session you
   name) and reaches every method from plain values. Each call is chained options, then `.await`.
-- All 32 methods of the core's API: `hello` through `Client::connect`, the rest as typed `Client`
+- All 36 methods of the core's API: `hello` through `Client::connect`, the rest as typed `Client`
   methods with typed parameters and results (`rpc.discover` returns the raw OpenRPC document).
 - Concurrent calls on one connection, over the framed protocol.
 - Event subscriptions and terminal attach streams, with flow-control credit granted for you.
@@ -15,7 +15,9 @@ the transport is a trait you can replace, so tests can run against a fake.
 ## Example
 
 This runs a command in a terminal on the core that `hc connect` reaches, reads what it printed and
-removes the terminal. It needs `hc` on `PATH`; the crate was tested against hc 0.1.21.
+removes the terminal. It needs `hc` on `PATH`; the crate was tested against hc 0.1.22. On hc 0.1.21
+every live test passes except the schema drift check, which pins 0.1.22 (the put in pieces tests
+skip there).
 
 ```rust,no_run
 use herdrify_hc::prelude::*;

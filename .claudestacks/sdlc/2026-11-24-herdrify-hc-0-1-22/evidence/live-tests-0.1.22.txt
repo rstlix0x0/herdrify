@@ -1,0 +1,26 @@
+$ cargo test -p herdrify-hc --test live --test live_herdr_core   # hc 0.1.22
+     Running tests/live.rs (target/debug/deps/live-014fdb2d4e219646)
+test differences_name_each_method_and_schema_that_differs ... ok
+test live_connect_and_server_status ... ok
+test live_files ... ok
+test live_machine_typed_errors ... ok
+test live_machine_exec ... ok
+test live_machine_list ... ok
+test live_docs ... ok
+test live_core_is_stopped_and_removed_on_drop ... ok
+test live_rpc_discover ... ok
+test live_templates_list ... ok
+test live_server_stop ... ok
+test live_terminal_attach ... ok
+test live_schema_matches_the_fixture ... FAILED
+test live_events_subscribe ... ok
+test live_server_restart ... ok
+test live_terminal_lifecycle ... ok
+test result: FAILED. 15 passed; 1 failed; 0 ignored; 0 measured; 0 filtered out; finished in 4.10s
+     Running tests/live_herdr_core.rs (target/debug/deps/live_herdr_core-07ebe2f17a73389f)
+test live_herdr_core_connects_and_reports_status ... ok
+test live_herdr_core_runs_a_command_to_completion ... ok
+test live_herdr_core_follows_events_and_attaches ... ok
+test live_herdr_core_runs_commands_and_edits_files ... ok
+test live_herdr_core_drives_a_shell ... ok
+test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 2.11s

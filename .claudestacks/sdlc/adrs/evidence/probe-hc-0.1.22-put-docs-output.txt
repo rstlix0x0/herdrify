@@ -1,0 +1,287 @@
+$ cargo +1.94 run (rustc 1.94.1)   # evidence/probe-022: herdrify-hc (path), tokio 1.54.1, serde_json 1.0.154, base64 0.23.1; isolated session; hc 0.1.22
+== hello
+version=0.1.22 framed=true generation=Generation(1)
+features=["framed", "attach", "events", "status", "shell", "resize_notifications", "automatic_input", "restart_environment", "put_chunks"]
+methods(36)=["hello", "server.status", "server.stop", "server.restart", "terminal.run", "templates.list", "terminal.list", "terminal.get", "terminal.kill", "terminal.rm", "terminal.keep", "terminal.label", "terminal.read", "terminal.attach", "terminal.send", "terminal.wait", "terminal.keys", "terminal.interrupt", "terminal.put", "terminal.put_begin", "terminal.put_chunk", "terminal.put_finish", "terminal.put_abort", "machine.exec", "file.read", "file.write", "file.edit", "doc.get", "doc.set", "events.subscribe", "machine.add", "machine.list", "machine.connect", "machine.rename", "machine.rm", "rpc.discover"]
+
+== error decode (SDK RpcError) of the 0.1.22 doc.set internal entry
+code=-32603 kind=Internal display=internal [internal]
+[setup] terminal.run {"argv":["sleep","300"],"no_parent":true}
+    => ok {"address":"t1","argv":["sleep","300"],"cols":200,"created_ms":1795503678071,"cwd":"/private/tmp/claude-501/-Users-hiraq-Projects-herdrify/f0ac2647-c3a7-40b0-9077-2ced77e38454/scratchpad/probe-022","die_with_parent":false,"exit_code":null,"finished_ms":null,"identity":"ghostty","keep":false,"labels"…(522 bytes)
+terminal=t1
+
+== happy path
+[A1] terminal.put_begin {"bytes":10,"name":"a.txt","terminal":"t1","transfer":"0123456789abcdef"}
+    => ok {"transfer":"0123456789abcdef"}
+[A2] terminal.put_chunk {"data":"aGVsbG8=","offset":0,"transfer":"0123456789abcdef"}
+    => ok {"bytes":5}
+[A3 wrong offset (0 again)] terminal.put_chunk {"data":"aGVsbG8=","offset":0,"transfer":"0123456789abcdef"}
+    => err code=-32602 kind=invalid_params message="the next piece starts at 5" hint=Some("see `hc schema`")
+[A3b offset ahead (7)] terminal.put_chunk {"data":"eA==","offset":7,"transfer":"0123456789abcdef"}
+    => err code=-32602 kind=invalid_params message="the next piece starts at 5" hint=Some("see `hc schema`")
+[A4] terminal.put_chunk {"data":"d29ybGQ=","offset":5,"transfer":"0123456789abcdef"}
+    => ok {"bytes":10}
+[A5 past size] terminal.put_chunk {"data":"IQ==","offset":10,"transfer":"0123456789abcdef"}
+    => err code=-32602 kind=invalid_params message="more than the 10 bytes begun with" hint=Some("see `hc schema`")
+[A6] terminal.put_finish {"transfer":"0123456789abcdef"}
+    => ok {"bytes":10,"path":"/tmp/hfp27894/state/herdr-core/hfp27894/files/t1/a.txt"}
+[A6 read back] file.read {"path":"/tmp/hfp27894/state/herdr-core/hfp27894/files/t1/a.txt"}
+    => ok {"first":1,"last":1,"lines":1,"text":"helloworld"}
+[A7 chunk after finish] terminal.put_chunk {"data":"IQ==","offset":10,"transfer":"0123456789abcdef"}
+    => err code=-32000 kind=not_found message="no put 0123456789abcdef here" hint=Some("it was aborted, or its terminal or connection went")
+[A8 finish again] terminal.put_finish {"transfer":"0123456789abcdef"}
+    => err code=-32000 kind=not_found message="no put 0123456789abcdef here" hint=Some("it was aborted, or its terminal or connection went")
+[A9 abort after finish] terminal.put_abort {"transfer":"0123456789abcdef"}
+    => ok {}
+[A10 begin reusing a finished transfer id] terminal.put_begin {"bytes":1,"name":"a2.txt","terminal":"t1","transfer":"0123456789abcdef"}
+    => ok {"transfer":"0123456789abcdef"}
+
+== transfer id and size rules
+[B1 15 hex] terminal.put_begin {"bytes":1,"name":"b.txt","terminal":"t1","transfer":"0123456789abcde"}
+    => err code=-32602 kind=invalid_params message="transfer must be 16 to 64 hex digits" hint=Some("see `hc schema`")
+[  cleanup] terminal.put_abort {"transfer":"0123456789abcde"}
+    => err code=-32602 kind=invalid_params message="transfer must be 16 to 64 hex digits" hint=Some("see `hc schema`")
+[B1b 16 hex] terminal.put_begin {"bytes":1,"name":"b.txt","terminal":"t1","transfer":"1123456789abcdef"}
+    => ok {"transfer":"1123456789abcdef"}
+[  cleanup] terminal.put_abort {"transfer":"1123456789abcdef"}
+    => ok {}
+[B1c 64 hex] terminal.put_begin {"bytes":1,"name":"b.txt","terminal":"t1","transfer":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"}
+    => ok {"transfer":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"}
+[  cleanup] terminal.put_abort {"transfer":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"}
+    => ok {}
+[B1d 65 hex] terminal.put_begin {"bytes":1,"name":"b.txt","terminal":"t1","transfer":"bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"}
+    => err code=-32602 kind=invalid_params message="transfer must be 16 to 64 hex digits" hint=Some("see `hc schema`")
+[  cleanup] terminal.put_abort {"transfer":"bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"}
+    => err code=-32602 kind=invalid_params message="transfer must be 16 to 64 hex digits" hint=Some("see `hc schema`")
+[B2 non-hex 16] terminal.put_begin {"bytes":1,"name":"b.txt","terminal":"t1","transfer":"zzzzzzzzzzzzzzzz"}
+    => err code=-32602 kind=invalid_params message="transfer must be 16 to 64 hex digits" hint=Some("see `hc schema`")
+[  cleanup] terminal.put_abort {"transfer":"zzzzzzzzzzzzzzzz"}
+    => err code=-32602 kind=invalid_params message="transfer must be 16 to 64 hex digits" hint=Some("see `hc schema`")
+[B3 uppercase hex 16] terminal.put_begin {"bytes":1,"name":"b.txt","terminal":"t1","transfer":"ABCDEF0123456789"}
+    => ok {"transfer":"ABCDEF0123456789"}
+[  cleanup] terminal.put_abort {"transfer":"ABCDEF0123456789"}
+    => ok {}
+[B3b empty] terminal.put_begin {"bytes":1,"name":"b.txt","terminal":"t1","transfer":""}
+    => err code=-32602 kind=invalid_params message="transfer must be 16 to 64 hex digits" hint=Some("see `hc schema`")
+[  cleanup] terminal.put_abort {"transfer":""}
+    => err code=-32602 kind=invalid_params message="transfer must be 16 to 64 hex digits" hint=Some("see `hc schema`")
+[B4 8 MiB] terminal.put_begin {"bytes":8388608,"name":"big.bin","terminal":"t1","transfer":"0000000000800000"}
+    => ok {"transfer":"0000000000800000"}
+[  cleanup] terminal.put_abort {"transfer":"0000000000800000"}
+    => ok {}
+[B4b 8 MiB + 1] terminal.put_begin {"bytes":8388609,"name":"big.bin","terminal":"t1","transfer":"0000000000800001"}
+    => err code=-32602 kind=invalid_params message="at most 8 MB per put" hint=Some("see `hc schema`")
+[  cleanup] terminal.put_abort {"transfer":"0000000000800001"}
+    => ok {}
+[B4c 8_000_001] terminal.put_begin {"bytes":8000001,"name":"big.bin","terminal":"t1","transfer":"00000000007a1201"}
+    => ok {"transfer":"00000000007a1201"}
+[  cleanup] terminal.put_abort {"transfer":"00000000007a1201"}
+    => ok {}
+
+== zero bytes, duplicates, unknowns
+[B5 begin 0 bytes] terminal.put_begin {"bytes":0,"name":"empty.txt","terminal":"t1","transfer":"2000000000000000"}
+    => ok {"transfer":"2000000000000000"}
+[B5b finish 0 bytes] terminal.put_finish {"transfer":"2000000000000000"}
+    => ok {"bytes":0,"path":"/tmp/hfp27894/state/herdr-core/hfp27894/files/t1/empty.txt"}
+[B6 begin] terminal.put_begin {"bytes":3,"name":"d.txt","terminal":"t1","transfer":"3000000000000000"}
+    => ok {"transfer":"3000000000000000"}
+[B6b same id while open] terminal.put_begin {"bytes":3,"name":"d.txt","terminal":"t1","transfer":"3000000000000000"}
+    => err code=-32602 kind=invalid_params message="put 3000000000000000 is taken" hint=Some("see `hc schema`")
+[B9 finish before all bytes] terminal.put_finish {"transfer":"3000000000000000"}
+    => err code=-32602 kind=invalid_params message="got 0 of 3 bytes" hint=Some("see `hc schema`")
+[B11 abort open] terminal.put_abort {"transfer":"3000000000000000"}
+    => ok {}
+[B11b chunk after abort] terminal.put_chunk {"data":"YWJj","offset":0,"transfer":"3000000000000000"}
+    => err code=-32000 kind=not_found message="no put 3000000000000000 here" hint=Some("it was aborted, or its terminal or connection went")
+[B11c abort unknown] terminal.put_abort {"transfer":"4000000000000000"}
+    => ok {}
+[B15 chunk unknown transfer] terminal.put_chunk {"data":"YQ==","offset":0,"transfer":"5000000000000000"}
+    => err code=-32000 kind=not_found message="no put 5000000000000000 here" hint=Some("it was aborted, or its terminal or connection went")
+[B15b finish unknown transfer] terminal.put_finish {"transfer":"5000000000000000"}
+    => err code=-32000 kind=not_found message="no put 5000000000000000 here" hint=Some("it was aborted, or its terminal or connection went")
+[B7 unknown terminal] terminal.put_begin {"bytes":1,"name":"x.txt","terminal":"t999","transfer":"6000000000000000"}
+    => err code=-32000 kind=not_found message="no terminal \"t999\"" hint=Some("see `hc ls --all`")
+[B8 empty name] terminal.put_begin {"bytes":1,"name":"","terminal":"t1","transfer":"700000000000000d"}
+    => ok {"transfer":"700000000000000d"}
+[  chunk] terminal.put_chunk {"data":"eg==","offset":0,"transfer":"700000000000000d"}
+    => ok {"bytes":1}
+[  finish] terminal.put_finish {"transfer":"700000000000000d"}
+    => ok {"bytes":1,"path":"/tmp/hfp27894/state/herdr-core/hfp27894/files/t1/file"}
+[B8b slash name] terminal.put_begin {"bytes":1,"name":"a/b.txt","terminal":"t1","transfer":"7000000000000015"}
+    => ok {"transfer":"7000000000000015"}
+[  chunk] terminal.put_chunk {"data":"eg==","offset":0,"transfer":"7000000000000015"}
+    => ok {"bytes":1}
+[  finish] terminal.put_finish {"transfer":"7000000000000015"}
+    => ok {"bytes":1,"path":"/tmp/hfp27894/state/herdr-core/hfp27894/files/t1/b.txt"}
+[B8c dotdot] terminal.put_begin {"bytes":1,"name":"..","terminal":"t1","transfer":"700000000000000c"}
+    => ok {"transfer":"700000000000000c"}
+[  chunk] terminal.put_chunk {"data":"eg==","offset":0,"transfer":"700000000000000c"}
+    => ok {"bytes":1}
+[  finish] terminal.put_finish {"transfer":"700000000000000c"}
+    => ok {"bytes":1,"path":"/tmp/hfp27894/state/herdr-core/hfp27894/files/t1/file-2"}
+[B8d name taken] terminal.put_begin {"bytes":1,"name":"a.txt","terminal":"t1","transfer":"7000000000000013"}
+    => ok {"transfer":"7000000000000013"}
+[  chunk] terminal.put_chunk {"data":"eg==","offset":0,"transfer":"7000000000000013"}
+    => ok {"bytes":1}
+[  finish] terminal.put_finish {"transfer":"7000000000000013"}
+    => ok {"bytes":1,"path":"/tmp/hfp27894/state/herdr-core/hfp27894/files/t1/a-2.txt"}
+[B10 begin 2 MiB] terminal.put_begin {"bytes":2097152,"name":"c.bin","terminal":"t1","transfer":"8000000000000000"}
+    => ok {"transfer":"8000000000000000"}
+[B10 chunk 1 MiB + 1] terminal.put_chunk {"data":"AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA…(1398156 bytes)
+    => err code=-32602 kind=invalid_params message="at most 1 MB per piece" hint=Some("see `hc schema`")
+[B10b chunk 1 MiB] terminal.put_chunk {"data":"AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA…(1398156 bytes)
+    => ok {"bytes":1048576}
+[B12 bad base64] terminal.put_chunk {"data":"!!notbase64","offset":1048576,"transfer":"8000000000000000"}
+    => err code=-32602 kind=invalid_params message="data is not base64" hint=Some("see `hc schema`")
+[B13 empty data] terminal.put_chunk {"data":"","offset":1048576,"transfer":"8000000000000000"}
+    => ok {"bytes":1048576}
+[  cleanup] terminal.put_abort {"transfer":"8000000000000000"}
+    => ok {}
+
+== D: a whole 8 MiB put in 1 MiB pieces, checked by size and content
+[D1 begin 8 MiB] terminal.put_begin {"bytes":8388608,"name":"full.txt","terminal":"t1","transfer":"9100000000000000"}
+    => ok {"transfer":"9100000000000000"}
+    [D2 piece 0] => ok {"bytes":1048576}
+    [D2 piece 1] => ok {"bytes":2097152}
+    [D2 piece 2] => ok {"bytes":3145728}
+    [D2 piece 3] => ok {"bytes":4194304}
+    [D2 piece 4] => ok {"bytes":5242880}
+    [D2 piece 5] => ok {"bytes":6291456}
+    [D2 piece 6] => ok {"bytes":7340032}
+    [D2 piece 7] => ok {"bytes":8388608}
+    [D2] 8 of 8 pieces accepted
+[D3 finish] terminal.put_finish {"transfer":"9100000000000000"}
+    => ok {"bytes":8388608,"path":"/tmp/hfp27894/state/herdr-core/hfp27894/files/t1/full.txt"}
+[D4 size] machine.exec {"argv":["wc","-c","/tmp/hfp27894/state/herdr-core/hfp27894/files/t1/full.txt"]}
+    => ok {"code":0,"ms":6,"signal":null,"stderr":"","stdout":"IDgzODg2MDggL3RtcC9oZnAyNzg5NC9zdGF0ZS9oZXJkci1jb3JlL2hmcDI3ODk0L2ZpbGVzL3QxL2Z1bGwudHh0Cg==","timed_out":false,"truncated":false}
+    [D4 size] stdout decoded: 8388608 /tmp/hfp27894/state/herdr-core/hfp27894/files/t1/full.txt
+[D4 checksum] machine.exec {"argv":["shasum","-a","256","/tmp/hfp27894/state/herdr-core/hfp27894/files/t1/full.txt"]}
+    => ok {"code":0,"ms":99,"signal":null,"stderr":"","stdout":"NTBmMGQ4ZTdhYTFjMThlMWEwNzgzZjk3Zjk0YmU4ZjIwYWIwYjU2Y2QwMDBlMDkwZDRjMzAzNTE4MmU5YWRkMCAgL3RtcC9oZnAyNzg5NC9zdGF0ZS9oZXJkci1jb3JlL2hmcDI3ODk0L2ZpbGVzL3QxL2Z1bGwudHh0Cg==","timed_out":false,"truncated":false}
+    [D4 checksum] stdout decoded: 50f0d8e7aa1c18e1a0783f97f94be8f20ab0b56cd000e090d4c3035182e9add0  /tmp/hfp27894/state/herdr-core/hfp27894/files/t1/full.txt
+    [D4] local sha256 of the sent bytes: 50f0d8e7aa1c18e1a0783f97f94be8f20ab0b56cd000e090d4c3035182e9add0
+
+== put_begin over a line (non-framed) connection
+[line] hello framed=false version="0.1.22"
+    [line] <- {"error":{"code":-32000,"data":{"hint":"send hello with framed: true","kind":"needs_framed"},"message":"a put in pieces needs a framed connection"},"id":1,"jsonrpc":"2.0"}
+    [line] (nothing more within 800ms)
+
+== events.subscribe docs
+[line] hello framed=false version="0.1.22"
+[C1 docs exact] subscribe {"docs":["probe-doc"]}
+    reply <- {"id":1,"jsonrpc":"2.0","result":{"channel":null,"seq":2,"terminals":[]}}
+[  set] doc.set {"name":"probe-doc","value":{"n":0},"version":0}
+    => ok {"version":1}
+[  set] doc.set {"name":"pre-x","value":1,"version":0}
+    => ok {"version":1}
+[  set] doc.set {"name":"other","value":1,"version":0}
+    => ok {"version":1}
+[  label] terminal.label {"labels":{"k":"13"},"terminal":"t1"}
+    => ok {"address":"t1","argv":["sleep","300"],"cols":200,"created_ms":1795503678071,"cwd":"/private/tmp/claude-501/-Users-hiraq-Projects-herdrify/f0ac2647-c3a7-40b0-9077-2ced77e38454/scratchpad/probe-022","die_with_parent":false,"exit_code":null,"finished_ms":null,"foreground":{"argv":["sleep","300"],"cwd"…(716 bytes)
+    [C1 docs exact] <- {"jsonrpc":"2.0","method":"event","params":{"data":{"name":"probe-doc","version":1},"seq":3,"type":"doc"}}
+    [C1 docs exact] (nothing more within 700ms)
+[line] hello framed=false version="0.1.22"
+[C2 docs prefix] subscribe {"docs":["pre*"]}
+    reply <- {"id":1,"jsonrpc":"2.0","result":{"channel":null,"seq":6,"terminals":[]}}
+[  set] doc.set {"name":"probe-doc","value":{"n":1},"version":1}
+    => ok {"version":2}
+[  set] doc.set {"name":"pre-x","value":1,"version":1}
+    => ok {"version":2}
+[  set] doc.set {"name":"other","value":1,"version":1}
+    => ok {"version":2}
+[  label] terminal.label {"labels":{"k":"14"},"terminal":"t1"}
+    => ok {"address":"t1","argv":["sleep","300"],"cols":200,"created_ms":1795503678071,"cwd":"/private/tmp/claude-501/-Users-hiraq-Projects-herdrify/f0ac2647-c3a7-40b0-9077-2ced77e38454/scratchpad/probe-022","die_with_parent":false,"exit_code":null,"finished_ms":null,"foreground":{"argv":["sleep","300"],"cwd"…(716 bytes)
+    [C2 docs prefix] <- {"jsonrpc":"2.0","method":"event","params":{"data":{"name":"pre-x","version":2},"seq":8,"type":"doc"}}
+    [C2 docs prefix] (nothing more within 700ms)
+[line] hello framed=false version="0.1.22"
+[C3 docs empty array] subscribe {"docs":[]}
+    reply <- {"id":1,"jsonrpc":"2.0","result":{"channel":null,"seq":10,"terminals":[{"address":"t1","argv":["sleep","300"],"cols":200,"created_ms":1795503678071,"cwd":"/private/tmp/claude-501/-Users-hiraq-Projects-herdrify/f0ac2647-c3a7-40b0-9077-2ced77e38454/scratchpad/probe-022","die_with_parent":false,"exit_c…(790 bytes)
+[  set] doc.set {"name":"probe-doc","value":{"n":2},"version":2}
+    => ok {"version":3}
+[  set] doc.set {"name":"pre-x","value":1,"version":2}
+    => ok {"version":3}
+[  set] doc.set {"name":"other","value":1,"version":2}
+    => ok {"version":3}
+[  label] terminal.label {"labels":{"k":"19"},"terminal":"t1"}
+    => ok {"address":"t1","argv":["sleep","300"],"cols":200,"created_ms":1795503678071,"cwd":"/private/tmp/claude-501/-Users-hiraq-Projects-herdrify/f0ac2647-c3a7-40b0-9077-2ced77e38454/scratchpad/probe-022","die_with_parent":false,"exit_code":null,"finished_ms":null,"foreground":{"argv":["sleep","300"],"cwd"…(716 bytes)
+    [C3 docs empty array] <- {"jsonrpc":"2.0","method":"event","params":{"data":{"name":"probe-doc","version":3},"seq":11,"type":"doc"}}
+    [C3 docs empty array] <- {"jsonrpc":"2.0","method":"event","params":{"data":{"name":"pre-x","version":3},"seq":12,"type":"doc"}}
+    [C3 docs empty array] <- {"jsonrpc":"2.0","method":"event","params":{"data":{"name":"other","version":3},"seq":13,"type":"doc"}}
+    [C3 docs empty array] <- {"jsonrpc":"2.0","method":"event","params":{"data":{"labels":{"k":"19"}},"seq":14,"terminal":"t1","type":"labels"}}
+    [C3 docs empty array] (nothing more within 700ms)
+[line] hello framed=false version="0.1.22"
+[C4 no filter] subscribe {}
+    reply <- {"id":1,"jsonrpc":"2.0","result":{"channel":null,"seq":14,"terminals":[{"address":"t1","argv":["sleep","300"],"cols":200,"created_ms":1795503678071,"cwd":"/private/tmp/claude-501/-Users-hiraq-Projects-herdrify/f0ac2647-c3a7-40b0-9077-2ced77e38454/scratchpad/probe-022","die_with_parent":false,"exit_c…(790 bytes)
+[  set] doc.set {"name":"probe-doc","value":{"n":3},"version":3}
+    => ok {"version":4}
+[  set] doc.set {"name":"pre-x","value":1,"version":3}
+    => ok {"version":4}
+[  set] doc.set {"name":"other","value":1,"version":3}
+    => ok {"version":4}
+[  label] terminal.label {"labels":{"k":"12"},"terminal":"t1"}
+    => ok {"address":"t1","argv":["sleep","300"],"cols":200,"created_ms":1795503678071,"cwd":"/private/tmp/claude-501/-Users-hiraq-Projects-herdrify/f0ac2647-c3a7-40b0-9077-2ced77e38454/scratchpad/probe-022","die_with_parent":false,"exit_code":null,"finished_ms":null,"foreground":{"argv":["sleep","300"],"cwd"…(716 bytes)
+    [C4 no filter] <- {"jsonrpc":"2.0","method":"event","params":{"data":{"name":"probe-doc","version":4},"seq":15,"type":"doc"}}
+    [C4 no filter] <- {"jsonrpc":"2.0","method":"event","params":{"data":{"name":"pre-x","version":4},"seq":16,"type":"doc"}}
+    [C4 no filter] <- {"jsonrpc":"2.0","method":"event","params":{"data":{"name":"other","version":4},"seq":17,"type":"doc"}}
+    [C4 no filter] <- {"jsonrpc":"2.0","method":"event","params":{"data":{"labels":{"k":"12"}},"seq":18,"terminal":"t1","type":"labels"}}
+    [C4 no filter] (nothing more within 700ms)
+[line] hello framed=false version="0.1.22"
+[C5 docs + terminal] subscribe {"docs":["probe-doc"],"terminal":"t1"}
+    reply <- {"id":1,"jsonrpc":"2.0","result":{"channel":null,"seq":18,"terminals":[{"address":"t1","argv":["sleep","300"],"cols":200,"created_ms":1795503678071,"cwd":"/private/tmp/claude-501/-Users-hiraq-Projects-herdrify/f0ac2647-c3a7-40b0-9077-2ced77e38454/scratchpad/probe-022","die_with_parent":false,"exit_c…(790 bytes)
+[  set] doc.set {"name":"probe-doc","value":{"n":4},"version":4}
+    => ok {"version":5}
+[  set] doc.set {"name":"pre-x","value":1,"version":4}
+    => ok {"version":5}
+[  set] doc.set {"name":"other","value":1,"version":4}
+    => ok {"version":5}
+[  label] terminal.label {"labels":{"k":"18"},"terminal":"t1"}
+    => ok {"address":"t1","argv":["sleep","300"],"cols":200,"created_ms":1795503678071,"cwd":"/private/tmp/claude-501/-Users-hiraq-Projects-herdrify/f0ac2647-c3a7-40b0-9077-2ced77e38454/scratchpad/probe-022","die_with_parent":false,"exit_code":null,"finished_ms":null,"foreground":{"argv":["sleep","300"],"cwd"…(716 bytes)
+    [C5 docs + terminal] <- {"jsonrpc":"2.0","method":"event","params":{"data":{"name":"probe-doc","version":5},"seq":19,"type":"doc"}}
+    [C5 docs + terminal] <- {"jsonrpc":"2.0","method":"event","params":{"data":{"labels":{"k":"18"}},"seq":22,"terminal":"t1","type":"labels"}}
+    [C5 docs + terminal] (nothing more within 700ms)
+[line] hello framed=false version="0.1.22"
+[C6 docs star] subscribe {"docs":["*"]}
+    reply <- {"id":1,"jsonrpc":"2.0","result":{"channel":null,"seq":22,"terminals":[]}}
+[  set] doc.set {"name":"probe-doc","value":{"n":5},"version":5}
+    => ok {"version":6}
+[  set] doc.set {"name":"pre-x","value":1,"version":5}
+    => ok {"version":6}
+[  set] doc.set {"name":"other","value":1,"version":5}
+    => ok {"version":6}
+[  label] terminal.label {"labels":{"k":"12"},"terminal":"t1"}
+    => ok {"address":"t1","argv":["sleep","300"],"cols":200,"created_ms":1795503678071,"cwd":"/private/tmp/claude-501/-Users-hiraq-Projects-herdrify/f0ac2647-c3a7-40b0-9077-2ced77e38454/scratchpad/probe-022","die_with_parent":false,"exit_code":null,"finished_ms":null,"foreground":{"argv":["sleep","300"],"cwd"…(716 bytes)
+    [C6 docs star] <- {"jsonrpc":"2.0","method":"event","params":{"data":{"name":"probe-doc","version":6},"seq":23,"type":"doc"}}
+    [C6 docs star] <- {"jsonrpc":"2.0","method":"event","params":{"data":{"name":"pre-x","version":6},"seq":24,"type":"doc"}}
+    [C6 docs star] <- {"jsonrpc":"2.0","method":"event","params":{"data":{"name":"other","version":6},"seq":25,"type":"doc"}}
+    [C6 docs star] (nothing more within 700ms)
+[line] hello framed=false version="0.1.22"
+[C7 docs empty string] subscribe {"docs":[""]}
+    reply <- {"id":1,"jsonrpc":"2.0","result":{"channel":null,"seq":26,"terminals":[]}}
+[  set] doc.set {"name":"probe-doc","value":{"n":6},"version":6}
+    => ok {"version":7}
+[  set] doc.set {"name":"pre-x","value":1,"version":6}
+    => ok {"version":7}
+[  set] doc.set {"name":"other","value":1,"version":6}
+    => ok {"version":7}
+[  label] terminal.label {"labels":{"k":"20"},"terminal":"t1"}
+    => ok {"address":"t1","argv":["sleep","300"],"cols":200,"created_ms":1795503678071,"cwd":"/private/tmp/claude-501/-Users-hiraq-Projects-herdrify/f0ac2647-c3a7-40b0-9077-2ced77e38454/scratchpad/probe-022","die_with_parent":false,"exit_code":null,"finished_ms":null,"foreground":{"argv":["sleep","300"],"cwd"…(716 bytes)
+    [C7 docs empty string] (nothing more within 700ms)
+[line] hello framed=false version="0.1.22"
+[C8 docs duplicate] subscribe {"docs":["probe-doc","probe-doc"]}
+    reply <- {"id":1,"jsonrpc":"2.0","result":{"channel":null,"seq":30,"terminals":[]}}
+[  set] doc.set {"name":"probe-doc","value":{"n":7},"version":7}
+    => ok {"version":8}
+[  set] doc.set {"name":"pre-x","value":1,"version":7}
+    => ok {"version":8}
+[  set] doc.set {"name":"other","value":1,"version":7}
+    => ok {"version":8}
+[  label] terminal.label {"labels":{"k":"17"},"terminal":"t1"}
+    => ok {"address":"t1","argv":["sleep","300"],"cols":200,"created_ms":1795503678071,"cwd":"/private/tmp/claude-501/-Users-hiraq-Projects-herdrify/f0ac2647-c3a7-40b0-9077-2ced77e38454/scratchpad/probe-022","die_with_parent":false,"exit_code":null,"finished_ms":null,"foreground":{"argv":["sleep","300"],"cwd"…(716 bytes)
+    [C8 docs duplicate] <- {"jsonrpc":"2.0","method":"event","params":{"data":{"name":"probe-doc","version":8},"seq":31,"type":"doc"}}
+    [C8 docs duplicate] (nothing more within 700ms)
+
+== teardown
+[teardown] terminal.kill {"terminal":"t1"}
+    => ok {"address":"t1","argv":["sleep","300"],"cols":200,"created_ms":1795503678071,"cwd":"/private/tmp/claude-501/-Users-hiraq-Projects-herdrify/f0ac2647-c3a7-40b0-9077-2ced77e38454/scratchpad/probe-022","die_with_parent":false,"exit_code":null,"finished_ms":1795503686283,"identity":"ghostty","keep":false…(544 bytes)
+[teardown] server.stop {}
+    => ok {"stopped":true}
+removed /tmp/hfp27894

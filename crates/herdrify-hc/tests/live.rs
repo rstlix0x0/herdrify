@@ -7,6 +7,11 @@
 //! Responsibilities:
 //!
 //! - the terminal methods, the two streams and the typed errors, each against a real core
+//! - the put in pieces and its refusals, which a core older than 0.1.22 does not serve and which
+//!   the tests then skip
+//! - the `docs` filter of the event subscription, which the client refuses with
+//!   `Error::NeedsNewerCore` against a core older than 0.1.22, before sending anything, and the
+//!   test asserts that refusal there
 //! - the check that the installed `hc` still publishes the schema the SDK was written against
 //!
 //! Non-responsibilities:
@@ -25,14 +30,15 @@ use herdrify_hc::connection::{
     AttachEvent, AttachStream, CloseReason, ConnectionEndKind, Subscription,
 };
 use herdrify_hc::protocol::{
-    Argv, Command, CoreVersion, DocGet, DocName, DocSet, DocVersion, Edit, EndReason, ErrorKind,
-    EventKind, EventsSubscribe, ExecCommand, FileEdit, FileName, FileRead, FileWrite, Keep,
-    KeyName, LabelChange, LabelChanges, LabelKey, LabelValue, MachineAdd, MachineConnect,
-    MachineExec, MachineList, MachineName, MachineRename, MachineRm, MachineTarget, Notification,
-    RemotePath, RpcDiscover, ServerRestart, ServerStatus, ServerStop, TemplatesList,
+    Argv, Command, CoreVersion, DocGet, DocName, DocSet, DocVersion, Edit, EmptyResult, EndReason,
+    ErrorKind, EventKind, EventsSubscribe, ExecCommand, FileEdit, FileName, FileRead, FileWrite,
+    HelloResult, Keep, KeyName, LabelChange, LabelChanges, LabelKey, LabelValue, MachineAdd,
+    MachineConnect, MachineExec, MachineList, MachineName, MachineRename, MachineRm, MachineTarget,
+    Notification, RemotePath, RpcDiscover, ServerRestart, ServerStatus, ServerStop, TemplatesList,
     TerminalAddress, TerminalAttach, TerminalGet, TerminalInterrupt, TerminalKeep, TerminalKeys,
-    TerminalKill, TerminalLabel, TerminalList, TerminalPut, TerminalRead, TerminalRef, TerminalRm,
-    TerminalRun, TerminalSend, TerminalState, TerminalWait, WaitReason, WaitTarget,
+    TerminalKill, TerminalLabel, TerminalList, TerminalPut, TerminalPutAbort, TerminalPutBegin,
+    TerminalPutChunk, TerminalPutFinish, TerminalRead, TerminalRef, TerminalRm, TerminalRun,
+    TerminalSend, TerminalState, TerminalWait, TransferId, WaitReason, WaitTarget,
 };
 use herdrify_hc::{Client, Error, ProcessTransport};
 use live_core::{LiveCore, hc_available};
@@ -389,6 +395,108 @@ async fn live_machine_exec() -> TestResult {
     Ok(())
 }
 
+/// Whether the core's `hello` lists the method `name`.
+fn has_method(hello: &HelloResult, name: &str) -> bool {
+    hello.methods.iter().any(|method| method == name)
+}
+
+/// Whether a put test must stop because the core does not serve `terminal.put_begin`.
+///
+/// When the method is missing, prints a notice that starts with `hfy-live:`, never `warning:`, so
+/// the log check of the gate ignores it. A core of 0.1.22 or newer always serves the method, so
+/// there the missing method is an error and the test fails instead of skipping.
+fn put_unsupported(hello: &HelloResult) -> Result<bool, TestError> {
+    if has_method(hello, "terminal.put_begin") {
+        return Ok(false);
+    }
+    if CoreVersion::parse(&hello.version)? >= CoreVersion::parse("0.1.22")? {
+        return Err(format!(
+            "hc {} must list terminal.put_begin in hello, but does not",
+            hello.version
+        )
+        .into());
+    }
+    eprintln!(
+        "hfy-live: skipped, no terminal.put_begin on hc {}",
+        hello.version
+    );
+    Ok(true)
+}
+
+#[tokio::test]
+async fn live_put_in_pieces() -> TestResult {
+    let Some(live) = live().await? else {
+        return Ok(());
+    };
+    if put_unsupported(live.client.hello())? {
+        return Ok(());
+    }
+    let core = timeout(START_PATIENCE, live.core.herdr_core().connect()).await??;
+    let shell = timeout(PATIENCE, core.terminals().run(["sleep", "300"]))
+        .await??
+        .terminal;
+
+    // Three pieces: two of 1 MiB and one of 512 KiB.
+    let data = "abcdefghijklmnop".repeat(163_840);
+    assert_eq!(data.len(), 2_621_440);
+    let stored = timeout(PATIENCE, shell.put_in_pieces("big.txt", data)).await??;
+    assert_eq!(stored.bytes, 2_621_440);
+
+    let counted = timeout(PATIENCE, core.exec(["wc", "-c", stored.path.as_str()])).await??;
+    let printed = String::from_utf8_lossy(&counted.stdout);
+    assert_eq!(printed.split_whitespace().next(), Some("2621440"));
+
+    timeout(PATIENCE, shell.kill()).await??;
+    Ok(())
+}
+
+#[tokio::test]
+async fn live_put_refusals() -> TestResult {
+    let Some(live) = live().await? else {
+        return Ok(());
+    };
+    let client = &live.client;
+    if put_unsupported(client.hello())? {
+        return Ok(());
+    }
+    let sh = start_sh(client).await?;
+    let begin = TerminalPutBegin::new(sh.clone(), FileName::new("p.txt"), 4, TransferId::random());
+    let transfer = within(PATIENCE, client.terminal_put_begin(begin))
+        .await?
+        .transfer;
+
+    let piece = TerminalPutChunk::new(transfer.clone(), 0, b"ab".to_vec());
+    let held = within(PATIENCE, client.terminal_put_chunk(piece)).await?;
+    assert_eq!(held.bytes, 2);
+
+    let again = TerminalPutChunk::new(transfer.clone(), 0, b"ab".to_vec());
+    let repeated = timeout(PATIENCE, client.terminal_put_chunk(again)).await?;
+    assert_eq!(
+        refusal(repeated)?,
+        ("terminal.put_chunk".to_owned(), ErrorKind::InvalidParams)
+    );
+
+    let early = timeout(
+        PATIENCE,
+        client.terminal_put_finish(TerminalPutFinish::new(transfer.clone())),
+    )
+    .await?;
+    assert_eq!(
+        refusal(early)?,
+        ("terminal.put_finish".to_owned(), ErrorKind::InvalidParams)
+    );
+
+    let aborted = within(
+        PATIENCE,
+        client.terminal_put_abort(TerminalPutAbort::new(transfer)),
+    )
+    .await?;
+    assert_eq!(aborted, EmptyResult {});
+
+    within(PATIENCE, client.terminal_kill(TerminalKill::new(sh))).await?;
+    Ok(())
+}
+
 #[tokio::test]
 async fn live_files() -> TestResult {
     let Some(live) = live().await? else {
@@ -442,6 +550,83 @@ async fn live_docs() -> TestResult {
 
     let cleared = DocSet::new(name, Value::Null, DocVersion(1));
     within(PATIENCE, client.doc_set(cleared)).await?;
+    Ok(())
+}
+
+/// Reads notifications until the document `last` has changed `times` times, and returns every
+/// document change seen on the way, in order.
+async fn doc_changes_until(
+    subscription: &mut Subscription,
+    last: &DocName,
+    times: usize,
+) -> Result<Vec<(DocName, DocVersion)>, TestError> {
+    let outcome = timeout(PATIENCE, async {
+        let mut changes = Vec::new();
+        loop {
+            match subscription.next().await {
+                Some(Ok(Notification::Event(event))) => {
+                    if let EventKind::Doc { name, version } = event.kind {
+                        changes.push((name, version));
+                        if changes.iter().filter(|(seen, _)| seen == last).count() == times {
+                            return Ok(changes);
+                        }
+                    }
+                }
+                Some(Ok(_)) => {}
+                Some(Err(error)) => return Err(TestError::from(error)),
+                None => return Err("the subscription ended before the event".into()),
+            }
+        }
+    })
+    .await;
+    outcome.map_err(|_| TestError::from("the document event did not arrive in time"))?
+}
+
+#[tokio::test]
+async fn live_events_docs() -> TestResult {
+    let Some(live) = live().await? else {
+        return Ok(());
+    };
+    let client = &live.client;
+    let wanted = DocName::new(format!("hfy-live-docs-{}", std::process::id()))?;
+    let other = DocName::new(format!("hfy-live-other-{}", std::process::id()))?;
+    let subscribe = EventsSubscribe::new().docs([wanted.clone()]);
+
+    if CoreVersion::parse(&client.hello().version)? < CoreVersion::parse("0.1.22")? {
+        eprintln!(
+            "hfy-live: docs refused by the client on hc {}",
+            client.hello().version
+        );
+        let refused = timeout(PATIENCE, client.events_subscribe(subscribe)).await?;
+        let Err(Error::NeedsNewerCore { option, .. }) = refused else {
+            return Err(format!("expected a refusal by the client, got {refused:?}").into());
+        };
+        assert_eq!(option, "events.subscribe docs");
+        return Ok(());
+    }
+
+    let mut subscription = within(PATIENCE, client.events_subscribe(subscribe)).await?;
+    assert!(subscription.terminals().is_empty());
+
+    let first = DocSet::new(wanted.clone(), json!({"n": 1}), DocVersion(0));
+    assert_eq!(
+        within(PATIENCE, client.doc_set(first)).await?.version,
+        DocVersion(1)
+    );
+    let elsewhere = DocSet::new(other, json!({"n": 1}), DocVersion(0));
+    within(PATIENCE, client.doc_set(elsewhere)).await?;
+    let second = DocSet::new(wanted.clone(), json!({"n": 2}), DocVersion(1));
+    assert_eq!(
+        within(PATIENCE, client.doc_set(second)).await?.version,
+        DocVersion(2)
+    );
+
+    let changes = doc_changes_until(&mut subscription, &wanted, 2).await?;
+    assert_eq!(
+        changes,
+        [(wanted.clone(), DocVersion(1)), (wanted, DocVersion(2))]
+    );
+    within(PATIENCE, subscription.close()).await?;
     Ok(())
 }
 
@@ -616,7 +801,7 @@ async fn live_schema_matches_the_fixture() -> TestResult {
     let Some(live) = live().await? else {
         return Ok(());
     };
-    let fixture: Value = serde_json::from_str(include_str!("fixtures/hc-0.1.21.openrpc.json"))?;
+    let fixture: Value = serde_json::from_str(include_str!("fixtures/hc-0.1.22.openrpc.json"))?;
 
     let printed = live.core.hc(&["schema"])?;
     assert!(printed.status.success(), "hc schema failed: {printed:?}");

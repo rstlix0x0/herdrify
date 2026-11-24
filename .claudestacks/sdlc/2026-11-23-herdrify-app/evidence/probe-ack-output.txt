@@ -1,0 +1,7 @@
+A1 {"ok":true} -> Ok(Ack)
+A1 {"ok":true,"x":1} -> Ok(Ack)
+A1 {"ok":false} -> Err(expected "ok": true)
+A1 {} -> Err(expected "ok": true)
+A1 7 -> Err(invalid type: integer `7`, expected a map at line 1 column 1)
+A2 to_string(struct)       = {"name":"api","argv":["claude"],"focus":false}
+A2 to_string(to_value(..)) = {"argv":["claude"],"focus":false,"name":"api"}

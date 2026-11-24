@@ -1,0 +1,30 @@
+P1 missing program: kind=NotFound display=No such file or directory (os error 2)
+P2 output() timed out: true
+kill: 12842: No such process
+P2 child pid 12842 alive after drop with kill_on_drop(true): false
+P3 signalled child: code=None success=false
+P4 json!(1) == json!(1.0): false
+P4 f64 15.0 serializes as: 15.0
+P4 u32 parses 15.0: Err("invalid type: floating point `15.0`, expected u32 at line 1 column 4")
+P4 f64 parses 15: Ok(15.0)
+P5 parsed: Node { id: "root", size: Some(Px { px: 240 }), terminal_opacity: Some(1.0), extra: {"alpha": Object {"k": Array [Number(1), Number(2)]}, "zeta": Number(1)} }
+P5 back: {"alpha":{"k":[1,2]},"id":"root","size":{"px":240},"terminal_opacity":1.0,"zeta":1}
+P5 back == src: false
+P5 serialized text order: {"id":"root","size":{"px":240},"terminal_opacity":1.0,"alpha":{"k":[1,2]},"zeta":1}
+P6 Size {"px":240} -> Ok(Px { px: 240 })
+P6 Size {"weight":2} -> Ok(Weight { weight: 2.0 })
+P6 Size {"px":2.5} -> Err("data did not match any variant of untagged enum Size")
+P6 Size {"other":1} -> Err("data did not match any variant of untagged enum Size")
+P6 Paint "border" -> Ok(Color("border"))
+P6 Paint {"gradient":["#2a6cbd","#0b2a57"],"angle":165} -> Ok(Gradient { gradient: ["#2a6cbd", "#0b2a57"], angle: 165.0 })
+P6 Paint {"image":"x.jpg"} -> Err("data did not match any variant of untagged enum Paint")
+P7 Tagged {"type":"row","id":"r","children":[{"type":"block","id":"b"}]} -> Ok(Row { id: "r", children: [Block { id: "b" }] })
+P7 Tagged {"type":"stack","id":"s"} -> Err("unknown variant `stack`, expected `block` or `row` at line 1 column 15")
+P9 Path::new("/tmp/x").is_absolute() = true
+P9 Path::new("x/y").is_absolute() = false
+P9 Path::new("~/code").is_absolute() = false
+P9 Path::new("./x").is_absolute() = false
+P9 Path::new("").is_absolute() = false
+P8 Theme {"ansi":[]} -> Err("invalid length 0, expected an array of length 16 at line 1 column 10")
+P8 Theme {"background":"#000000","ansi":["#000000"]} -> Err("invalid length 1, expected an array of length 16 at line 1 column 42")
+P8 Theme {"background":7} -> Err("invalid type: integer `7`, expected a string at line 1 column 15")

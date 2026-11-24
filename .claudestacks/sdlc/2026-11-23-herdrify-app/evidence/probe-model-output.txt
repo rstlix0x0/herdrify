@@ -1,0 +1,38 @@
+R layouts/main.json: JSON-equal=true no_duplicate_keys=true reparse_stable=true
+R layouts/terminals.json: JSON-equal=true no_duplicate_keys=true reparse_stable=true
+R layouts/win98.json: JSON-equal=true no_duplicate_keys=true reparse_stable=true
+R themes/atom-one-dark.json: JSON-equal=true no_duplicate_keys=true reparse_stable=true
+R themes/win98.json: JSON-equal=true no_duplicate_keys=true reparse_stable=true
+R keys.json: JSON-equal=true no_duplicate_keys=true reparse_stable=true
+E1 content terminal+x -> Ok(Terminal { terminal: "t7", extra: {"x": Number(1)} }) -> {"terminal":"t7","x":1}
+E1 size px+weight -> Ok(Px { px: Number(1), extra: {"weight": Number(2)} }) -> {"px":1,"weight":2}
+E1 theme by appearance+x -> Ok(ByAppearance { light: "paper", dark: "ink", extra: {"x": Number(1)} }) -> {"light":"paper","dark":"ink","x":1}
+E2 content mod empty -> Ok(Other({"mod": String("")})) -> {"mod":""}
+E2 size px string -> Ok(Other({"px": String("x")})) -> {"px":"x"}
+E2 content agent -> Ok(Agent { agent: "focused", extra: {} }) -> {"agent":"focused"}
+E2 content tab+pane -> Ok(Tab { tab: "active", pane: Some(PaneFrame { gap: Some(Number(6)), radius: None, background: None, border: None, focus: None, header: None, lone: Some(false), extra: {"zz": Number(1)} }), extra: {} }) -> {"tab":"active","pane":{"gap":6,"lone":false,"zz":1}}
+E2 content unknown -> Ok(Other({"board": String("x")})) -> {"board":"x"}
+E3 paint number -> Err(data did not match any variant of untagged enum Paint)
+E4 action "pane.split:right" -> Ok(Run { command: "pane.split", value: Some("right") }) -> "pane.split:right"
+E4 action "space.new:{a:b}" -> Ok(Run { command: "space.new", value: Some("{a:b}") }) -> "space.new:{a:b}"
+E4 action "send:" -> Ok(Send("")) -> "send:"
+E4 action "terminal" -> Ok(Terminal) -> "terminal"
+E4 action "terminal.copy" -> Ok(Run { command: "terminal.copy", value: None }) -> "terminal.copy"
+E4 action {"command":"layout.resize","args":{"id":"sidebar","px":240}} -> Ok(Command { command: "layout.resize", args: Some({"id": String("sidebar"), "px": Number(240)}), extra: {} }) -> {"args":{"id":"sidebar","px":240},"command":"layout.resize"}
+E4 action {"command":"x","args":7} -> Ok(Other(Object {"args": Number(7), "command": String("x")})) -> {"args":7,"command":"x"}
+E4 action {"args":{}} -> Ok(Other(Object {"args": Object {}})) -> {"args":{}}
+E4 action 7 -> Ok(Other(Number(7))) -> 7
+E4 action null -> Ok(Other(Null)) -> null
+E4 action true -> Ok(Other(Bool(true))) -> true
+E4 action ["a"] -> Ok(Other(Array [String("a")])) -> ["a"]
+E4 action ":x" -> Err(":x" is not a key action: its command name is empty)
+E4 action "" -> Err("" is not a key action: its command name is empty)
+E4 action {"command":""} -> Err(a command name cannot be empty)
+E5 section "global" -> Global
+E5 section "terminal" -> Terminal
+E5 section "layout:herdrify-main" -> Layout("herdrify-main")
+E5 section "mod:herdrify-host" -> Mod("herdrify-host")
+E5 section "layout:" -> Other("layout:")
+E5 section "mod:" -> Other("mod:")
+E5 section "weird" -> Other("weird")
+E6 node -> Ok(Node { id: None, kind: Other("grid"), content: None, children: None, active: None, header: None, size: None, min: None, max: None, radius: None, gap: None, padding: None, background: None, border: None, divider: None, shadow: None, focus: None, hidden: None, resizable: None, movable: None, window_drag: None, floating: None, look: Look { theme: None, colors: None, font: None, font_size: None, ui_font: None, font_weight: None, terminal_padding: None, terminal_opacity: None, terminal_line_height: None, terminal_cell_width: None, terminal_scroll_speed: None }, root: RootOptions { titlebar: None, traffic_lights: None, window_blur: None, preview: None, terminal_menu: None, toast: None, link_handlers: Some(["my-browser"]), cloned_from: None }, extra: {"zz": Array [Number(1), Number(2.0)]} }) -> {"type":"grid","link_handlers":["my-browser"],"zz":[1,2.0]}

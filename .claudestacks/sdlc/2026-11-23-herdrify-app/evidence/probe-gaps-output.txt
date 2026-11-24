@@ -1,0 +1,50 @@
+== version: herdr-app 0.1.17
+== window ready after 840.069875ms
+G | do space.new {"argv":["sh","-c","i=0; while [ $i -lt 60 ]; do echo line $i hello world; i=$((i+1)); done; sleep 600"],"name":"hzprobe"} | exit=Some(0) | {"space":"spc1454bbb9abf5877f9f52ca6fe2447ca","tab":"tb009b7157e3a91ebcf22a6548ec03f8d7","terminal":"t1"}
+K | hc run --bg --json --no-parent -- sh -c sleep 600 | exit=Some(0) | {"address":"t2","agent":"sh","cwd":"/Users/hiraq/Projects/herdrify/.claude/worktrees/herdrify-app/.claudestacks/sdlc/2026-11-23-herdrify-app/evidence","state":"live","turn":0} 
+K hc run keys: Some(["address", "agent", "cwd", "state", "turn"])
+K | do terminal.keep {"place":"right","terminal":"t2"} | exit=Some(0) | {"pane":"p2710fecc3619dcb2414e51346abb1878","pending":true,"tab":"tb009b7157e3a91ebcf22a6548ec03f8d7","terminal":"t2"}
+K | do terminal.park {"terminal":"t2"} | exit=Some(1) | {"error":"This terminal already has a pane change in progress."}
+K | do terminal.keep {"terminal":"t2"} | exit=Some(0) | {"pane":"p2710fecc3619dcb2414e51346abb1878"}
+K | do terminal.park {"terminal":"t2"} | exit=Some(0) | {"pending":true,"terminal":"t2"}
+K | do terminal.kill {"terminal":"t2"} | exit=Some(0) | {"ok":true}
+S | do pane.focus {"terminal":"t1"} | exit=Some(0) | {"ok":true}
+S | do terminal.select {"at":{"col":0,"row":2},"mode":"word","terminal":"t1"} | exit=Some(0) | {"ok":true}
+S | do terminal.adjust_selection {"direction":"right","terminal":"t1"} | exit=Some(0) | {"ok":true}
+S | do terminal.adjust_selection {"direction":"line_end","terminal":"t1"} | exit=Some(0) | {"ok":true}
+S | do terminal.select {"at":"cursor","terminal":"t1"} | exit=Some(0) | {"ok":true}
+S | do terminal.clear_selection {"terminal":"t1"} | exit=Some(0) | {"ok":true}
+R | do pane.split {"argv":["sh","-c","sleep 600"],"direction":"right"} | exit=Some(0) | {"pane":"p982f32c065245bebb048a2f27e96a741","terminal":"t3"}
+R panes: p1=pde94d1585a6a65144491b8153cbebf58 p2=p982f32c065245bebb048a2f27e96a741
+R | do pane.resize {"direction":"left","pane":"p982f32c065245bebb048a2f27e96a741","px":30} | exit=Some(1) | {"error":"that pane isn't on screen"}
+R | do pane.resize {"direction":"right"} | exit=Some(1) | {"error":"that pane isn't on screen"}
+R | do pane.swap {"pane":"p982f32c065245bebb048a2f27e96a741","target":"pde94d1585a6a65144491b8153cbebf58"} | exit=Some(0) | {"ok":true}
+R | do pane.close {"pane":"p982f32c065245bebb048a2f27e96a741"} | exit=Some(0) | {"ok":true}
+X | do space.select {} | exit=Some(1) | {"error":"no such space"}
+X | do space.select {"id":"x7","index":1} | exit=Some(1) | {"error":"no such space"}
+X | do tab.select {} | exit=Some(1) | {"error":"no such tab"}
+X | do tab.select {"id":"x7","index":1} | exit=Some(1) | {"error":"no such tab"}
+X | do tab.move {"by":1,"index":1} | exit=Some(1) | {"error":"tab.move needs index or by"}
+X | do pane.focus {} | exit=Some(1) | {"error":"no such pane"}
+X | do pane.focus {"pane":"x7","terminal":"t1"} | exit=Some(1) | {"error":"no such pane"}
+X | do pane.swap {} | exit=Some(1) | {"error":"pane.swap needs direction or target"}
+X | do pane.swap {"direction":"left","target":"x7"} | exit=Some(1) | {"error":"pane.swap takes direction or target, not both"}
+X | do terminal.scroll {"lines":1,"pages":1} | exit=Some(1) | {"error":"terminal.scroll takes one of lines, pages, to, not lines and pages"}
+X | do layout.resize {"id":"sidebar"} | exit=Some(0) | {"ok":true}
+X | do layout.resize {"id":"sidebar","px":200,"weight":1} | exit=Some(0) | {"ok":true}
+X | do tab.new {"argv":["sh"],"mod":"files"} | exit=Some(0) | {"pane":"pb3cd2ca55e2f4889bd688f44d38d6c8c","space":"spc1454bbb9abf5877f9f52ca6fe2447ca","tab":"tbf359dc5a06d64a882dd1093e2c845cee"}
+X | do pane.split {"argv":["sh"],"direction":"right","mod":"files"} | exit=Some(0) | {"pane":"pe2a0da7a9b3759218ad7829fb49e479b"}
+X | do terminal.kill {"terminal":""} | exit=Some(1) | {"error":"terminal.kill needs terminal"}
+X | do space.rename {"name":""} | exit=Some(0) | {"ok":true}
+X | do tab.rename {"name":""} | exit=Some(0) | {"ok":true}
+X | do layout.resize {"id":"sidebar","px":-5} | exit=Some(0) | {"ok":true}
+X | do layout.resize {"id":"sidebar","px":2.5} | exit=Some(0) | {"ok":true}
+X | do space.select {"index":0} | exit=Some(1) | {"error":"no such space"}
+X | do space.move {"id":"x7","index":0} | exit=Some(1) | {"error":"no space \"x7\""}
+X | do app.settings {"section":"x7"} | exit=Some(0) | {"ok":true}
+X | do layout.switch {"name":"x7"} | exit=Some(0) | {"ok":true}
+X | do terminal.open {"place":"x7"} | exit=Some(0) | {"space":"spc1454bbb9abf5877f9f52ca6fe2447ca","tab":"tb56169a15da1dde9fd25955c1ce1cda55","terminal":"t4"}
+Q kill -TERM Some(27100) exit=Some(0)
+Q window wait after SIGTERM: Ok(Ok(ExitStatus(unix_wait_status(15))))
+Q status after SIGTERM: Some(2)
+Z | hc server stop | exit=Some(0) | {"stopped":true} 

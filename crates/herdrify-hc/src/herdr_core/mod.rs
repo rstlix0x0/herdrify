@@ -12,7 +12,7 @@
 //!
 //! | Reach | Methods |
 //! |---|---|
-//! | [`HerdrCore::terminals`] → [`TerminalOps`] | `terminal.run`, `terminal.list`, `terminal.wait` on the caller's children |
+//! | [`HerdrCore::terminals`] → [`TerminalOps`] | `terminal.run`, `terminal.list`, `terminal.wait` on the caller's children, `terminal.put_chunk`, `terminal.put_finish`, `terminal.put_abort` |
 //! | [`TerminalOps::handle`] → [`TerminalHandle`] | every method about one terminal, `terminal.attach` and `events.subscribe` on it included |
 //! | [`HerdrCore::machines`] → [`MachineOps`] | `machine.add`, `machine.list`, `machine.connect`, `machine.rename`, `machine.rm` |
 //! | [`HerdrCore::exec`], [`HerdrCore::exec_line`] | `machine.exec` |
@@ -43,6 +43,7 @@ mod entry;
 mod error;
 mod files;
 mod machines;
+mod put;
 mod server;
 mod terminals;
 

@@ -23,10 +23,10 @@ herdrify uses ports and adapters ([ADR 0001](../.claudestacks/sdlc/adrs/0001-por
 
 | Crate | Job | ADR |
 |---|---|---|
-| `herdrify-core` | domain types, the six ports, use cases, grant logic, Lua API description. No I/O. | 0001, 0004, 0007 |
+| `herdrify-core` | domain types, the six ports, use cases, grant logic, Lua API description. No I/O. | 0001, 0007, 0008 |
 | `herdrify-hc` | async herdr-core client: JSON-RPC over `hc connect`, sans-IO protocol, public `Transport` | 0002 |
 | `herdrify-app` | async herdr-app client: commands, layout/theme/keys models, public `Transport` | 0002 |
-| `herdrify-lua` | `Runtime` adapter: runs components under airsl, host modules behind grants | 0001, 0004 |
+| `herdrify-lua` | `Runtime` adapter: runs components under airsl, host modules behind grants | 0001, 0008 |
 | `herdrify-herdr` | `Window` + `Terminals` adapter over both SDKs and Herdr's home | 0001, 0003 |
 | `herdrify-store` | `Store` adapter over `$HERDRIFY_HOME` | 0005 |
 | `herdrify-git` | `Source` adapter: fetches repositories | 0001 |
@@ -107,7 +107,7 @@ There is one sandboxed level, with no trusted tier for installs
   commands are refused.
 - **Grants are owned by core.** The kinds are `fs`, `env`, `proc` and `hc`, capped by the ceiling in
   `config.toml`. A request over the ceiling refuses the plan
-  ([ADR 0004](../.claudestacks/sdlc/adrs/0004-grants-owned-by-core.md)).
+  ([ADR 0008](../.claudestacks/sdlc/adrs/0008-grants-owned-by-core-hc-0-1-22.md)).
 
 ## Runtime flows
 

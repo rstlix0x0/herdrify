@@ -1,0 +1,22 @@
+$ hc --version
+hc 0.1.22
+$ cargo test -p herdrify-hc --test live live_schema_matches_the_fixture
+running 1 test
+test live_schema_matches_the_fixture ... FAILED
+
+failures:
+
+---- live_schema_matches_the_fixture stdout ----
+hfy-live: running against hc core 0.1.22
+
+thread 'live_schema_matches_the_fixture' (11126150) panicked at crates/herdrify-hc/tests/live.rs:626:5:
+hc schema differs from the fixture in: method doc.set, method events.subscribe, method terminal.keep, method terminal.kill, method terminal.label, method terminal.put, method terminal.put_abort, method terminal.put_begin, method terminal.put_chunk, method terminal.put_finish, method terminal.rm, method terminal.wait, schema Empty, schema PutBeginResult, schema PutPieceResult, the rest of the document
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+
+failures:
+    live_schema_matches_the_fixture
+
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 15 filtered out; finished in 0.22s
+
+error: test failed, to rerun pass `-p herdrify-hc --test live`

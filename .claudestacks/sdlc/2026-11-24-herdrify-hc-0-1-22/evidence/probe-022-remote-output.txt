@@ -1,0 +1,45 @@
+$ cargo +1.94 run -- remote (rustc 1.94.1)   # evidence/probe-022, remote section; hc 0.1.22; core A and the machine "box" are two isolated sessions
+== hello
+version=0.1.22 framed=true generation=Generation(1)
+features=["framed", "attach", "events", "status", "shell", "resize_notifications", "automatic_input", "restart_environment", "put_chunks"]
+methods(36)=["hello", "server.status", "server.stop", "server.restart", "terminal.run", "templates.list", "terminal.list", "terminal.get", "terminal.kill", "terminal.rm", "terminal.keep", "terminal.label", "terminal.read", "terminal.attach", "terminal.send", "terminal.wait", "terminal.keys", "terminal.interrupt", "terminal.put", "terminal.put_begin", "terminal.put_chunk", "terminal.put_finish", "terminal.put_abort", "machine.exec", "file.read", "file.write", "file.edit", "doc.get", "doc.set", "events.subscribe", "machine.add", "machine.list", "machine.connect", "machine.rename", "machine.rm", "rpc.discover"]
+
+== error decode (SDK RpcError) of the 0.1.22 doc.set internal entry
+code=-32603 kind=Internal display=internal [internal]
+[setup] terminal.run {"argv":["sleep","300"],"no_parent":true}
+    => ok {"address":"t1","argv":["sleep","300"],"cols":200,"created_ms":1795505711943,"cwd":"/private/tmp/claude-501/-Users-hiraq-Projects-herdrify/f0ac2647-c3a7-40b0-9077-2ced77e38454/scratchpad/probe-022","die_with_parent":false,"exit_code":null,"finished_ms":null,"identity":"ghostty","keep":false,"labels"…(522 bytes)
+terminal=t1
+
+== R: a put to a terminal on another machine (a second isolated core, session hfq26239)
+[R0 machine.add] machine.add {"name":"box","session":"hfq26239","via":"env -u HC_SESSION XDG_STATE_HOME=/tmp/hfq26239/state XDG_CONFIG_HOME=/tmp/hfq26239/config XDG_RUNTIME_DIR=/tmp/hfq26239/run sh -c"}
+    => ok {"host":"hiraqs-macbook-air","id":"9bdfd54965751b529641903b8842ba0c","keeps_running_after_logout":null,"logout_linger_user":null,"name":"box","session":"hfq26239","target":"env -u HC_SESSION XDG_STATE_HOME=/tmp/hfq26239/state XDG_CONFIG_HOME=/tmp/hfq26239/config XDG_RUNTIME_DIR=/tmp/hfq26239/run sh …(352 bytes)
+[R1 run on box] terminal.run {"argv":["sleep","300"],"no_parent":true,"on":"box"}
+    => ok {"address":"box/t1","argv":["sleep","300"],"cols":200,"created_ms":1795505712215,"cwd":"/private/tmp/claude-501/-Users-hiraq-Projects-herdrify/f0ac2647-c3a7-40b0-9077-2ced77e38454/scratchpad/probe-022","die_with_parent":false,"exit_code":null,"finished_ms":null,"identity":"ghostty","keep":false,"lab…(526 bytes)
+remote terminal=box/t1
+[R2 terminal.put to box (control)] terminal.put {"data":"d2hvbGU=","name":"w.txt","terminal":"box/t1"}
+    => ok {"bytes":5,"path":"/tmp/hfq26239/state/herdr-core/hfq26239/files/t1/w.txt"}
+[R3 put_begin to box] terminal.put_begin {"bytes":5,"name":"p.txt","terminal":"box/t1","transfer":"f100000000000000"}
+    => err code=-32000 kind=machine_unknown message="unknown machine \"box\"" hint=Some("this core only runs local terminals; use an address like t7")
+[R3b put_chunk] terminal.put_chunk {"data":"cGllY2U=","offset":0,"transfer":"f100000000000000"}
+    => err code=-32000 kind=not_found message="no put f100000000000000 here" hint=Some("it was aborted, or its terminal or connection went")
+[R3c put_finish] terminal.put_finish {"transfer":"f100000000000000"}
+    => err code=-32000 kind=not_found message="no put f100000000000000 here" hint=Some("it was aborted, or its terminal or connection went")
+[R3d put_abort] terminal.put_abort {"transfer":"f100000000000000"}
+    => ok {}
+[R4 teardown remote terminal] terminal.kill {"terminal":"box/t1"}
+    => ok {"address":"box/t1","argv":["sleep","300"],"cols":200,"created_ms":1795505712215,"cwd":"/private/tmp/claude-501/-Users-hiraq-Projects-herdrify/f0ac2647-c3a7-40b0-9077-2ced77e38454/scratchpad/probe-022","die_with_parent":false,"exit_code":null,"finished_ms":1795505712222,"identity":"ghostty","keep":f…(540 bytes)
+[R4 machine.rm] machine.rm {"name":"box"}
+    => err code=-32602 kind=invalid_params message="missing field `machine`" hint=Some("see `hc schema`")
+R5 hc server stop (box core): {"stopped":true}
+removed /tmp/hfq26239
+
+== teardown
+[teardown] terminal.kill {"terminal":"t1"}
+    => ok {"address":"t1","argv":["sleep","300"],"cols":200,"created_ms":1795505711943,"cwd":"/private/tmp/claude-501/-Users-hiraq-Projects-herdrify/f0ac2647-c3a7-40b0-9077-2ced77e38454/scratchpad/probe-022","die_with_parent":false,"exit_code":null,"finished_ms":1795505712554,"identity":"ghostty","keep":false…(536 bytes)
+[teardown] server.stop {}
+    => ok {"stopped":true}
+removed /tmp/hfp26239
+
+# Note (added after the run): core A kept a link to the machine "box", and restarted the box core
+# (session hfq26239, pid 26467) after R5 had stopped it. That core was found at 14:35 and stopped
+# with SIGTERM; its directory was already removed. Nothing outside the two isolated sessions was touched.

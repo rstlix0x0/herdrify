@@ -1,0 +1,85 @@
+$ PATH=<0.1.21 release>:$PATH cargo test -p herdrify-hc --test live --test live_herdr_core -- --nocapture   # hc 0.1.21
+$ ls -ld /tmp/hf*   # before the run (pre-existing, dated before this chain)
+drwxr-xr-x@ 23 hiraq  wheel  736 Nov 23 18:28 /tmp/hfa48416-0
+drwxr-xr-x@ 24 hiraq  wheel  768 Nov 23 18:28 /tmp/hfa48416-1
+drwx------@  3 hiraq  wheel   96 Nov 23 15:45 /tmp/hfy.4K8V
+$ hc --version
+hc 0.1.21
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.12s
+     Running tests/live.rs (target/debug/deps/live-380e34ee4e6c6d18)
+
+running 19 tests
+test differences_name_each_method_and_schema_that_differs ... ok
+hfy-live: running against hc core 0.1.21
+hfy-live: running against hc core 0.1.21
+hfy-live: running against hc core 0.1.21
+hfy-live: docs refused by the client on hc 0.1.21
+hfy-live: running against hc core 0.1.21
+hfy-live: running against hc core 0.1.21
+hfy-live: running against hc core 0.1.21
+hfy-live: running against hc core 0.1.21
+hfy-live: running against hc core 0.1.21
+test live_events_docs ... ok
+test live_core_is_stopped_and_removed_on_drop ... ok
+test live_connect_and_server_status ... ok
+test live_files ... ok
+test live_docs ... ok
+test live_machine_exec ... ok
+test live_machine_list ... ok
+test live_events_subscribe ... ok
+hfy-live: running against hc core 0.1.21
+hfy-live: running against hc core 0.1.21
+hfy-live: skipped, no terminal.put_begin on hc 0.1.21
+hfy-live: running against hc core 0.1.21
+hfy-live: skipped, no terminal.put_begin on hc 0.1.21
+hfy-live: running against hc core 0.1.21
+hfy-live: running against hc core 0.1.21
+test live_machine_typed_errors ... ok
+test live_put_refusals ... ok
+test live_put_in_pieces ... ok
+hfy-live: running against hc core 0.1.21
+test live_rpc_discover ... ok
+hfy-live: running against hc core 0.1.21
+
+thread 'live_schema_matches_the_fixture' (11861074) panicked at crates/herdrify-hc/tests/live.rs:811:5:
+hc schema differs from the fixture in: method doc.set, method events.subscribe, method terminal.keep, method terminal.kill, method terminal.label, method terminal.put, method terminal.put_abort, method terminal.put_begin, method terminal.put_chunk, method terminal.put_finish, method terminal.rm, method terminal.wait, schema Empty, schema PutBeginResult, schema PutPieceResult, the rest of the document
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+hfy-live: running against hc core 0.1.21
+test live_schema_matches_the_fixture ... FAILED
+test live_templates_list ... ok
+test live_server_stop ... ok
+hfy-live: running against hc core 0.1.21
+hfy-live: running against hc core 0.1.21
+test live_server_restart ... ok
+test live_terminal_attach ... ok
+test live_terminal_lifecycle ... ok
+
+failures:
+
+failures:
+    live_schema_matches_the_fixture
+
+test result: FAILED. 18 passed; 1 failed; 0 ignored; 0 measured; 0 filtered out; finished in 3.88s
+
+error: test failed, to rerun pass `-p herdrify-hc --test live`
+     Running tests/live_herdr_core.rs (target/debug/deps/live_herdr_core-3bff3ed228a8c6ff)
+
+running 5 tests
+test live_herdr_core_connects_and_reports_status ... ok
+test live_herdr_core_follows_events_and_attaches ... ok
+test live_herdr_core_runs_a_command_to_completion ... ok
+test live_herdr_core_runs_commands_and_edits_files ... ok
+test live_herdr_core_drives_a_shell ... ok
+
+test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 1.39s
+
+error: 1 target failed:
+    `-p herdrify-hc --test live`
+exit: 101
+
+$ ls /tmp | grep '^hf'   # leftovers after the run
+hfa48416-0
+hfa48416-1
+hfy.4K8V
+$ pgrep -fl -- --hc-launchd
+99744 /Users/hiraq/.local/bin/herdr-core --hc-launchd /tmp/hc-launchd-99423-1795439820016278000-5a508fbfff0cab34711f07a208837716/ready

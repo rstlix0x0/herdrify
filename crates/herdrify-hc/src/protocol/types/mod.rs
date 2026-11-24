@@ -29,7 +29,8 @@ pub use server::{CoreInfo, HolderInfo, LoginSession, StatusResult, StopResult};
 pub use templates::{TemplateInfo, TemplatesResult};
 #[doc(inline)]
 pub use terminal::{
-    AttachResult, Children, DisplayFacts, EndReason, FirstMessage, Foreground, IdleOrWorking,
-    InitialSize, InterruptResult, KeysResult, ListResult, PutResult, ReadResult, RemoveResult,
-    RunResult, SendResult, Status, StatusWord, Terminal, TerminalState, WaitReason, WaitResult,
+    AttachResult, Children, DisplayFacts, EmptyResult, EndReason, FirstMessage, Foreground,
+    IdleOrWorking, InitialSize, InterruptResult, KeysResult, ListResult, PutBeginResult,
+    PutPieceResult, PutResult, ReadResult, RemoveResult, RunResult, SendResult, Status, StatusWord,
+    Terminal, TerminalState, WaitReason, WaitResult,
 };

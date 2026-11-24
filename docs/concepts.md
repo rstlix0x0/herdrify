@@ -21,10 +21,10 @@ A component or bundle folder may contain only `*.lua`, `*.toml`, `*.md` and `LIC
 
 | Term | Meaning | ADR |
 |---|---|---|
-| **grant** | What a component may touch. The kinds are `fs`, `env`, `proc` and `hc`. | 0004 |
-| **hc grant** | Access to herdr-core. `read = "own" \| "all"`, `run = [programs]`, `send = "own"`. 18 of hc's 32 methods are never exposed. | 0004 |
-| **ceiling** | The most any component may be granted, set in `config.toml`. A request over it refuses the plan. | 0004 |
-| **approval** | The person accepts a whole plan or declines it. Nothing in between. | 0004, 0006 |
+| **grant** | What a component may touch. The kinds are `fs`, `env`, `proc` and `hc`. | 0008 |
+| **hc grant** | Access to herdr-core. `read = "own" \| "all"`, `run = [programs]`, `send = "own"`. 22 of hc's 36 methods are never exposed. | 0008 |
+| **ceiling** | The most any component may be granted, set in `config.toml`. A request over it refuses the plan. | 0008 |
+| **approval** | The person accepts a whole plan or declines it. Nothing in between. | 0008, 0006 |
 | **sandboxed** | The only trust level for installed things. | 0003 |
 | **host** | `herdrify-host`, herdrify's one JavaScript mod inside Herdr. It draws every component's UI tree. | 0003 |
 | **allowlisted Herdr mods** | Herdr's own shipped mods that a generated layout may use, always with empty props. | 0003 |

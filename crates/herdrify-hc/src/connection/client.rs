@@ -12,7 +12,8 @@
 //! - [`Client::call_raw`], a call with untyped parameters and an untyped result
 //! - the typed methods, one for each request-reply method of herdr-core, which send the method's
 //!   parameters and read its reply into the method's output type
-//! - [`Client::events_subscribe`], which opens a [`Subscription`] on an event channel
+//! - [`Client::events_subscribe`], which opens a [`Subscription`] on an event channel, and refuses
+//!   the docs filter on a core older than 0.1.22
 //! - [`Client::terminal_attach`], which opens an [`AttachStream`] on a terminal
 //! - [`Client::close_reason`], why the connection ended
 //!
@@ -40,16 +41,18 @@ use super::writer::{self, Command, Commands};
 use super::{AttachStream, ConnectionEnd, Error, Subscription};
 use crate::port::Transport;
 use crate::protocol::{
-    AttachResult, Channel, CoreVersion, DocGet, DocGetResult, DocSet, DocSetResult, ErrorKind,
-    EventsSubscribe, ExecResult, FileEdit, FileRead, FileReadResult, FileResult, FileWrite, Frame,
-    FrameKind, Generation, HelloParams, HelloResult, Incoming, InterruptResult, KeysResult, Line,
-    ListResult, MAX_PAYLOAD_LEN, Machine, MachineAdd, MachineConnect, MachineExec, MachineList,
-    MachineListResult, MachineRename, MachineRm, MachineView, Method, MethodName, ProtocolError,
-    PutResult, ReadResult, RemoveResult, Request, RequestId, RpcDiscover, RunResult, SendResult,
-    ServerRestart, ServerStatus, ServerStop, StatusResult, StopResult, SubscribeResult,
-    TemplatesList, TemplatesResult, Terminal, TerminalAttach, TerminalGet, TerminalInterrupt,
-    TerminalKeep, TerminalKeys, TerminalKill, TerminalLabel, TerminalList, TerminalPut,
-    TerminalRead, TerminalRm, TerminalRun, TerminalSend, TerminalWait, UnexpectedReply, WaitResult,
+    AttachResult, Channel, CoreVersion, DocGet, DocGetResult, DocSet, DocSetResult, EmptyResult,
+    ErrorKind, EventsSubscribe, ExecResult, FileEdit, FileRead, FileReadResult, FileResult,
+    FileWrite, Frame, FrameKind, Generation, HelloParams, HelloResult, Incoming, InterruptResult,
+    KeysResult, Line, ListResult, MAX_PAYLOAD_LEN, Machine, MachineAdd, MachineConnect,
+    MachineExec, MachineList, MachineListResult, MachineRename, MachineRm, MachineView, Method,
+    MethodName, ProtocolError, PutBeginResult, PutPieceResult, PutResult, ReadResult, RemoveResult,
+    Request, RequestId, RpcDiscover, RunResult, SendResult, ServerRestart, ServerStatus,
+    ServerStop, StatusResult, StopResult, SubscribeResult, TemplatesList, TemplatesResult,
+    Terminal, TerminalAttach, TerminalGet, TerminalInterrupt, TerminalKeep, TerminalKeys,
+    TerminalKill, TerminalLabel, TerminalList, TerminalPut, TerminalPutAbort, TerminalPutBegin,
+    TerminalPutChunk, TerminalPutFinish, TerminalRead, TerminalRm, TerminalRun, TerminalSend,
+    TerminalWait, UnexpectedReply, WaitResult,
 };
 
 /// A framed connection to herdr-core.
@@ -77,6 +80,7 @@ pub struct Client<T: Transport> {
 
 struct Inner {
     hello: HelloResult,
+    version: CoreVersion,
     commands: Commands,
     pending: Arc<Pending>,
     end: Arc<EndRecord>,
@@ -102,11 +106,6 @@ impl<T: Transport> Client<T> {
     ///
     /// The transport is dropped if the handshake fails.
     ///
-    /// # Panics
-    ///
-    /// Panics when called outside a Tokio runtime, because it spawns the tasks that read and write
-    /// frames.
-    ///
     /// # Errors
     ///
     /// - [`Error::Transport`] when a line cannot be sent or received.
@@ -118,6 +117,11 @@ impl<T: Transport> Client<T> {
     /// - [`Error::Decode`] when the reply's result is not a handshake result.
     /// - [`Error::InvalidVersion`] when the core's version is not `MAJOR.MINOR.PATCH`.
     /// - [`Error::UnsupportedVersion`] when the core is older than 0.1.21.
+    ///
+    /// # Panics
+    ///
+    /// Panics when called outside a Tokio runtime, because it spawns the tasks that read and write
+    /// frames.
     pub async fn connect(mut transport: T) -> Result<Self, Error> {
         let hello = MethodName::new(HelloParams::NAME).map_err(unencodable)?;
         let params = HelloParams::new().generation(Generation::ONE).framed();
@@ -188,6 +192,7 @@ impl<T: Transport> Client<T> {
         Ok(Self {
             inner: Arc::new(Inner {
                 hello: hello_result,
+                version: found,
                 commands,
                 pending,
                 end,
@@ -482,6 +487,106 @@ impl<T: Transport> Client<T> {
         self.call::<TerminalPut>(params).await
     }
 
+    /// Opens a transfer that sends a file to a terminal in pieces.
+    ///
+    /// The terminal must be on this core. For a terminal on another machine, send the whole file
+    /// with [`Client::terminal_put`]. Follow with [`Client::terminal_put_chunk`] for each piece,
+    /// then [`Client::terminal_put_finish`], or [`Client::terminal_put_abort`] to drop the transfer.
+    ///
+    /// # Examples
+    ///
+    /// ```no_run
+    /// use herdrify_hc::protocol::{FileName, TerminalPutBegin, TerminalRef, TransferId};
+    /// use herdrify_hc::{Client, Transport};
+    ///
+    /// async fn begin<T: Transport>(client: &Client<T>) -> Result<(), Box<dyn std::error::Error>> {
+    ///     let terminal = TerminalRef::new("t7")?;
+    ///     let begin = TerminalPutBegin::new(terminal, FileName::new("a.png"), 5, TransferId::random());
+    ///     let opened = client.terminal_put_begin(begin).await?;
+    ///     println!("transfer {}", opened.transfer.as_str());
+    ///     Ok(())
+    /// }
+    /// ```
+    ///
+    /// # Errors
+    ///
+    /// As [`Client::call_raw`], and [`Error::Decode`] when the reply is not a [`PutBeginResult`].
+    pub async fn terminal_put_begin(
+        &self,
+        params: TerminalPutBegin,
+    ) -> Result<PutBeginResult, Error> {
+        self.call::<TerminalPutBegin>(params).await
+    }
+
+    /// Sends one piece of an open transfer.
+    ///
+    /// # Examples
+    ///
+    /// ```no_run
+    /// use herdrify_hc::protocol::{TerminalPutChunk, TransferId};
+    /// use herdrify_hc::{Client, Error, Transport};
+    ///
+    /// async fn send<T: Transport>(client: &Client<T>, transfer: TransferId) -> Result<(), Error> {
+    ///     let chunk = TerminalPutChunk::new(transfer, 0, b"hello".to_vec());
+    ///     let held = client.terminal_put_chunk(chunk).await?;
+    ///     println!("the core holds {} bytes", held.bytes);
+    ///     Ok(())
+    /// }
+    /// ```
+    ///
+    /// # Errors
+    ///
+    /// As [`Client::call_raw`], and [`Error::Decode`] when the reply is not a [`PutPieceResult`].
+    pub async fn terminal_put_chunk(
+        &self,
+        params: TerminalPutChunk,
+    ) -> Result<PutPieceResult, Error> {
+        self.call::<TerminalPutChunk>(params).await
+    }
+
+    /// Closes a transfer and stores the file.
+    ///
+    /// # Examples
+    ///
+    /// ```no_run
+    /// use herdrify_hc::protocol::{TerminalPutFinish, TransferId};
+    /// use herdrify_hc::{Client, Error, Transport};
+    ///
+    /// async fn finish<T: Transport>(client: &Client<T>, transfer: TransferId) -> Result<(), Error> {
+    ///     let stored = client.terminal_put_finish(TerminalPutFinish::new(transfer)).await?;
+    ///     println!("stored {} bytes at {}", stored.bytes, stored.path);
+    ///     Ok(())
+    /// }
+    /// ```
+    ///
+    /// # Errors
+    ///
+    /// As [`Client::call_raw`], and [`Error::Decode`] when the reply is not a [`PutResult`].
+    pub async fn terminal_put_finish(&self, params: TerminalPutFinish) -> Result<PutResult, Error> {
+        self.call::<TerminalPutFinish>(params).await
+    }
+
+    /// Drops a transfer and what it received.
+    ///
+    /// # Examples
+    ///
+    /// ```no_run
+    /// use herdrify_hc::protocol::{TerminalPutAbort, TransferId};
+    /// use herdrify_hc::{Client, Error, Transport};
+    ///
+    /// async fn abort<T: Transport>(client: &Client<T>, transfer: TransferId) -> Result<(), Error> {
+    ///     client.terminal_put_abort(TerminalPutAbort::new(transfer)).await?;
+    ///     Ok(())
+    /// }
+    /// ```
+    ///
+    /// # Errors
+    ///
+    /// As [`Client::call_raw`], and [`Error::Decode`] when the reply is not an [`EmptyResult`].
+    pub async fn terminal_put_abort(&self, params: TerminalPutAbort) -> Result<EmptyResult, Error> {
+        self.call::<TerminalPutAbort>(params).await
+    }
+
     /// Runs a command on a machine and returns what it printed.
     ///
     /// The output is returned as bytes, decoded from the base64 the core sends.
@@ -538,13 +643,17 @@ impl<T: Transport> Client<T> {
         self.call::<DocSet>(params).await
     }
 
-    /// Subscribes to herdr-core's events, optionally narrowed to some terminals.
+    /// Subscribes to herdr-core's events, optionally narrowed to some terminals, and adding the
+    /// change events of some docs when the request sets `docs`.
     ///
     /// The returned [`Subscription`] delivers the notifications that follow. The connection stays
     /// open while it exists.
     ///
     /// # Errors
     ///
+    /// - [`Error::NeedsNewerCore`] when the request sets `docs` and the core is older than 0.1.22.
+    ///   Nothing is sent, and the error is returned even when the connection has ended, ahead of
+    ///   [`Error::Closed`].
     /// - As [`Client::call_raw`].
     /// - [`Error::Decode`] when the reply is not a [`SubscribeResult`]. A `channel` that is not a
     ///   `u32`, is 0, or is already open for another stream opens nothing and sends nothing. For a
@@ -552,6 +661,9 @@ impl<T: Transport> Client<T> {
     /// - [`Error::Protocol`] with [`ProtocolError::MissingChannel`] when the reply names no
     ///   channel to read events from.
     pub async fn events_subscribe(&self, params: EventsSubscribe) -> Result<Subscription, Error> {
+        if let Some(refusal) = docs_refusal(&self.inner.version, &params) {
+            return Err(refusal);
+        }
         let method = MethodName::new(EventsSubscribe::NAME).map_err(unencodable)?;
         let params = serde_json::to_value(params).map_err(unencodable)?;
         let Answer { outcome, stream } =
@@ -723,6 +835,16 @@ const fn unexpected(got: UnexpectedReply) -> Error {
     Error::Protocol(ProtocolError::UnexpectedHelloReply { got })
 }
 
+/// The refusal for a subscription that sets `docs` on a core older than 0.1.22, or `None` when
+/// the subscription may be sent.
+fn docs_refusal(found: &CoreVersion, params: &EventsSubscribe) -> Option<Error> {
+    (params.docs_set() && *found < CoreVersion::DOCS_MINIMUM).then(|| Error::NeedsNewerCore {
+        option: Error::DOCS_OPTION,
+        needs: CoreVersion::DOCS_MINIMUM,
+        found: found.clone(),
+    })
+}
+
 /// Why the router refused to open a stream on `channel`, as the source of an [`Error::Decode`].
 ///
 /// The router refuses channel 0, which carries calls, and a channel another stream holds.
@@ -742,10 +864,12 @@ mod tests {
 
     use serde_json::{Value, json};
 
-    use super::Client;
+    use super::{Client, docs_refusal};
     use crate::connection::memory_link::{MemoryPeer, MemoryTransport, link};
     use crate::connection::{ConnectionEndKind, Error};
-    use crate::protocol::{Channel, Frame, FrameKind, MethodName, ServerStop};
+    use crate::protocol::{
+        Channel, CoreVersion, DocName, EventsSubscribe, Frame, FrameKind, MethodName, ServerStop,
+    };
 
     type TestResult = Result<(), Box<dyn StdError>>;
 
@@ -759,6 +883,48 @@ mod tests {
                 .to_string()
                 .into_bytes(),
         }
+    }
+
+    fn with_docs() -> Result<EventsSubscribe, Box<dyn StdError>> {
+        Ok(EventsSubscribe::new().docs([DocName::new("settings")?]))
+    }
+
+    #[test]
+    fn docs_on_a_0_1_21_core_are_refused() -> TestResult {
+        let found = CoreVersion::parse("0.1.21")?;
+        let refused = docs_refusal(&found, &with_docs()?);
+        assert!(matches!(
+            refused,
+            Some(Error::NeedsNewerCore { option, ref needs, found: ref seen })
+                if option == Error::DOCS_OPTION
+                    && *needs == CoreVersion::parse("0.1.22")?
+                    && *seen == found
+        ));
+        Ok(())
+    }
+
+    #[test]
+    fn docs_on_a_0_1_22_release_candidate_are_refused() -> TestResult {
+        let found = CoreVersion::parse("0.1.22-rc.1")?;
+        assert!(matches!(
+            docs_refusal(&found, &with_docs()?),
+            Some(Error::NeedsNewerCore { .. })
+        ));
+        Ok(())
+    }
+
+    #[test]
+    fn docs_on_a_0_1_22_core_pass() -> TestResult {
+        let found = CoreVersion::parse("0.1.22")?;
+        assert!(docs_refusal(&found, &with_docs()?).is_none());
+        Ok(())
+    }
+
+    #[test]
+    fn no_docs_on_a_0_1_21_core_pass() -> TestResult {
+        let found = CoreVersion::parse("0.1.21")?;
+        assert!(docs_refusal(&found, &EventsSubscribe::new()).is_none());
+        Ok(())
     }
 
     #[tokio::test]

@@ -1,0 +1,12 @@
+$ cargo +1.94 run (rustc 1.94.1)   # evidence/probe-sdk: herdrify-hc (path), serde 1.0.229, serde_json 1.0.154, base64 0.23.1
+[1] Error: herdr-core 0.1.21 is older than the supported minimum 0.1.22
+[1] HerdrCoreError: herdr-core 0.1.21 is older than the supported minimum 0.1.22
+[1] 0.1.21 < 0.1.22: true
+[1] 0.1.22+abc >= 0.1.22: true
+[1] 0.1.22-rc.1 < 0.1.22: true
+[2] c3f9fbb5094625cd21bcfaae9f80fe55 then 9d88b81fcad6d722… distinct: true
+[3] from {} -> EmptyResult, back -> {}
+[3] from {"later":1} -> EmptyResult
+[3] from null -> Err("invalid type: null, expected struct EmptyResult at line 1 column 4")
+[5] DocName::new("") -> Some(Empty(EmptyValueError { what: "doc name" })) / doc name must not be empty
+[4] 1 MiB piece request: 1398287 bytes; limit 16777216

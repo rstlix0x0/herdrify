@@ -1,0 +1,47 @@
+$ HC_SCHEMA_FILE=evidence/hc-0.1.22-schema.json cargo +1.94 run -- framed (rustc 1.94.1)   # evidence/probe-022, framed section; hc 0.1.22, isolated session
+== hello
+version=0.1.22 framed=true generation=Generation(1)
+features=["framed", "attach", "events", "status", "shell", "resize_notifications", "automatic_input", "restart_environment", "put_chunks"]
+methods(36)=["hello", "server.status", "server.stop", "server.restart", "terminal.run", "templates.list", "terminal.list", "terminal.get", "terminal.kill", "terminal.rm", "terminal.keep", "terminal.label", "terminal.read", "terminal.attach", "terminal.send", "terminal.wait", "terminal.keys", "terminal.interrupt", "terminal.put", "terminal.put_begin", "terminal.put_chunk", "terminal.put_finish", "terminal.put_abort", "machine.exec", "file.read", "file.write", "file.edit", "doc.get", "doc.set", "events.subscribe", "machine.add", "machine.list", "machine.connect", "machine.rename", "machine.rm", "rpc.discover"]
+
+== error decode (SDK RpcError) of the 0.1.22 doc.set internal entry
+code=-32603 kind=Internal display=internal [internal]
+[setup] terminal.run {"argv":["sleep","300"],"no_parent":true}
+    => ok {"address":"t1","argv":["sleep","300"],"cols":200,"created_ms":1795507034372,"cwd":"/private/tmp/claude-501/-Users-hiraq-Projects-herdrify/f0ac2647-c3a7-40b0-9077-2ced77e38454/scratchpad/probe-022","die_with_parent":false,"exit_code":null,"finished_ms":null,"identity":"ghostty","keep":false,"labels"…(522 bytes)
+terminal=t1
+
+== G: rpc.discover on 0.1.22 against `hc schema` (evidence/hc-0.1.22-schema.json)
+[G1] rpc.discover == hc schema: true
+[G1] methods: 36 vs 36
+
+== F: events.subscribe docs over a FRAMED connection (raw hc connect, the SDK's Frame codec)
+[F1 framed docs exact] hello framed=true version="0.1.22"
+[F1 framed docs exact] subscribe {"docs":["probe-doc"]}
+    reply on channel 0: stream channel=Some(1) snapshot terminals=[]
+[  set probe-doc] doc.set {"name":"probe-doc","value":0,"version":0}
+    => ok {"version":1}
+[  set other] doc.set {"name":"other-f0","value":1,"version":0}
+    => ok {"version":1}
+[  label t] terminal.label {"labels":{"f":"0"},"terminal":"t1"}
+    => ok {"address":"t1","argv":["sleep","300"],"cols":200,"created_ms":1795507034372,"cwd":"/private/tmp/claude-501/-Users-hiraq-Projects-herdrify/f0ac2647-c3a7-40b0-9077-2ced77e38454/scratchpad/probe-022","die_with_parent":false,"exit_code":null,"finished_ms":null,"identity":"ghostty","keep":false,"labels"…(529 bytes)
+    <- channel 1 Data: {"jsonrpc":"2.0","method":"event","params":{"data":{"name":"probe-doc","version":1},"seq":2,"type":"doc"}}
+    [F1 framed docs exact] (nothing more within 900ms)
+[F2 framed docs + terminal] hello framed=true version="0.1.22"
+[F2 framed docs + terminal] subscribe {"docs":["probe-doc"],"terminal":"t1"}
+    reply on channel 0: stream channel=Some(1) snapshot terminals=["t1"]
+[  set probe-doc] doc.set {"name":"probe-doc","value":1,"version":1}
+    => ok {"version":2}
+[  set other] doc.set {"name":"other-f1","value":1,"version":0}
+    => ok {"version":1}
+[  label t] terminal.label {"labels":{"f":"1"},"terminal":"t1"}
+    => ok {"address":"t1","argv":["sleep","300"],"cols":200,"created_ms":1795507034372,"cwd":"/private/tmp/claude-501/-Users-hiraq-Projects-herdrify/f0ac2647-c3a7-40b0-9077-2ced77e38454/scratchpad/probe-022","die_with_parent":false,"exit_code":null,"finished_ms":null,"foreground":{"argv":["sleep","300"],"cwd"…(715 bytes)
+    <- channel 1 Data: {"jsonrpc":"2.0","method":"event","params":{"data":{"name":"probe-doc","version":2},"seq":6,"type":"doc"}}
+    <- channel 1 Data: {"jsonrpc":"2.0","method":"event","params":{"data":{"labels":{"f":"1"}},"seq":8,"terminal":"t1","type":"labels"}}
+    [F2 framed docs + terminal] (nothing more within 900ms)
+
+== teardown
+[teardown] terminal.kill {"terminal":"t1"}
+    => ok {"address":"t1","argv":["sleep","300"],"cols":200,"created_ms":1795507034372,"cwd":"/private/tmp/claude-501/-Users-hiraq-Projects-herdrify/f0ac2647-c3a7-40b0-9077-2ced77e38454/scratchpad/probe-022","die_with_parent":false,"exit_code":null,"finished_ms":1795507036411,"identity":"ghostty","keep":false…(543 bytes)
+[teardown] server.stop {}
+    => ok {"stopped":true}
+removed /tmp/hfp66083

@@ -1,7 +1,7 @@
 [package]
 name        = "herdrify-hc"
 description = "Async client for herdr-core: JSON-RPC over hc connect."
-version     = "0.1.0"
+version     = "0.2.0"
 readme      = "README.md"
 keywords    = ["herdr", "json-rpc", "terminal", "async", "client"]
 categories  = ["api-bindings", "asynchronous"]

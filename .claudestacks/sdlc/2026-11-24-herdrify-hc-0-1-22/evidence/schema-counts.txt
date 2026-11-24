@@ -1,0 +1,5 @@
+$ jq ".openrpc, (.components.schemas|length)" hc-0.1.22-schema.json crates/herdrify-hc/tests/fixtures/hc-0.1.21.openrpc.json
+"1.3.2"
+39
+"1.3.2"
+36

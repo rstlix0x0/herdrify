@@ -4,6 +4,33 @@ All notable changes to `herdrify-hc` are recorded here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and the crate follows
 [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.2.0] - 2026-11-24
+
+### Added
+
+- Putting a file on a terminal in pieces of at most 1 MiB, up to 8 MiB per put, so a big file never
+  holds up the connection. It needs a framed connection and a core of 0.1.22 or newer.
+  - `Client::terminal_put_begin`, `terminal_put_chunk`, `terminal_put_finish` and
+    `terminal_put_abort`, with their request types and the reply types `PutBeginResult`,
+    `PutPieceResult` and `EmptyResult`.
+  - `TransferId`, the identifier that ties the pieces of one transfer together: `TransferId::new`
+    checks a value, `TransferId::random` makes one, and `protocol::InvalidTransferId` is the error
+    of `new`.
+  - `TerminalHandle::put_begin` opens a transfer; `TerminalHandle::put_in_pieces` sends a whole
+    file in pieces and aborts the transfer if a piece fails.
+  - `TerminalOps::put_chunk`, `put_finish` and `put_abort` send one piece, finish the transfer
+    and cancel it.
+- Document filter on event subscriptions: `EventsSubscribe::docs`, and the `docs` option of
+  `HerdrCore::events`. `Error::DOCS_OPTION` names that option in `Error::NeedsNewerCore`.
+
+### Changed
+
+- **Breaking:** `Error` gains the variant `Error::NeedsNewerCore`. The `docs` option is refused
+  with it, before anything is sent, on cores older than 0.1.22. A `match` on `Error` that has no
+  wildcard arm must handle it.
+- Tested against `hc` 0.1.22. On `hc` 0.1.21 every live test passes except the schema drift check,
+  which pins the 0.1.22 schema; the put in pieces tests skip there.
+
 ## [0.1.0] - 2026-11-23
 
 First release: an async client for herdr-core, tested against `hc` 0.1.21.
@@ -40,4 +67,5 @@ First release: an async client for herdr-core, tested against `hc` 0.1.21.
   `files-and-exec`. They use `HerdrCore`; `connect --client` shows the same with the `Client`.
 - Minimum supported Rust version: 1.94.
 
+[0.2.0]: https://github.com/rstlix0x0/herdrify/releases/tag/herdrify-hc-v0.2.0
 [0.1.0]: https://github.com/rstlix0x0/herdrify/releases/tag/herdrify-hc-v0.1.0

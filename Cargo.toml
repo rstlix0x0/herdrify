@@ -11,8 +11,8 @@ authors      = ["rstlix0x0 <rstlix.dev@gmail.com>"]
 
 [workspace.dependencies]
 herdrify-core    = { path = "crates/herdrify-core", version = "0.0.0" }
-herdrify-hc      = { path = "crates/herdrify-hc", version = "0.1.0" }
-herdrify-app     = { path = "crates/herdrify-app", version = "0.0.0" }
+herdrify-hc      = { path = "crates/herdrify-hc", version = "0.2.0" }
+herdrify-app     = { path = "crates/herdrify-app", version = "0.1.0" }
 herdrify-lua     = { path = "crates/herdrify-lua", version = "0.0.0" }
 herdrify-herdr   = { path = "crates/herdrify-herdr", version = "0.0.0" }
 herdrify-store   = { path = "crates/herdrify-store", version = "0.0.0" }

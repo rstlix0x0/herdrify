@@ -26,7 +26,13 @@ dependencies = [
 
 [[package]]
 name = "herdrify-app"
-version = "0.0.0"
+version = "0.1.0"
+dependencies = [
+ "serde",
+ "serde_json",
+ "thiserror",
+ "tokio",
+]
 
 [[package]]
 name = "herdrify-cli"
@@ -53,7 +59,7 @@ dependencies = [
 
 [[package]]
 name = "herdrify-hc"
-version = "0.1.0"
+version = "0.2.0"
 dependencies = [
  "base64",
  "serde",
