@@ -25,9 +25,10 @@ pick, for full control. [`connect`](connect/) shows that path side by side with 
 
 ## Before you run them
 
-They need `hc` on `PATH` (they were written against hc 0.1.21). Each acts on the core that
-`hc connect` reaches, which is your everyday core unless you say otherwise. The examples only
-touch terminals and files they create, and remove them again.
+They need `hc` on `PATH` (they were written against hc 0.1.21 and are unchanged for 0.2.0; they
+build in the gate). Each acts on the core that `hc connect` reaches, which is your everyday core
+unless you say otherwise. The examples only touch terminals and files they create, and remove them
+again.
 
 To run them on a throwaway core of their own instead:
 

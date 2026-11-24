@@ -33,6 +33,8 @@ cargo run -p herdrify-hc --example connect -- --stream         # a StreamTranspo
 cargo run -p herdrify-hc --example connect -- --client         # the Client and typed requests
 ```
 
+Output captured on hc 0.1.21:
+
 ```text
 connected to hc 0.1.21, 32 methods
 core pid 13739, up 0 s, 0 live and 0 finished terminals

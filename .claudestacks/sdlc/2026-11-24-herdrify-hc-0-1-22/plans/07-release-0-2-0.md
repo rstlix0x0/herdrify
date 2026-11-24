@@ -1,5 +1,5 @@
 ---
-status: approved
+status: done
 created: 2026-11-24
 depends-on: [01, 02, 03, 04, 05, 06]
 built-on: 2db7af9df077
@@ -144,3 +144,38 @@ once the author commits.
 - `cargo make dod` is green with zero warnings with hc 0.1.22 installed.
 - `cargo make deny` is ok.
 - `cargo publish --dry-run -p herdrify-hc --allow-dirty` verifies v0.2.0.
+
+## Review findings
+
+Reviewer verdict (Tasks 1–2): COMPLIANT, 0🔴 1🟡 9🔵 2❓, no drift. Re-run: `cargo check --workspace`, fmt, `RUSTDOCFLAGS="-D warnings" cargo doc --workspace`, `cargo test -p herdrify-hc --doc` (98), `cargo metadata --locked` all ok; counts recounted (36 methods / 39 schemas on 0.1.22; 32 / 36 on 0.1.21); every CHANGELOG name exists in `src`.
+
+- 🟡 `CHANGELOG.md:13` "for files too large for one frame" was false (a put in pieces is capped at 8 MiB, whose base64 fits one 16 MiB frame payload) and clashed with the concepts word **frame** — fixed: pieces of at most 1 MiB, up to 8 MiB per put, so a big file never holds up the connection; needs a framed connection and core 0.1.22+ (`evidence/probe-022-output.txt:72-73`, `:163-165`).
+- ❓ `src/herdr_core/put.rs:1-2` made the same claim — fixed the same way. `cargo test -p herdrify-hc --doc` → `test result: ok. 98 passed`.
+- 🔵 `CHANGELOG.md:9` lead line repeated the bullet at `:30` — fixed: removed.
+- 🔵 `CHANGELOG.md` Added missed `protocol::InvalidTransferId`, `Error::DOCS_OPTION`, `TransferId::random` — fixed: added, with `TransferId::new`.
+- 🔵 `examples/README.md:28` "written against hc 0.1.22" was untrue (examples unchanged since 0.1.21) — fixed: written against hc 0.1.21, unchanged for 0.2.0, built in the gate.
+- 🔵 `examples/connect/README.md:37-38` sample output was retyped, not captured — fixed: the captured 0.1.21 lines restored byte for byte from `HEAD` and labelled "Output captured on hc 0.1.21:". No example was run.
+- 🔵 `docs/architecture.md:26` ADR column out of order — fixed: "0001, 0007, 0008".
+- 🔵 `docs/herdr-and-airsl.md:3-6` intro put all raw output in `adrs/evidence/` — fixed: rows naming a chain's evidence folder are the exception; ragged reflow fixed.
+- 🔵 `docs/herdr-and-airsl.md:28-29` "observed on hc 0.1.21 and 0.1.22" was too broad — fixed: the last two rows (put in pieces, `docs` filter) were observed on 0.1.22, the rest on 0.1.21.
+- 🔵 `CLAUDE.md:91-95` Grants (0008) left out the `docs` rule — fixed: "Components cannot set the `docs` param of `events.subscribe`: it is refused." (ADR 0008's Decision line).
+- ❓ "0.1.21 still supported" while `live_schema_matches_the_fixture` fails on 0.1.21 — fixed: README and CHANGELOG say every live test passes on hc 0.1.21 except the schema drift check, which pins 0.1.22, and the put tests skip there (`evidence/live-tests-0.1.21-after.txt`).
+- 🔵 nothing fails the gate if the version, counts or ADR numbers in prose revert — declined: they are prose; the plan grep and the publish dry run cover the version and counts.
+
+Plan grep after the fixes: 5 hits, all deliberate 0.1.21 history (README support line, the 0.1.21 count row, examples README, the connect example's captured-output label and line).
+
+## Gate
+
+With hc 0.1.22 and herdr-app 0.1.17 on `PATH`, `HC_*` unset:
+- `(set -o pipefail; mkdir -p target && cargo make dod 2>&1 | tee target/dod.log)` → exit 0. `sed $'s/\x1b\\[[0-9;]*m//g' target/dod.log | grep -E '^ *(warning|error)'` prints nothing. Live tests ran, none skipped: herdrify-app live 10 passed; herdrify-hc live 19 passed, live_herdr_core 5 passed; lib 363, client_fake 106, schema_coverage 9, adapter_stream 4, herdrify-app lib 253; doctests 447 + 29 + 98.
+- `cargo make deny` → exit 0: `advisories ok, bans ok, licenses ok, sources ok`.
+- `cargo clippy -p herdrify-hc --all-targets --all-features --target x86_64-pc-windows-msvc -- -D warnings` → exit 0, `Finished`.
+- `cargo publish --dry-run -p herdrify-hc --allow-dirty` → exit 0: `Packaged 110 files, 985.6KiB (208.0KiB compressed)`, `Verifying herdrify-hc v0.2.0`, `warning: aborting upload due to dry run`.
+- Leftovers: `/tmp/hf*` identical before and after (`hfa48416-0`, `hfa48416-1`, `hfy.4K8V`, all 2026-11-23). The only `--hc-launchd` process is pid 99744, from 2026-11-23, not started by this run.
+
+## Deviations
+
+- 2026-11-24: Tasks 1–2 ran alongside plan 06 Task 2 (disjoint files); the gate (Task 3) ran after plan 06 was done.
+- 2026-11-24: The connect example's sample output keeps the captured 0.1.21 lines (labelled) instead of the plan's "connected to hc 0.1.22, 36 methods": that line was never captured, and no example was run against a core. The examples README says the examples were written against 0.1.21 instead of the plan's "written against hc 0.1.22", for the same reason.
+- 2026-11-24: The strict `cargo publish --dry-run -p herdrify-hc` without `--allow-dirty` is left for after the author commits, as the plan says.
+- 2026-11-24: Not committed (instruction: do not commit).

@@ -1,5 +1,5 @@
-//! `TerminalHandle::put_in_pieces`: stores a file for a terminal as several calls, so a file too
-//! big for one `terminal.put` request still goes through.
+//! `TerminalHandle::put_in_pieces`: stores a file for a terminal as several calls, in pieces of at
+//! most 1 MiB, so a big file never holds up the connection.
 //!
 //! The method opens a transfer, sends the file in pieces of at most [`PIECE_BYTES`], closes the
 //! transfer, and drops it when any step fails.

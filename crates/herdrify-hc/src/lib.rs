@@ -16,7 +16,7 @@
 //! # Examples
 //!
 //! Run a command in a terminal on the core that `hc connect` reaches. This needs `hc` on `PATH`
-//! (the crate was tested against hc 0.1.21), so the example is compiled but never run:
+//! (the crate was tested against hc 0.1.22), so the example is compiled but never run:
 //!
 //! ```no_run
 //! use herdrify_hc::prelude::*;

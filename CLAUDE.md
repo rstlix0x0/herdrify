@@ -5,13 +5,13 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ## Status
 
 The Cargo workspace exists: nine crates, no features yet. `herdrify-hc` is implemented: the async
-SDK for herdr-core, at 0.1.0 (`HerdrCore` entrypoint over a typed client for all 32 methods,
+SDK for herdr-core, at 0.2.0 (`HerdrCore` entrypoint over a typed client for all 36 methods,
 `ProcessTransport` over `hc connect`, event and attach streams). `herdrify-app` is implemented too:
 the async SDK for herdr-app, at 0.1.0 (the layout, theme and keys file models, and the `HerdrApp`
 entrypoint over `Client<T: Transport>`, with `ProcessTransport` over the `herdr-app` CLI). The
 other crates are still stubs. The architecture is decided:
 
-- **Approved ADRs** in `.claudestacks/sdlc/adrs/` (0001–0007). They are sealed and are the
+- **Approved ADRs** in `.claudestacks/sdlc/adrs/` (0001–0008). They are sealed and are the
   authority. A changed decision is a new superseding ADR, written with `/claudestacks-sdlc:adr`.
   Never edit the body of an approved ADR.
 - **Evidence** in `.claudestacks/sdlc/adrs/evidence/`: raw command output and Rust probes the ADRs
@@ -88,11 +88,12 @@ Rust tools and libraries for [Herdr](https://herdr.dev):
     `~/.config/herdr-app`).
   - Keys go only into `layout:herdrify-<frame>` and `mod:herdrify-host`, and bind only to herdrify
     actions. `send:` and `argv` are refused.
-- **Grants (0004).**
+- **Grants (0008).**
   - Core owns the kinds `fs`, `env`, `proc` and `hc`. The `config.toml` ceiling caps them, and a
     request over it refuses the plan.
   - `hc` and `herdr-app` are banned as `proc` entries. `proc` entries are bare names.
-  - The hc method table is closed: 18 of 32 methods are never exposed.
+  - The hc method table is closed: 22 of 36 methods are never exposed.
+  - Components cannot set the `docs` param of `events.subscribe`: it is refused.
 - **Home (0005).**
   - `$HERDRIFY_HOME` holds `config.toml` (the only record of intent), `herdrify.lock`, `cache/`,
     `components/<name>@<commit>/`, `dev/` and `state/`.

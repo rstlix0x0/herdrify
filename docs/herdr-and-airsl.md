@@ -1,13 +1,14 @@
 # Herdr and airsl: facts herdrify builds on
 
-These facts were observed on 2026-11-22; the `herdrify-app` section below on 2026-11-23. The raw
-output behind each row is in
-[`.claudestacks/sdlc/adrs/evidence/`](../.claudestacks/sdlc/adrs/evidence/). Probe again before
-relying on a fact for a newer version.
+These facts were observed on 2026-11-22; the `herdrify-app` section below on 2026-11-23, and the
+`hc` 0.1.22 rows on 2026-11-24. The raw output behind each row is in
+[`.claudestacks/sdlc/adrs/evidence/`](../.claudestacks/sdlc/adrs/evidence/), except where a row
+names the evidence folder of its own chain. Probe again before relying on a fact for a newer
+version.
 
 | Tool | Version |
 |---|---|
-| hc (herdr-core) | 0.1.21 |
+| hc (herdr-core) | 0.1.22 (0.1.21 for the facts observed before it) |
 | herdr-app | 0.1.16 (the herdr-app table), 0.1.17 (the `herdrify-app` section) |
 | airsl | 0.1.4 (mlua 0.12.2) |
 | tokio (probe) | 1.54.1 |
@@ -16,7 +17,7 @@ relying on a fact for a newer version.
 
 | Fact | Evidence |
 |---|---|
-| `hc schema` is an OpenRPC 1.3.2 document: 32 methods, 36 schemas | `probe-facts-output.txt:3-7,40` |
+| `hc schema` is an OpenRPC 1.3.2 document. On 0.1.22: 36 methods, 39 schemas (on 0.1.21: 32 methods, 36 schemas). | `.claudestacks/sdlc/2026-11-24-herdrify-hc-0-1-22/evidence/method-counts.txt:1-3`, `.claudestacks/sdlc/2026-11-24-herdrify-hc-0-1-22/evidence/schema-counts.txt:1-5` |
 | JSON-RPC 2.0, one message per line, or framed after `hello`. Protocol generation 1. Errors carry a stable `data.kind`. | `probe-facts-output.txt:6` |
 | `hc connect` serves the API over stdio; the remote form is `ssh box hc connect` | `hc-0.1.21-help.txt:41` |
 | Streams: `events.subscribe` and `terminal.attach` | `probe-facts-output.txt:21,33` |
@@ -24,10 +25,13 @@ relying on a fact for a newer version.
 
 ### Using `hc connect` from a program (`herdrify-hc`)
 
-`herdrify-hc` 0.1.0 is the async client built on these facts. They were observed on `hc` 0.1.21
-against throwaway cores. The raw output behind each row is in
+`herdrify-hc` 0.2.0 is the async client built on these facts, observed against throwaway cores.
+The put in pieces and the `docs` filter rows were observed on `hc` 0.1.22 (the last two rows); the
+rest were observed on `hc` 0.1.21. The raw output behind each row is in
 [`.claudestacks/sdlc/2026-11-22-herdrify-hc/evidence/`](../.claudestacks/sdlc/2026-11-22-herdrify-hc/evidence/),
-and the Evidence column names the file inside it.
+and the Evidence column names the file inside it. The rows that carry a full path, the
+`hc` 0.1.22 ones, are in
+[`.claudestacks/sdlc/2026-11-24-herdrify-hc-0-1-22/evidence/`](../.claudestacks/sdlc/2026-11-24-herdrify-hc-0-1-22/evidence/).
 
 | Fact | Evidence |
 |---|---|
@@ -42,6 +46,8 @@ and the Evidence column names the file inside it.
 | Closing `hc connect`'s stdin makes it exit 0 after it sends any in-flight reply. `hc connect` starts a stopped isolated core by itself. | `probe-plain-output.txt:603-623`, `probe-plain-output.txt:109-122` |
 | A core that belongs to nobody else is reached by `HC_SESSION` (or `hc connect --session <name>`, the same core) together with `XDG_STATE_HOME`, `XDG_CONFIG_HOME` and `XDG_RUNTIME_DIR` pointed at a scratch directory, and every inherited `HC_*` variable removed. | `probe-plain-output.txt:2`, `probe-plain-output.txt:131-138` |
 | A socket path over 103 bytes is refused on macOS (`the socket path for session … is too long here (110 bytes; this system allows 103)`). A `mktemp` directory under `/var/folders` gave 110 bytes; a short directory under `/tmp` works. | `probe-plain-output.txt:25-34,105-122` |
+| The put in pieces (`terminal.put_begin`, `put_chunk`, `put_finish`, `put_abort`) works on this core's terminals only: `nowhere/t1` and `local/t1` fail with `machine_unknown` and the hint "this core only runs local terminals". A transfer id is 16 to 64 hex digits (15 and 65 are refused). A piece is at most 1 MiB and a put at most 8 MiB (one byte more is refused). | `.claudestacks/sdlc/2026-11-24-herdrify-hc-0-1-22/evidence/probe-022-extra-output.txt:15,19`, `.claudestacks/sdlc/2026-11-24-herdrify-hc-0-1-22/evidence/probe-022-output.txt:39-73,128-133` |
+| The `docs` filter on `events.subscribe` needs 0.1.22. On 0.1.22 `{"docs":["probe-doc"]}` delivers only that document's events. 0.1.21 accepts `docs` and ignores it: it delivered every doc event and the terminal events. | `.claudestacks/sdlc/2026-11-24-herdrify-hc-0-1-22/evidence/probe-022-output.txt:168-181`, `.claudestacks/sdlc/2026-11-24-herdrify-hc-0-1-22/evidence/probe-021-output.txt:159-175` |
 
 ## herdr-app
 
@@ -94,7 +100,7 @@ and the Evidence column names the file inside it.
 | `GrantSet` has three axes: `fs`, `env`, `proc` | `src/sandbox/grant_set.rs:54-59` |
 | `proc` matches the program name as written, not a resolved path | `src/sandbox/grants.rs:221-226` |
 | Third-party host modules, under a host-chosen root table | `src/modules/registry.rs:1-6`, `src/builder.rs:78-86` |
-| Ships its own extension manifest, `Ceiling`, `negotiate` and `Approver`; herdrify does not use them (ADR 0004) | `src/extension/*` |
+| Ships its own extension manifest, `Ceiling`, `negotiate` and `Approver`; herdrify does not use them (ADR 0008) | `src/extension/*` |
 | `block_on` inside `spawn_blocking` works; on an async worker it panics | `probe-bridge-output.txt:2,7` |
 
 airsl source lines are in `airsl-0.1.4-excerpts.md`.
