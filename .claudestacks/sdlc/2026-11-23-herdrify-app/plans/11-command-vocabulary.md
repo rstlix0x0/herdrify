@@ -1,5 +1,5 @@
 ---
-status: approved
+status: done
 created: 2026-11-23
 depends-on: [10]
 built-on: aab842c3c7d3
@@ -148,3 +148,34 @@ Done is green. Commit `feat(herdrify-app): add the command argument enums`.
 ## Proof
 
 - `cargo make dod` is green.
+
+## Review findings
+
+Reviewer verdict: plan-compliant; blocking: none. Scoped gate re-run by the reviewer: `dod-app.sh` → `exit=0`, no warning/error lines; 154 unit, 3 integration, 166 doctests passed. `cargo test -p herdrify-app protocol::commands` → 11 passed.
+
+- open 🟡 `commands/words.rs:311` — the `Px` doc says a fractional size is refused; `Px::new` refuses only non-finite and negative values (reviewer probe: `Px::new(2.5) = Ok("2.5")`). The doc is the defect: drop "or fractional".
+- open 🔵 `commands/words.rs:347` — `value >= 0.0` lets `-0.0` through (`Px::new(-0.0) = Ok`), while `Weight::new(-0.0)` refuses.
+- open 🔵 `commands/outputs.rs:258` / Task 1 Proof — `outputs_decode_recorded_replies` uses shortened ids ("tbb6", "p271", "pe0e") for all but `Created`, so it is not the recorded stdout byte for byte. The shapes match.
+- open 🔵 `commands/words.rs:272` — the `Position` doc claims herdr-app answers "no such space" for position 0 for tabs too; the evidence records only `space.select {"index":0}`.
+- open 🔵 `commands/words.rs:403-437` — `FiniteF64` is generic by name but tied to `pages` (doc and `argument: "pages"`).
+- open 🔵 `commands/words.rs:540` — `Rename<N>` has no bound, so `Rename::<String>` compiles.
+- open 🔵 `commands/words.rs:616,680,706` — integer widths differ without a stated reason (`TabMoveTo::By(i32)`, `Scroll::Lines(i64)`, `At::Cell` `u32`).
+- open 🔵 `commands/mod.rs:1` — the `//!` block has no "why it exists" sentence.
+
+## Deviations
+
+- 2026-11-24 — `cargo make dod` was replaced by the scoped gate (fmt, workspace clippy and doc with `-D warnings`, herdrify-app tests and doctests). The full gate fails only in herdrify-hc `tests/live.rs` `live_schema_matches_the_fixture`, against the installed `hc 0.1.22`, which this plan does not touch.
+- 2026-11-24 — Tasks 1–3 ran as one coder in order, since Task 2 edits Task 1's `mod.rs` and Task 3 edits Task 2's `words.rs`. Built in parallel with plan 14 (disjoint files).
+- 2026-11-24 — Where the plan was silent, the coder chose: hand-written `Serialize` for `Focus`, `Pin`, `Machine`, `Rename<N>` and `At`; externally tagged `rename_all = "snake_case"` for the one-of enums (flattened into the command); `#[serde(untagged)]` struct variants for `TabContent`/`PaneContent`, with the `module` field renamed to `"mod"`; `Eq` on both content enums (clippy `derive_partial_eq_without_eq`).
+
+## Fix pass (2026-11-24, on the author's word "fix all findings")
+
+- fixed: the `Px` doc no longer says fractional sizes are refused; new test `px_takes_fractional_sizes` pins `Px::new(2.5)` as `Ok`, written `2.5`.
+- fixed: `Px::new(-0.0)` now stores `0.0`; new test `px_writes_negative_zero_as_zero`, seen red first (left `"-0.0"`, right `"0.0"`).
+- fixed: `outputs_decode_recorded_replies` decodes the full recorded stdout of every shape (probe-commands-output.txt lines 729, 738, 739, 750, 751, 763, 765; probe-gaps-output.txt lines 6, 8, 9); no ids are shortened and no paths appear.
+- fixed: the `Position` doc claims only what is recorded: `space.select` with position 0 is refused as "no such space".
+- fixed (name kept, as plan and spec fix it): the `FiniteF64` doc says it is the page count of a scroll and that its refusal names `pages`.
+- fixed: `Rename<N: sealed::RenameTarget>`; the marker trait sits in a private module, implemented only for `SpaceName`, `TabName`, `PaneName`; a `compile_fail,E0277` doctest shows `Rename::<String>` is refused.
+- declined (spec-fixed): integer widths stay `u32` / `i32` / `i64` as spec §5.9 sets them; a `//` reason now sits at `TabMoveTo::By`, `Scroll::Lines` and `At::Cell`.
+- fixed: `commands/mod.rs`'s `//!` block opens with why the layer exists.
+- Gate after the pass: `dod-app.sh` → `exit=0`, no warning/error lines; 195 unit, 5 + 3 integration, 254 + 29 doctests passed.

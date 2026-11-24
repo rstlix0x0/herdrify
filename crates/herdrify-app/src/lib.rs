@@ -17,8 +17,12 @@
 //!
 //! Layers:
 //!
+//! - [`driver`], the typed client that runs commands and returns typed replies
 //! - [`files`], the layout, theme and keys files as pure data
+//! - [`port`], the seam to whatever runs the `herdr-app` program
 //! - [`protocol`], herdr-app's command-line language as pure data
 
+pub mod driver;
 pub mod files;
+pub mod port;
 pub mod protocol;

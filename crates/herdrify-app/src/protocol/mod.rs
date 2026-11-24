@@ -21,6 +21,10 @@
 //!   closed recently, with an agent status that keeps words it does not know
 //! - the window status, decoded into the focus, the layout in use, the floating nodes and the
 //!   problems herdr-app reports
+//! - the trait every command implements, the shapes of what a command prints, and the words and
+//!   numbers a command takes as arguments, with the ranges of the numbers checked
+//! - a command type for each command herdr-app lists, on spaces, tabs, panes, terminals, agents,
+//!   layouts, mods, overlays, the app and the window, each a value that serializes to its arguments
 //!
 //! Non-responsibilities:
 //!
@@ -33,6 +37,7 @@
 //! (unit-test-mandate exemption #1, export-only).
 
 mod catalog;
+mod commands;
 mod identifiers;
 mod invocation;
 mod listing;
@@ -42,6 +47,26 @@ mod version;
 
 #[doc(inline)]
 pub use catalog::{ArgInfo, CommandInfo, KNOWN_COMMANDS, KnownCommand};
+
+#[doc(inline)]
+pub use commands::{
+    Ack, AgentFocus, AgentNext, AgentPrev, AppCheckUpdates, AppFeedback, AppHelp, AppHide,
+    AppHideOthers, AppPalette, AppQuit, AppReset, AppSettings, AppShowAll, AppTheme, AppUpdate,
+    AppUpdateCore, AppWelcome, AppWhatsNew, AppZoomIn, AppZoomOut, AppZoomReset,
+    ArgumentRangeError, At, ClickTarget, Command, Created, Direction, FeedbackFrom, FiniteF64,
+    Focus, Kept, LayoutClone, LayoutHide, LayoutReset, LayoutResize, LayoutSelect, LayoutSet,
+    LayoutShow, LayoutSwitch, LayoutToggle, Machine, ModClone, ModOpen, Opened, OverlayClose,
+    PaneClose, PaneContent, PaneFocus, PaneGo, PaneRename, PaneResize, PaneSplit, PaneSwap,
+    PaneTarget, PaneZoom, Parked, Pin, Place, Position, Px, RawReply, Rename, Resize, Scroll,
+    ScrollEdge, SelectMode, SelectionMove, SettingsSection, SpaceClose, SpaceMove, SpaceNew,
+    SpaceNext, SpacePrev, SpaceRef, SpaceRename, SpaceSelect, Split, SplitDirection, SwapWith,
+    TabClose, TabContent, TabMade, TabMove, TabMoveTo, TabNew, TabNext, TabPrev, TabRef, TabRename,
+    TabSelect, TabSettle, TabUnsettle, TerminalAdjustSelection, TerminalClearSelection,
+    TerminalCopy, TerminalKeep, TerminalKill, TerminalOpen, TerminalPark, TerminalPaste,
+    TerminalPasteImage, TerminalPeek, TerminalPin, TerminalRightClick, TerminalScroll,
+    TerminalSearch, TerminalSelect, TerminalSelectAll, TerminalShow, Weight, WindowClose,
+    WindowMaximize, WindowMinimize,
+};
 
 #[doc(inline)]
 pub use identifiers::{
