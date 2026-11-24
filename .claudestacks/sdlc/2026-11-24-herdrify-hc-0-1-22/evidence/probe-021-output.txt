@@ -1,0 +1,291 @@
+$ cargo +1.94 run (rustc 1.94.1)   # evidence/probe-022: herdrify-hc (path), tokio 1.54.1, serde_json 1.0.154, base64 0.23.1; isolated session; hc 0.1.21 release first on PATH
+== hello
+version=0.1.21 framed=true generation=Generation(1)
+features=["framed", "attach", "events", "status", "shell", "resize_notifications", "automatic_input", "restart_environment"]
+methods(32)=["hello", "server.status", "server.stop", "server.restart", "terminal.run", "templates.list", "terminal.list", "terminal.get", "terminal.kill", "terminal.rm", "terminal.keep", "terminal.label", "terminal.read", "terminal.attach", "terminal.send", "terminal.wait", "terminal.keys", "terminal.interrupt", "terminal.put", "machine.exec", "file.read", "file.write", "file.edit", "doc.get", "doc.set", "events.subscribe", "machine.add", "machine.list", "machine.connect", "machine.rename", "machine.rm", "rpc.discover"]
+
+== error decode (SDK RpcError) of the 0.1.22 doc.set internal entry
+code=-32603 kind=Internal display=internal [internal]
+[setup] terminal.run {"argv":["sleep","300"],"no_parent":true}
+    => ok {"address":"t1","argv":["sleep","300"],"cols":200,"created_ms":1795503686995,"cwd":"/private/tmp/claude-501/-Users-hiraq-Projects-herdrify/f0ac2647-c3a7-40b0-9077-2ced77e38454/scratchpad/probe-022","die_with_parent":false,"exit_code":null,"finished_ms":null,"identity":"ghostty","keep":false,"labels"…(522 bytes)
+terminal=t1
+
+== happy path
+[A1] terminal.put_begin {"bytes":10,"name":"a.txt","terminal":"t1","transfer":"0123456789abcdef"}
+    => err code=-32601 kind=unknown_method message="unknown method \"terminal.put_begin\"" hint=Some("see `hc schema`")
+[A2] terminal.put_chunk {"data":"aGVsbG8=","offset":0,"transfer":"0123456789abcdef"}
+    => err code=-32601 kind=unknown_method message="unknown method \"terminal.put_chunk\"" hint=Some("see `hc schema`")
+[A3 wrong offset (0 again)] terminal.put_chunk {"data":"aGVsbG8=","offset":0,"transfer":"0123456789abcdef"}
+    => err code=-32601 kind=unknown_method message="unknown method \"terminal.put_chunk\"" hint=Some("see `hc schema`")
+[A3b offset ahead (7)] terminal.put_chunk {"data":"eA==","offset":7,"transfer":"0123456789abcdef"}
+    => err code=-32601 kind=unknown_method message="unknown method \"terminal.put_chunk\"" hint=Some("see `hc schema`")
+[A4] terminal.put_chunk {"data":"d29ybGQ=","offset":5,"transfer":"0123456789abcdef"}
+    => err code=-32601 kind=unknown_method message="unknown method \"terminal.put_chunk\"" hint=Some("see `hc schema`")
+[A5 past size] terminal.put_chunk {"data":"IQ==","offset":10,"transfer":"0123456789abcdef"}
+    => err code=-32601 kind=unknown_method message="unknown method \"terminal.put_chunk\"" hint=Some("see `hc schema`")
+[A6] terminal.put_finish {"transfer":"0123456789abcdef"}
+    => err code=-32601 kind=unknown_method message="unknown method \"terminal.put_finish\"" hint=Some("see `hc schema`")
+[A7 chunk after finish] terminal.put_chunk {"data":"IQ==","offset":10,"transfer":"0123456789abcdef"}
+    => err code=-32601 kind=unknown_method message="unknown method \"terminal.put_chunk\"" hint=Some("see `hc schema`")
+[A8 finish again] terminal.put_finish {"transfer":"0123456789abcdef"}
+    => err code=-32601 kind=unknown_method message="unknown method \"terminal.put_finish\"" hint=Some("see `hc schema`")
+[A9 abort after finish] terminal.put_abort {"transfer":"0123456789abcdef"}
+    => err code=-32601 kind=unknown_method message="unknown method \"terminal.put_abort\"" hint=Some("see `hc schema`")
+[A10 begin reusing a finished transfer id] terminal.put_begin {"bytes":1,"name":"a2.txt","terminal":"t1","transfer":"0123456789abcdef"}
+    => err code=-32601 kind=unknown_method message="unknown method \"terminal.put_begin\"" hint=Some("see `hc schema`")
+
+== transfer id and size rules
+[B1 15 hex] terminal.put_begin {"bytes":1,"name":"b.txt","terminal":"t1","transfer":"0123456789abcde"}
+    => err code=-32601 kind=unknown_method message="unknown method \"terminal.put_begin\"" hint=Some("see `hc schema`")
+[  cleanup] terminal.put_abort {"transfer":"0123456789abcde"}
+    => err code=-32601 kind=unknown_method message="unknown method \"terminal.put_abort\"" hint=Some("see `hc schema`")
+[B1b 16 hex] terminal.put_begin {"bytes":1,"name":"b.txt","terminal":"t1","transfer":"1123456789abcdef"}
+    => err code=-32601 kind=unknown_method message="unknown method \"terminal.put_begin\"" hint=Some("see `hc schema`")
+[  cleanup] terminal.put_abort {"transfer":"1123456789abcdef"}
+    => err code=-32601 kind=unknown_method message="unknown method \"terminal.put_abort\"" hint=Some("see `hc schema`")
+[B1c 64 hex] terminal.put_begin {"bytes":1,"name":"b.txt","terminal":"t1","transfer":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"}
+    => err code=-32601 kind=unknown_method message="unknown method \"terminal.put_begin\"" hint=Some("see `hc schema`")
+[  cleanup] terminal.put_abort {"transfer":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"}
+    => err code=-32601 kind=unknown_method message="unknown method \"terminal.put_abort\"" hint=Some("see `hc schema`")
+[B1d 65 hex] terminal.put_begin {"bytes":1,"name":"b.txt","terminal":"t1","transfer":"bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"}
+    => err code=-32601 kind=unknown_method message="unknown method \"terminal.put_begin\"" hint=Some("see `hc schema`")
+[  cleanup] terminal.put_abort {"transfer":"bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"}
+    => err code=-32601 kind=unknown_method message="unknown method \"terminal.put_abort\"" hint=Some("see `hc schema`")
+[B2 non-hex 16] terminal.put_begin {"bytes":1,"name":"b.txt","terminal":"t1","transfer":"zzzzzzzzzzzzzzzz"}
+    => err code=-32601 kind=unknown_method message="unknown method \"terminal.put_begin\"" hint=Some("see `hc schema`")
+[  cleanup] terminal.put_abort {"transfer":"zzzzzzzzzzzzzzzz"}
+    => err code=-32601 kind=unknown_method message="unknown method \"terminal.put_abort\"" hint=Some("see `hc schema`")
+[B3 uppercase hex 16] terminal.put_begin {"bytes":1,"name":"b.txt","terminal":"t1","transfer":"ABCDEF0123456789"}
+    => err code=-32601 kind=unknown_method message="unknown method \"terminal.put_begin\"" hint=Some("see `hc schema`")
+[  cleanup] terminal.put_abort {"transfer":"ABCDEF0123456789"}
+    => err code=-32601 kind=unknown_method message="unknown method \"terminal.put_abort\"" hint=Some("see `hc schema`")
+[B3b empty] terminal.put_begin {"bytes":1,"name":"b.txt","terminal":"t1","transfer":""}
+    => err code=-32601 kind=unknown_method message="unknown method \"terminal.put_begin\"" hint=Some("see `hc schema`")
+[  cleanup] terminal.put_abort {"transfer":""}
+    => err code=-32601 kind=unknown_method message="unknown method \"terminal.put_abort\"" hint=Some("see `hc schema`")
+[B4 8 MiB] terminal.put_begin {"bytes":8388608,"name":"big.bin","terminal":"t1","transfer":"0000000000800000"}
+    => err code=-32601 kind=unknown_method message="unknown method \"terminal.put_begin\"" hint=Some("see `hc schema`")
+[  cleanup] terminal.put_abort {"transfer":"0000000000800000"}
+    => err code=-32601 kind=unknown_method message="unknown method \"terminal.put_abort\"" hint=Some("see `hc schema`")
+[B4b 8 MiB + 1] terminal.put_begin {"bytes":8388609,"name":"big.bin","terminal":"t1","transfer":"0000000000800001"}
+    => err code=-32601 kind=unknown_method message="unknown method \"terminal.put_begin\"" hint=Some("see `hc schema`")
+[  cleanup] terminal.put_abort {"transfer":"0000000000800001"}
+    => err code=-32601 kind=unknown_method message="unknown method \"terminal.put_abort\"" hint=Some("see `hc schema`")
+[B4c 8_000_001] terminal.put_begin {"bytes":8000001,"name":"big.bin","terminal":"t1","transfer":"00000000007a1201"}
+    => err code=-32601 kind=unknown_method message="unknown method \"terminal.put_begin\"" hint=Some("see `hc schema`")
+[  cleanup] terminal.put_abort {"transfer":"00000000007a1201"}
+    => err code=-32601 kind=unknown_method message="unknown method \"terminal.put_abort\"" hint=Some("see `hc schema`")
+
+== zero bytes, duplicates, unknowns
+[B5 begin 0 bytes] terminal.put_begin {"bytes":0,"name":"empty.txt","terminal":"t1","transfer":"2000000000000000"}
+    => err code=-32601 kind=unknown_method message="unknown method \"terminal.put_begin\"" hint=Some("see `hc schema`")
+[B5b finish 0 bytes] terminal.put_finish {"transfer":"2000000000000000"}
+    => err code=-32601 kind=unknown_method message="unknown method \"terminal.put_finish\"" hint=Some("see `hc schema`")
+[B6 begin] terminal.put_begin {"bytes":3,"name":"d.txt","terminal":"t1","transfer":"3000000000000000"}
+    => err code=-32601 kind=unknown_method message="unknown method \"terminal.put_begin\"" hint=Some("see `hc schema`")
+[B6b same id while open] terminal.put_begin {"bytes":3,"name":"d.txt","terminal":"t1","transfer":"3000000000000000"}
+    => err code=-32601 kind=unknown_method message="unknown method \"terminal.put_begin\"" hint=Some("see `hc schema`")
+[B9 finish before all bytes] terminal.put_finish {"transfer":"3000000000000000"}
+    => err code=-32601 kind=unknown_method message="unknown method \"terminal.put_finish\"" hint=Some("see `hc schema`")
+[B11 abort open] terminal.put_abort {"transfer":"3000000000000000"}
+    => err code=-32601 kind=unknown_method message="unknown method \"terminal.put_abort\"" hint=Some("see `hc schema`")
+[B11b chunk after abort] terminal.put_chunk {"data":"YWJj","offset":0,"transfer":"3000000000000000"}
+    => err code=-32601 kind=unknown_method message="unknown method \"terminal.put_chunk\"" hint=Some("see `hc schema`")
+[B11c abort unknown] terminal.put_abort {"transfer":"4000000000000000"}
+    => err code=-32601 kind=unknown_method message="unknown method \"terminal.put_abort\"" hint=Some("see `hc schema`")
+[B15 chunk unknown transfer] terminal.put_chunk {"data":"YQ==","offset":0,"transfer":"5000000000000000"}
+    => err code=-32601 kind=unknown_method message="unknown method \"terminal.put_chunk\"" hint=Some("see `hc schema`")
+[B15b finish unknown transfer] terminal.put_finish {"transfer":"5000000000000000"}
+    => err code=-32601 kind=unknown_method message="unknown method \"terminal.put_finish\"" hint=Some("see `hc schema`")
+[B7 unknown terminal] terminal.put_begin {"bytes":1,"name":"x.txt","terminal":"t999","transfer":"6000000000000000"}
+    => err code=-32601 kind=unknown_method message="unknown method \"terminal.put_begin\"" hint=Some("see `hc schema`")
+[B8 empty name] terminal.put_begin {"bytes":1,"name":"","terminal":"t1","transfer":"700000000000000d"}
+    => err code=-32601 kind=unknown_method message="unknown method \"terminal.put_begin\"" hint=Some("see `hc schema`")
+[  chunk] terminal.put_chunk {"data":"eg==","offset":0,"transfer":"700000000000000d"}
+    => err code=-32601 kind=unknown_method message="unknown method \"terminal.put_chunk\"" hint=Some("see `hc schema`")
+[  finish] terminal.put_finish {"transfer":"700000000000000d"}
+    => err code=-32601 kind=unknown_method message="unknown method \"terminal.put_finish\"" hint=Some("see `hc schema`")
+[B8b slash name] terminal.put_begin {"bytes":1,"name":"a/b.txt","terminal":"t1","transfer":"7000000000000015"}
+    => err code=-32601 kind=unknown_method message="unknown method \"terminal.put_begin\"" hint=Some("see `hc schema`")
+[  chunk] terminal.put_chunk {"data":"eg==","offset":0,"transfer":"7000000000000015"}
+    => err code=-32601 kind=unknown_method message="unknown method \"terminal.put_chunk\"" hint=Some("see `hc schema`")
+[  finish] terminal.put_finish {"transfer":"7000000000000015"}
+    => err code=-32601 kind=unknown_method message="unknown method \"terminal.put_finish\"" hint=Some("see `hc schema`")
+[B8c dotdot] terminal.put_begin {"bytes":1,"name":"..","terminal":"t1","transfer":"700000000000000c"}
+    => err code=-32601 kind=unknown_method message="unknown method \"terminal.put_begin\"" hint=Some("see `hc schema`")
+[  chunk] terminal.put_chunk {"data":"eg==","offset":0,"transfer":"700000000000000c"}
+    => err code=-32601 kind=unknown_method message="unknown method \"terminal.put_chunk\"" hint=Some("see `hc schema`")
+[  finish] terminal.put_finish {"transfer":"700000000000000c"}
+    => err code=-32601 kind=unknown_method message="unknown method \"terminal.put_finish\"" hint=Some("see `hc schema`")
+[B8d name taken] terminal.put_begin {"bytes":1,"name":"a.txt","terminal":"t1","transfer":"7000000000000013"}
+    => err code=-32601 kind=unknown_method message="unknown method \"terminal.put_begin\"" hint=Some("see `hc schema`")
+[  chunk] terminal.put_chunk {"data":"eg==","offset":0,"transfer":"7000000000000013"}
+    => err code=-32601 kind=unknown_method message="unknown method \"terminal.put_chunk\"" hint=Some("see `hc schema`")
+[  finish] terminal.put_finish {"transfer":"7000000000000013"}
+    => err code=-32601 kind=unknown_method message="unknown method \"terminal.put_finish\"" hint=Some("see `hc schema`")
+[B10 begin 2 MiB] terminal.put_begin {"bytes":2097152,"name":"c.bin","terminal":"t1","transfer":"8000000000000000"}
+    => err code=-32601 kind=unknown_method message="unknown method \"terminal.put_begin\"" hint=Some("see `hc schema`")
+[B10 chunk 1 MiB + 1] terminal.put_chunk {"data":"AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA…(1398156 bytes)
+    => err code=-32601 kind=unknown_method message="unknown method \"terminal.put_chunk\"" hint=Some("see `hc schema`")
+[B10b chunk 1 MiB] terminal.put_chunk {"data":"AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA…(1398156 bytes)
+    => err code=-32601 kind=unknown_method message="unknown method \"terminal.put_chunk\"" hint=Some("see `hc schema`")
+[B12 bad base64] terminal.put_chunk {"data":"!!notbase64","offset":1048576,"transfer":"8000000000000000"}
+    => err code=-32601 kind=unknown_method message="unknown method \"terminal.put_chunk\"" hint=Some("see `hc schema`")
+[B13 empty data] terminal.put_chunk {"data":"","offset":1048576,"transfer":"8000000000000000"}
+    => err code=-32601 kind=unknown_method message="unknown method \"terminal.put_chunk\"" hint=Some("see `hc schema`")
+[  cleanup] terminal.put_abort {"transfer":"8000000000000000"}
+    => err code=-32601 kind=unknown_method message="unknown method \"terminal.put_abort\"" hint=Some("see `hc schema`")
+
+== D: a whole 8 MiB put in 1 MiB pieces, checked by size and content
+[D1 begin 8 MiB] terminal.put_begin {"bytes":8388608,"name":"full.txt","terminal":"t1","transfer":"9100000000000000"}
+    => err code=-32601 kind=unknown_method message="unknown method \"terminal.put_begin\"" hint=Some("see `hc schema`")
+    [D2 piece 0] => terminal.put_chunk refused by herdr-core: unknown method "terminal.put_chunk" [unknown_method]
+    [D2 piece 1] => terminal.put_chunk refused by herdr-core: unknown method "terminal.put_chunk" [unknown_method]
+    [D2 piece 2] => terminal.put_chunk refused by herdr-core: unknown method "terminal.put_chunk" [unknown_method]
+    [D2 piece 3] => terminal.put_chunk refused by herdr-core: unknown method "terminal.put_chunk" [unknown_method]
+    [D2 piece 4] => terminal.put_chunk refused by herdr-core: unknown method "terminal.put_chunk" [unknown_method]
+    [D2 piece 5] => terminal.put_chunk refused by herdr-core: unknown method "terminal.put_chunk" [unknown_method]
+    [D2 piece 6] => terminal.put_chunk refused by herdr-core: unknown method "terminal.put_chunk" [unknown_method]
+    [D2 piece 7] => terminal.put_chunk refused by herdr-core: unknown method "terminal.put_chunk" [unknown_method]
+    [D2] 0 of 8 pieces accepted
+[D3 finish] terminal.put_finish {"transfer":"9100000000000000"}
+    => err code=-32601 kind=unknown_method message="unknown method \"terminal.put_finish\"" hint=Some("see `hc schema`")
+
+== put_begin over a line (non-framed) connection
+[line] hello framed=false version="0.1.21"
+    [line] <- {"error":{"code":-32601,"data":{"hint":"see `hc schema`","kind":"unknown_method"},"message":"unknown method \"terminal.put_begin\""},"id":1,"jsonrpc":"2.0"}
+    [line] (nothing more within 800ms)
+
+== events.subscribe docs
+[line] hello framed=false version="0.1.21"
+[C1 docs exact] subscribe {"docs":["probe-doc"]}
+    reply <- {"id":1,"jsonrpc":"2.0","result":{"channel":null,"seq":2,"terminals":[{"address":"t1","argv":["sleep","300"],"cols":200,"created_ms":1795503686995,"cwd":"/private/tmp/claude-501/-Users-hiraq-Projects-herdrify/f0ac2647-c3a7-40b0-9077-2ced77e38454/scratchpad/probe-022","die_with_parent":false,"exit_co…(781 bytes)
+[  set] doc.set {"name":"probe-doc","value":{"n":0},"version":0}
+    => ok {"version":1}
+[  set] doc.set {"name":"pre-x","value":1,"version":0}
+    => ok {"version":1}
+[  set] doc.set {"name":"other","value":1,"version":0}
+    => ok {"version":1}
+[  label] terminal.label {"labels":{"k":"13"},"terminal":"t1"}
+    => ok {"address":"t1","argv":["sleep","300"],"cols":200,"created_ms":1795503686995,"cwd":"/private/tmp/claude-501/-Users-hiraq-Projects-herdrify/f0ac2647-c3a7-40b0-9077-2ced77e38454/scratchpad/probe-022","die_with_parent":false,"exit_code":null,"finished_ms":null,"foreground":{"argv":["sleep","300"],"cwd"…(716 bytes)
+    [C1 docs exact] <- {"jsonrpc":"2.0","method":"event","params":{"data":{"name":"probe-doc","version":1},"seq":3,"type":"doc"}}
+    [C1 docs exact] <- {"jsonrpc":"2.0","method":"event","params":{"data":{"name":"pre-x","version":1},"seq":4,"type":"doc"}}
+    [C1 docs exact] <- {"jsonrpc":"2.0","method":"event","params":{"data":{"name":"other","version":1},"seq":5,"type":"doc"}}
+    [C1 docs exact] <- {"jsonrpc":"2.0","method":"event","params":{"data":{"labels":{"k":"13"}},"seq":6,"terminal":"t1","type":"labels"}}
+    [C1 docs exact] (nothing more within 700ms)
+[line] hello framed=false version="0.1.21"
+[C2 docs prefix] subscribe {"docs":["pre*"]}
+    reply <- {"id":1,"jsonrpc":"2.0","result":{"channel":null,"seq":6,"terminals":[{"address":"t1","argv":["sleep","300"],"cols":200,"created_ms":1795503686995,"cwd":"/private/tmp/claude-501/-Users-hiraq-Projects-herdrify/f0ac2647-c3a7-40b0-9077-2ced77e38454/scratchpad/probe-022","die_with_parent":false,"exit_co…(789 bytes)
+[  set] doc.set {"name":"probe-doc","value":{"n":1},"version":1}
+    => ok {"version":2}
+[  set] doc.set {"name":"pre-x","value":1,"version":1}
+    => ok {"version":2}
+[  set] doc.set {"name":"other","value":1,"version":1}
+    => ok {"version":2}
+[  label] terminal.label {"labels":{"k":"14"},"terminal":"t1"}
+    => ok {"address":"t1","argv":["sleep","300"],"cols":200,"created_ms":1795503686995,"cwd":"/private/tmp/claude-501/-Users-hiraq-Projects-herdrify/f0ac2647-c3a7-40b0-9077-2ced77e38454/scratchpad/probe-022","die_with_parent":false,"exit_code":null,"finished_ms":null,"foreground":{"argv":["sleep","300"],"cwd"…(716 bytes)
+    [C2 docs prefix] <- {"jsonrpc":"2.0","method":"event","params":{"data":{"name":"probe-doc","version":2},"seq":7,"type":"doc"}}
+    [C2 docs prefix] <- {"jsonrpc":"2.0","method":"event","params":{"data":{"name":"pre-x","version":2},"seq":8,"type":"doc"}}
+    [C2 docs prefix] <- {"jsonrpc":"2.0","method":"event","params":{"data":{"name":"other","version":2},"seq":9,"type":"doc"}}
+    [C2 docs prefix] <- {"jsonrpc":"2.0","method":"event","params":{"data":{"labels":{"k":"14"}},"seq":10,"terminal":"t1","type":"labels"}}
+    [C2 docs prefix] (nothing more within 700ms)
+[line] hello framed=false version="0.1.21"
+[C3 docs empty array] subscribe {"docs":[]}
+    reply <- {"id":1,"jsonrpc":"2.0","result":{"channel":null,"seq":10,"terminals":[{"address":"t1","argv":["sleep","300"],"cols":200,"created_ms":1795503686995,"cwd":"/private/tmp/claude-501/-Users-hiraq-Projects-herdrify/f0ac2647-c3a7-40b0-9077-2ced77e38454/scratchpad/probe-022","die_with_parent":false,"exit_c…(790 bytes)
+[  set] doc.set {"name":"probe-doc","value":{"n":2},"version":2}
+    => ok {"version":3}
+[  set] doc.set {"name":"pre-x","value":1,"version":2}
+    => ok {"version":3}
+[  set] doc.set {"name":"other","value":1,"version":2}
+    => ok {"version":3}
+[  label] terminal.label {"labels":{"k":"19"},"terminal":"t1"}
+    => ok {"address":"t1","argv":["sleep","300"],"cols":200,"created_ms":1795503686995,"cwd":"/private/tmp/claude-501/-Users-hiraq-Projects-herdrify/f0ac2647-c3a7-40b0-9077-2ced77e38454/scratchpad/probe-022","die_with_parent":false,"exit_code":null,"finished_ms":null,"foreground":{"argv":["sleep","300"],"cwd"…(716 bytes)
+    [C3 docs empty array] <- {"jsonrpc":"2.0","method":"event","params":{"data":{"name":"probe-doc","version":3},"seq":11,"type":"doc"}}
+    [C3 docs empty array] <- {"jsonrpc":"2.0","method":"event","params":{"data":{"name":"pre-x","version":3},"seq":12,"type":"doc"}}
+    [C3 docs empty array] <- {"jsonrpc":"2.0","method":"event","params":{"data":{"name":"other","version":3},"seq":13,"type":"doc"}}
+    [C3 docs empty array] <- {"jsonrpc":"2.0","method":"event","params":{"data":{"labels":{"k":"19"}},"seq":14,"terminal":"t1","type":"labels"}}
+    [C3 docs empty array] (nothing more within 700ms)
+[line] hello framed=false version="0.1.21"
+[C4 no filter] subscribe {}
+    reply <- {"id":1,"jsonrpc":"2.0","result":{"channel":null,"seq":14,"terminals":[{"address":"t1","argv":["sleep","300"],"cols":200,"created_ms":1795503686995,"cwd":"/private/tmp/claude-501/-Users-hiraq-Projects-herdrify/f0ac2647-c3a7-40b0-9077-2ced77e38454/scratchpad/probe-022","die_with_parent":false,"exit_c…(790 bytes)
+[  set] doc.set {"name":"probe-doc","value":{"n":3},"version":3}
+    => ok {"version":4}
+[  set] doc.set {"name":"pre-x","value":1,"version":3}
+    => ok {"version":4}
+[  set] doc.set {"name":"other","value":1,"version":3}
+    => ok {"version":4}
+[  label] terminal.label {"labels":{"k":"12"},"terminal":"t1"}
+    => ok {"address":"t1","argv":["sleep","300"],"cols":200,"created_ms":1795503686995,"cwd":"/private/tmp/claude-501/-Users-hiraq-Projects-herdrify/f0ac2647-c3a7-40b0-9077-2ced77e38454/scratchpad/probe-022","die_with_parent":false,"exit_code":null,"finished_ms":null,"foreground":{"argv":["sleep","300"],"cwd"…(716 bytes)
+    [C4 no filter] <- {"jsonrpc":"2.0","method":"event","params":{"data":{"name":"probe-doc","version":4},"seq":15,"type":"doc"}}
+    [C4 no filter] <- {"jsonrpc":"2.0","method":"event","params":{"data":{"name":"pre-x","version":4},"seq":16,"type":"doc"}}
+    [C4 no filter] <- {"jsonrpc":"2.0","method":"event","params":{"data":{"name":"other","version":4},"seq":17,"type":"doc"}}
+    [C4 no filter] <- {"jsonrpc":"2.0","method":"event","params":{"data":{"labels":{"k":"12"}},"seq":18,"terminal":"t1","type":"labels"}}
+    [C4 no filter] (nothing more within 700ms)
+[line] hello framed=false version="0.1.21"
+[C5 docs + terminal] subscribe {"docs":["probe-doc"],"terminal":"t1"}
+    reply <- {"id":1,"jsonrpc":"2.0","result":{"channel":null,"seq":18,"terminals":[{"address":"t1","argv":["sleep","300"],"cols":200,"created_ms":1795503686995,"cwd":"/private/tmp/claude-501/-Users-hiraq-Projects-herdrify/f0ac2647-c3a7-40b0-9077-2ced77e38454/scratchpad/probe-022","die_with_parent":false,"exit_c…(790 bytes)
+[  set] doc.set {"name":"probe-doc","value":{"n":4},"version":4}
+    => ok {"version":5}
+[  set] doc.set {"name":"pre-x","value":1,"version":4}
+    => ok {"version":5}
+[  set] doc.set {"name":"other","value":1,"version":4}
+    => ok {"version":5}
+[  label] terminal.label {"labels":{"k":"18"},"terminal":"t1"}
+    => ok {"address":"t1","argv":["sleep","300"],"cols":200,"created_ms":1795503686995,"cwd":"/private/tmp/claude-501/-Users-hiraq-Projects-herdrify/f0ac2647-c3a7-40b0-9077-2ced77e38454/scratchpad/probe-022","die_with_parent":false,"exit_code":null,"finished_ms":null,"foreground":{"argv":["sleep","300"],"cwd"…(716 bytes)
+    [C5 docs + terminal] <- {"jsonrpc":"2.0","method":"event","params":{"data":{"labels":{"k":"18"}},"seq":22,"terminal":"t1","type":"labels"}}
+    [C5 docs + terminal] (nothing more within 700ms)
+[line] hello framed=false version="0.1.21"
+[C6 docs star] subscribe {"docs":["*"]}
+    reply <- {"id":1,"jsonrpc":"2.0","result":{"channel":null,"seq":22,"terminals":[{"address":"t1","argv":["sleep","300"],"cols":200,"created_ms":1795503686995,"cwd":"/private/tmp/claude-501/-Users-hiraq-Projects-herdrify/f0ac2647-c3a7-40b0-9077-2ced77e38454/scratchpad/probe-022","die_with_parent":false,"exit_c…(790 bytes)
+[  set] doc.set {"name":"probe-doc","value":{"n":5},"version":5}
+    => ok {"version":6}
+[  set] doc.set {"name":"pre-x","value":1,"version":5}
+    => ok {"version":6}
+[  set] doc.set {"name":"other","value":1,"version":5}
+    => ok {"version":6}
+[  label] terminal.label {"labels":{"k":"12"},"terminal":"t1"}
+    => ok {"address":"t1","argv":["sleep","300"],"cols":200,"created_ms":1795503686995,"cwd":"/private/tmp/claude-501/-Users-hiraq-Projects-herdrify/f0ac2647-c3a7-40b0-9077-2ced77e38454/scratchpad/probe-022","die_with_parent":false,"exit_code":null,"finished_ms":null,"foreground":{"argv":["sleep","300"],"cwd"…(716 bytes)
+    [C6 docs star] <- {"jsonrpc":"2.0","method":"event","params":{"data":{"name":"probe-doc","version":6},"seq":23,"type":"doc"}}
+    [C6 docs star] <- {"jsonrpc":"2.0","method":"event","params":{"data":{"name":"pre-x","version":6},"seq":24,"type":"doc"}}
+    [C6 docs star] <- {"jsonrpc":"2.0","method":"event","params":{"data":{"name":"other","version":6},"seq":25,"type":"doc"}}
+    [C6 docs star] <- {"jsonrpc":"2.0","method":"event","params":{"data":{"labels":{"k":"12"}},"seq":26,"terminal":"t1","type":"labels"}}
+    [C6 docs star] (nothing more within 700ms)
+[line] hello framed=false version="0.1.21"
+[C7 docs empty string] subscribe {"docs":[""]}
+    reply <- {"id":1,"jsonrpc":"2.0","result":{"channel":null,"seq":26,"terminals":[{"address":"t1","argv":["sleep","300"],"cols":200,"created_ms":1795503686995,"cwd":"/private/tmp/claude-501/-Users-hiraq-Projects-herdrify/f0ac2647-c3a7-40b0-9077-2ced77e38454/scratchpad/probe-022","die_with_parent":false,"exit_c…(790 bytes)
+[  set] doc.set {"name":"probe-doc","value":{"n":6},"version":6}
+    => ok {"version":7}
+[  set] doc.set {"name":"pre-x","value":1,"version":6}
+    => ok {"version":7}
+[  set] doc.set {"name":"other","value":1,"version":6}
+    => ok {"version":7}
+[  label] terminal.label {"labels":{"k":"20"},"terminal":"t1"}
+    => ok {"address":"t1","argv":["sleep","300"],"cols":200,"created_ms":1795503686995,"cwd":"/private/tmp/claude-501/-Users-hiraq-Projects-herdrify/f0ac2647-c3a7-40b0-9077-2ced77e38454/scratchpad/probe-022","die_with_parent":false,"exit_code":null,"finished_ms":null,"foreground":{"argv":["sleep","300"],"cwd"…(716 bytes)
+    [C7 docs empty string] <- {"jsonrpc":"2.0","method":"event","params":{"data":{"name":"probe-doc","version":7},"seq":27,"type":"doc"}}
+    [C7 docs empty string] <- {"jsonrpc":"2.0","method":"event","params":{"data":{"name":"pre-x","version":7},"seq":28,"type":"doc"}}
+    [C7 docs empty string] <- {"jsonrpc":"2.0","method":"event","params":{"data":{"name":"other","version":7},"seq":29,"type":"doc"}}
+    [C7 docs empty string] <- {"jsonrpc":"2.0","method":"event","params":{"data":{"labels":{"k":"20"}},"seq":30,"terminal":"t1","type":"labels"}}
+    [C7 docs empty string] (nothing more within 700ms)
+[line] hello framed=false version="0.1.21"
+[C8 docs duplicate] subscribe {"docs":["probe-doc","probe-doc"]}
+    reply <- {"id":1,"jsonrpc":"2.0","result":{"channel":null,"seq":30,"terminals":[{"address":"t1","argv":["sleep","300"],"cols":200,"created_ms":1795503686995,"cwd":"/private/tmp/claude-501/-Users-hiraq-Projects-herdrify/f0ac2647-c3a7-40b0-9077-2ced77e38454/scratchpad/probe-022","die_with_parent":false,"exit_c…(790 bytes)
+[  set] doc.set {"name":"probe-doc","value":{"n":7},"version":7}
+    => ok {"version":8}
+[  set] doc.set {"name":"pre-x","value":1,"version":7}
+    => ok {"version":8}
+[  set] doc.set {"name":"other","value":1,"version":7}
+    => ok {"version":8}
+[  label] terminal.label {"labels":{"k":"17"},"terminal":"t1"}
+    => ok {"address":"t1","argv":["sleep","300"],"cols":200,"created_ms":1795503686995,"cwd":"/private/tmp/claude-501/-Users-hiraq-Projects-herdrify/f0ac2647-c3a7-40b0-9077-2ced77e38454/scratchpad/probe-022","die_with_parent":false,"exit_code":null,"finished_ms":null,"foreground":{"argv":["sleep","300"],"cwd"…(716 bytes)
+    [C8 docs duplicate] <- {"jsonrpc":"2.0","method":"event","params":{"data":{"name":"probe-doc","version":8},"seq":31,"type":"doc"}}
+    [C8 docs duplicate] <- {"jsonrpc":"2.0","method":"event","params":{"data":{"name":"pre-x","version":8},"seq":32,"type":"doc"}}
+    [C8 docs duplicate] <- {"jsonrpc":"2.0","method":"event","params":{"data":{"name":"other","version":8},"seq":33,"type":"doc"}}
+    [C8 docs duplicate] <- {"jsonrpc":"2.0","method":"event","params":{"data":{"labels":{"k":"17"}},"seq":34,"terminal":"t1","type":"labels"}}
+    [C8 docs duplicate] (nothing more within 700ms)
+
+== teardown
+[teardown] terminal.kill {"terminal":"t1"}
+    => ok {"address":"t1","argv":["sleep","300"],"cols":200,"created_ms":1795503686995,"cwd":"/private/tmp/claude-501/-Users-hiraq-Projects-herdrify/f0ac2647-c3a7-40b0-9077-2ced77e38454/scratchpad/probe-022","die_with_parent":false,"exit_code":null,"finished_ms":1795503694517,"identity":"ghostty","keep":false…(544 bytes)
+[teardown] server.stop {}
+    => ok {"stopped":true}
+removed /tmp/hfp28392

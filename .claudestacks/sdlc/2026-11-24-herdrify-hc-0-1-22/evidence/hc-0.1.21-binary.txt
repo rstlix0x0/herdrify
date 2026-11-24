@@ -1,0 +1,7 @@
+$ curl -fsSL https://releases.herdr.dev/core/0.1.21/manifest.json   # macos-aarch64 entry
+"0.1.21"
+{"url":"https://releases.herdr.dev/core/0.1.21/herdr-core-macos-aarch64.tar.gz","sha256":"1ab38dd9270f63a8f794d6d60e8702eb0d1c85a72bda85d735e5eea43f05ffed"}
+$ shasum -a 256 herdr-core-macos-aarch64.tar.gz
+1ab38dd9270f63a8f794d6d60e8702eb0d1c85a72bda85d735e5eea43f05ffed
+$ hc --version   # the extracted release, run from a scratch dir (not installed)
+hc 0.1.21

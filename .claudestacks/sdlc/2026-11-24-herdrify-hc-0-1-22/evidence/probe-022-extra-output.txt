@@ -1,0 +1,102 @@
+$ cargo +1.94 run -- extra (rustc 1.94.1)   # evidence/probe-022, extra sections; hc 0.1.22, isolated session
+== hello
+version=0.1.22 framed=true generation=Generation(1)
+features=["framed", "attach", "events", "status", "shell", "resize_notifications", "automatic_input", "restart_environment", "put_chunks"]
+methods(36)=["hello", "server.status", "server.stop", "server.restart", "terminal.run", "templates.list", "terminal.list", "terminal.get", "terminal.kill", "terminal.rm", "terminal.keep", "terminal.label", "terminal.read", "terminal.attach", "terminal.send", "terminal.wait", "terminal.keys", "terminal.interrupt", "terminal.put", "terminal.put_begin", "terminal.put_chunk", "terminal.put_finish", "terminal.put_abort", "machine.exec", "file.read", "file.write", "file.edit", "doc.get", "doc.set", "events.subscribe", "machine.add", "machine.list", "machine.connect", "machine.rename", "machine.rm", "rpc.discover"]
+
+== error decode (SDK RpcError) of the 0.1.22 doc.set internal entry
+code=-32603 kind=Internal display=internal [internal]
+[setup] terminal.run {"argv":["sleep","300"],"no_parent":true}
+    => ok {"address":"t1","argv":["sleep","300"],"cols":200,"created_ms":1795505641198,"cwd":"/private/tmp/claude-501/-Users-hiraq-Projects-herdrify/f0ac2647-c3a7-40b0-9077-2ced77e38454/scratchpad/probe-022","die_with_parent":false,"exit_code":null,"finished_ms":null,"identity":"ghostty","keep":false,"labels"…(522 bytes)
+terminal=t1
+
+== E: remote and ended terminals
+[E1 put_begin unknown machine] terminal.put_begin {"bytes":1,"name":"r.txt","terminal":"nowhere/t1","transfer":"e100000000000000"}
+    => err code=-32000 kind=machine_unknown message="unknown machine \"nowhere\"" hint=Some("this core only runs local terminals; use an address like t7")
+[E1b terminal.put unknown machine (control)] terminal.put {"data":"eA==","name":"r.txt","terminal":"nowhere/t1"}
+    => err code=-32000 kind=machine_unknown message="unknown machine \"nowhere\"" hint=Some("no machines yet: hc machine add <ssh-target>")
+[E1c put_begin local machine name] terminal.put_begin {"bytes":1,"name":"r.txt","terminal":"local/t1","transfer":"e1c0000000000000"}
+    => err code=-32000 kind=machine_unknown message="unknown machine \"local\"" hint=Some("this core only runs local terminals; use an address like t7")
+[  cleanup] terminal.put_abort {"transfer":"e1c0000000000000"}
+    => ok {}
+[E2 setup: a program that ends] terminal.run {"argv":["true"],"no_parent":true,"wait":true}
+    => ok {"address":"t2","argv":["true"],"cols":200,"created_ms":1795505641228,"cwd":"/private/tmp/claude-501/-Users-hiraq-Projects-herdrify/f0ac2647-c3a7-40b0-9077-2ced77e38454/scratchpad/probe-022","die_with_parent":false,"exit_code":null,"finished_ms":null,"identity":"ghostty","keep":false,"labels":{},"na…(646 bytes)
+[E2 the ended terminal] terminal.get {"terminal":"t2"}
+    => ok {"address":"t2","argv":["true"],"cols":200,"created_ms":1795505641228,"cwd":"/private/tmp/claude-501/-Users-hiraq-Projects-herdrify/f0ac2647-c3a7-40b0-9077-2ced77e38454/scratchpad/probe-022","die_with_parent":false,"exit_code":0,"finished_ms":1795505641232,"identity":"ghostty","keep":false,"labels":…(529 bytes)
+[E2 put_begin on an ended terminal] terminal.put_begin {"bytes":1,"name":"f.txt","terminal":"t2","transfer":"e200000000000000"}
+    => err code=-32000 kind=finished message="t2 has finished" hint=Some("nothing there to read it")
+[E2b terminal.put on an ended terminal (control)] terminal.put {"data":"eA==","name":"f.txt","terminal":"t2"}
+    => err code=-32000 kind=finished message="t2 has finished" hint=Some("nothing there to read it")
+[  cleanup] terminal.put_abort {"transfer":"e200000000000000"}
+    => ok {}
+[E3 setup] terminal.run {"argv":["sleep","300"],"no_parent":true}
+    => ok {"address":"t3","argv":["sleep","300"],"cols":200,"created_ms":1795505641254,"cwd":"/private/tmp/claude-501/-Users-hiraq-Projects-herdrify/f0ac2647-c3a7-40b0-9077-2ced77e38454/scratchpad/probe-022","die_with_parent":false,"exit_code":null,"finished_ms":null,"identity":"ghostty","keep":false,"labels"…(522 bytes)
+[E3 begin 4 bytes] terminal.put_begin {"bytes":4,"name":"m.txt","terminal":"t3","transfer":"e300000000000000"}
+    => ok {"transfer":"e300000000000000"}
+[E3 piece 1] terminal.put_chunk {"data":"YWI=","offset":0,"transfer":"e300000000000000"}
+    => ok {"bytes":2}
+[E3 kill the terminal mid-put] terminal.kill {"terminal":"t3"}
+    => ok {"address":"t3","argv":["sleep","300"],"cols":200,"created_ms":1795505641254,"cwd":"/private/tmp/claude-501/-Users-hiraq-Projects-herdrify/f0ac2647-c3a7-40b0-9077-2ced77e38454/scratchpad/probe-022","die_with_parent":false,"exit_code":null,"finished_ms":1795505641272,"identity":"ghostty","keep":false…(536 bytes)
+[E3 piece 2 after the kill] terminal.put_chunk {"data":"Y2Q=","offset":2,"transfer":"e300000000000000"}
+    => err code=-32000 kind=finished message="t3 has finished" hint=Some("nothing there to read it")
+[E3 finish after the kill] terminal.put_finish {"transfer":"e300000000000000"}
+    => err code=-32000 kind=not_found message="no put e300000000000000 here" hint=Some("it was aborted, or its terminal or connection went")
+[E3 abort after the kill] terminal.put_abort {"transfer":"e300000000000000"}
+    => ok {}
+[E4 setup] terminal.run {"argv":["true"],"no_parent":true,"wait":true}
+    => ok {"address":"t4","argv":["true"],"cols":200,"created_ms":1795505641787,"cwd":"/private/tmp/claude-501/-Users-hiraq-Projects-herdrify/f0ac2647-c3a7-40b0-9077-2ced77e38454/scratchpad/probe-022","die_with_parent":false,"exit_code":null,"finished_ms":null,"identity":"ghostty","keep":false,"labels":{},"na…(646 bytes)
+[E4 begin on a finished terminal, then rm it] terminal.put_begin {"bytes":1,"name":"g.txt","terminal":"t4","transfer":"e400000000000000"}
+    => err code=-32000 kind=finished message="t4 has finished" hint=Some("nothing there to read it")
+[E4 rm] terminal.rm {"terminal":"t4"}
+    => ok {"removed":"t4"}
+[E4 piece after rm] terminal.put_chunk {"data":"eg==","offset":0,"transfer":"e400000000000000"}
+    => err code=-32000 kind=not_found message="no put e400000000000000 here" hint=Some("it was aborted, or its terminal or connection went")
+
+== C9/C10: docs with labels or children_of (line connection)
+[C9 setup label] terminal.label {"labels":{"team":"a"},"terminal":"t1"}
+    => ok {"address":"t1","argv":["sleep","300"],"cols":200,"created_ms":1795505641198,"cwd":"/private/tmp/claude-501/-Users-hiraq-Projects-herdrify/f0ac2647-c3a7-40b0-9077-2ced77e38454/scratchpad/probe-022","die_with_parent":false,"exit_code":null,"finished_ms":null,"foreground":{"argv":["sleep","300"],"cwd"…(718 bytes)
+[C10 setup child] terminal.run {"argv":["sleep","300"],"parent":"t1"}
+    => ok {"address":"t5","argv":["sleep","300"],"cols":200,"created_ms":1795505641816,"cwd":"/private/tmp/claude-501/-Users-hiraq-Projects-herdrify/f0ac2647-c3a7-40b0-9077-2ced77e38454/scratchpad/probe-022","die_with_parent":true,"exit_code":null,"finished_ms":null,"identity":"ghostty","keep":false,"labels":…(521 bytes)
+[line] hello framed=false version="0.1.22"
+[C9 docs + labels] subscribe {"docs":["probe-doc"],"labels":{"team":"a"}}
+    reply snapshot terminals = ["t1"]
+[  set probe-doc] doc.set {"name":"probe-doc","value":100,"version":0}
+    => ok {"version":1}
+[  set other] doc.set {"name":"other-101","value":1,"version":0}
+    => ok {"version":1}
+[  label the labelled terminal] terminal.label {"labels":{"n":"101"},"terminal":"t1"}
+    => ok {"address":"t1","argv":["sleep","300"],"cols":200,"created_ms":1795505641198,"cwd":"/private/tmp/claude-501/-Users-hiraq-Projects-herdrify/f0ac2647-c3a7-40b0-9077-2ced77e38454/scratchpad/probe-022","die_with_parent":false,"exit_code":null,"finished_ms":null,"foreground":{"argv":["sleep","300"],"cwd"…(728 bytes)
+[  label the child] terminal.label {"labels":{"n":"101"},"terminal":"t5"}
+    => ok {"address":"t5","argv":["sleep","300"],"cols":200,"created_ms":1795505641816,"cwd":"/private/tmp/claude-501/-Users-hiraq-Projects-herdrify/f0ac2647-c3a7-40b0-9077-2ced77e38454/scratchpad/probe-022","die_with_parent":true,"exit_code":null,"finished_ms":null,"foreground":{"argv":["sleep","300"],"cwd":…(716 bytes)
+    [C9 docs + labels] <- {"jsonrpc":"2.0","method":"event","params":{"data":{"name":"probe-doc","version":1},"seq":12,"type":"doc"}}
+    [C9 docs + labels] <- {"jsonrpc":"2.0","method":"event","params":{"data":{"labels":{"n":"101","team":"a"}},"seq":15,"terminal":"t1","type":"labels"}}
+    [C9 docs + labels] (nothing more within 700ms)
+[line] hello framed=false version="0.1.22"
+[C10 docs + children_of] subscribe {"children_of":"t1","docs":["probe-doc"]}
+    reply snapshot terminals = ["t5"]
+[  set probe-doc] doc.set {"name":"probe-doc","value":101,"version":0}
+    => err code=-32000 kind=conflict message="document \"probe-doc\" is at version 1, not 0" hint=Some("read doc.get and retry with its version")
+[  get probe-doc] doc.get {"name":"probe-doc"}
+    => ok {"value":100,"version":1}
+[  set probe-doc] doc.set {"name":"probe-doc","value":101,"version":1}
+    => ok {"version":2}
+[  set other] doc.set {"name":"other-102","value":1,"version":0}
+    => ok {"version":1}
+[  label the labelled terminal] terminal.label {"labels":{"n":"102"},"terminal":"t1"}
+    => ok {"address":"t1","argv":["sleep","300"],"cols":200,"created_ms":1795505641198,"cwd":"/private/tmp/claude-501/-Users-hiraq-Projects-herdrify/f0ac2647-c3a7-40b0-9077-2ced77e38454/scratchpad/probe-022","die_with_parent":false,"exit_code":null,"finished_ms":null,"foreground":{"argv":["sleep","300"],"cwd"…(728 bytes)
+[  label the child] terminal.label {"labels":{"n":"102"},"terminal":"t5"}
+    => ok {"address":"t5","argv":["sleep","300"],"cols":200,"created_ms":1795505641816,"cwd":"/private/tmp/claude-501/-Users-hiraq-Projects-herdrify/f0ac2647-c3a7-40b0-9077-2ced77e38454/scratchpad/probe-022","die_with_parent":true,"exit_code":null,"finished_ms":null,"foreground":{"argv":["sleep","300"],"cwd":…(716 bytes)
+    [C10 docs + children_of] <- {"jsonrpc":"2.0","method":"event","params":{"data":{"name":"probe-doc","version":2},"seq":17,"type":"doc"}}
+    [C10 docs + children_of] <- {"jsonrpc":"2.0","method":"event","params":{"data":{"labels":{"n":"102"}},"seq":20,"terminal":"t5","type":"labels"}}
+    [C10 docs + children_of] (nothing more within 700ms)
+[  cleanup child] terminal.kill {"terminal":"t5"}
+    => ok {"address":"t5","argv":["sleep","300"],"cols":200,"created_ms":1795505641816,"cwd":"/private/tmp/claude-501/-Users-hiraq-Projects-herdrify/f0ac2647-c3a7-40b0-9077-2ced77e38454/scratchpad/probe-022","die_with_parent":true,"exit_code":null,"finished_ms":1795505643353,"identity":"ghostty","keep":false,…(544 bytes)
+[  cleanup E3] terminal.rm {"terminal":"t3"}
+    => ok {"removed":"t3"}
+
+== teardown
+[teardown] terminal.kill {"terminal":"t1"}
+    => ok {"address":"t1","argv":["sleep","300"],"cols":200,"created_ms":1795505641198,"cwd":"/private/tmp/claude-501/-Users-hiraq-Projects-herdrify/f0ac2647-c3a7-40b0-9077-2ced77e38454/scratchpad/probe-022","die_with_parent":false,"exit_code":null,"finished_ms":1795505643375,"identity":"ghostty","keep":false…(556 bytes)
+[teardown] server.stop {}
+    => ok {"stopped":true}
+removed /tmp/hfp25042

@@ -1,0 +1,19 @@
+$ airsl --version
+airsl 0.1.5
+$ for f in <the airsl files ADR 0008 cites>; do cmp airsl-0.1.4/$f airsl-0.1.5/$f; done   # cargo registry sources
+identical  src/sandbox/grant_set.rs
+identical  src/sandbox/grants.rs
+identical  src/modules/registry.rs
+identical  src/builder.rs
+identical  src/extension/manifest.rs
+identical  src/extension/ceiling.rs
+identical  src/extension/negotiate.rs
+identical  src/extension/approver.rs
+$ herdr-app --version
+herdr-app 0.1.17
+$ jq -r ".. | objects | .name? // empty" crates/herdrify-app/tests/fixtures/herdr-app-0.1.17-commands.json | grep -x terminal.open
+terminal.open
+$ jq -c ".methods[] | select(.name==\"events.subscribe\") | [.params[].name]" hc-0.1.22-schema.json
+["children_of","docs","labels","terminal"]
+$ jq -c ".methods[] | select(.name==\"terminal.run\")" <0.1.21 schema> == <0.1.22 schema>
+terminal.run identical

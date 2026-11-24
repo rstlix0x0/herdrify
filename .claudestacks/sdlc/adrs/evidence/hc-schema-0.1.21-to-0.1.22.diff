@@ -1,0 +1,444 @@
+$ diff -U2 <(jq -S . tests/fixtures/hc-0.1.21.openrpc.json) <(hc schema | jq -S .)   # hc 0.1.22, isolated HC_SESSION and XDG dirs
+--- hc-0.1.21.openrpc.json
++++ hc 0.1.22 schema
+@@ -140,4 +140,7 @@
+         "type": "object"
+       },
++      "Empty": {
++        "type": "object"
++      },
+       "ExecResult": {
+         "properties": {
+@@ -682,4 +685,30 @@
+           "version",
+           "state"
++        ],
++        "type": "object"
++      },
++      "PutBeginResult": {
++        "properties": {
++          "transfer": {
++            "description": "The transfer, as begun.",
++            "type": "string"
++          }
++        },
++        "required": [
++          "transfer"
++        ],
++        "type": "object"
++      },
++      "PutPieceResult": {
++        "properties": {
++          "bytes": {
++            "description": "Bytes received so far.",
++            "format": "uint",
++            "minimum": 0,
++            "type": "integer"
++          }
++        },
++        "required": [
++          "bytes"
+         ],
+         "type": "object"
+@@ -1532,5 +1561,5 @@
+     },
+     "title": "herdr-core",
+-    "version": "0.1.21"
++    "version": "0.1.22"
+   },
+   "methods": [
+@@ -2098,4 +2127,11 @@
+           },
+           "message": "machine_unknown"
++        },
++        {
++          "code": -32000,
++          "data": {
++            "kind": "unavailable"
++          },
++          "message": "unavailable"
+         }
+       ],
+@@ -2155,4 +2191,11 @@
+           },
+           "message": "live"
++        },
++        {
++          "code": -32000,
++          "data": {
++            "kind": "unavailable"
++          },
++          "message": "unavailable"
+         }
+       ],
+@@ -2205,4 +2248,11 @@
+           },
+           "message": "invalid_params"
++        },
++        {
++          "code": -32000,
++          "data": {
++            "kind": "unavailable"
++          },
++          "message": "unavailable"
+         }
+       ],
+@@ -2259,4 +2309,11 @@
+           },
+           "message": "invalid_params"
++        },
++        {
++          "code": -32000,
++          "data": {
++            "kind": "unavailable"
++          },
++          "message": "unavailable"
+         }
+       ],
+@@ -2698,4 +2755,11 @@
+           },
+           "message": "config"
++        },
++        {
++          "code": -32000,
++          "data": {
++            "kind": "unavailable"
++          },
++          "message": "unavailable"
+         }
+       ],
+@@ -2930,5 +2994,5 @@
+     },
+     {
+-      "description": "Write bytes to a file beside a live terminal, on its machine, for its program to read (a pasted image). Lands in a folder of its own, removed with the terminal; the name is kept (a suffix when taken). Types nothing: paste the path yourself.",
++      "description": "Write bytes to a file beside a live terminal, on its machine, for its program to read (a pasted image). Lands in a folder of its own, removed with the terminal; the name is kept (a suffix when taken). On a direct route with chunk support, the timeout applies to each piece. A core sending the whole file to a relay applies its machine timeout to that call. Types nothing: paste the path yourself.",
+       "errors": [
+         {
+@@ -2959,4 +3023,18 @@
+           },
+           "message": "invalid_params"
++        },
++        {
++          "code": -32000,
++          "data": {
++            "kind": "unavailable"
++          },
++          "message": "unavailable"
++        },
++        {
++          "code": -32603,
++          "data": {
++            "kind": "internal"
++          },
++          "message": "internal"
+         }
+       ],
+@@ -3000,4 +3078,276 @@
+     },
+     {
++      "description": "Between cores: begin a put that comes in pieces, so a big file never holds up a line. The file appears only once finished.",
++      "errors": [
++        {
++          "code": -32000,
++          "data": {
++            "kind": "not_found"
++          },
++          "message": "not_found"
++        },
++        {
++          "code": -32000,
++          "data": {
++            "kind": "finished"
++          },
++          "message": "finished"
++        },
++        {
++          "code": -32602,
++          "data": {
++            "kind": "invalid_params"
++          },
++          "message": "invalid_params"
++        },
++        {
++          "code": -32000,
++          "data": {
++            "kind": "unavailable"
++          },
++          "message": "unavailable"
++        },
++        {
++          "code": -32603,
++          "data": {
++            "kind": "internal"
++          },
++          "message": "internal"
++        },
++        {
++          "code": -32000,
++          "data": {
++            "kind": "needs_framed"
++          },
++          "message": "needs_framed"
++        }
++      ],
++      "name": "terminal.put_begin",
++      "paramStructure": "by-name",
++      "params": [
++        {
++          "description": "Its whole size in raw bytes; at most 8 MB.",
++          "name": "bytes",
++          "required": true,
++          "schema": {
++            "description": "Its whole size in raw bytes; at most 8 MB.",
++            "format": "uint",
++            "minimum": 0,
++            "type": "integer"
++          }
++        },
++        {
++          "description": "The file's name, as for terminal.put.",
++          "name": "name",
++          "required": true,
++          "schema": {
++            "description": "The file's name, as for terminal.put.",
++            "type": "string"
++          }
++        },
++        {
++          "description": "The terminal: `t7` or a name, on this core.",
++          "name": "terminal",
++          "required": true,
++          "schema": {
++            "description": "The terminal: `t7` or a name, on this core.",
++            "type": "string"
++          }
++        },
++        {
++          "description": "Names this transfer in its pieces: 16 to 64 hex digits the sender picks.",
++          "name": "transfer",
++          "required": true,
++          "schema": {
++            "description": "Names this transfer in its pieces: 16 to 64 hex digits the sender picks.",
++            "type": "string"
++          }
++        }
++      ],
++      "result": {
++        "name": "result",
++        "schema": {
++          "$ref": "#/components/schemas/PutBeginResult"
++        }
++      }
++    },
++    {
++      "description": "Between cores: the next piece of a put, at exactly the offset received so far. Answers once written.",
++      "errors": [
++        {
++          "code": -32000,
++          "data": {
++            "kind": "not_found"
++          },
++          "message": "not_found"
++        },
++        {
++          "code": -32000,
++          "data": {
++            "kind": "finished"
++          },
++          "message": "finished"
++        },
++        {
++          "code": -32602,
++          "data": {
++            "kind": "invalid_params"
++          },
++          "message": "invalid_params"
++        },
++        {
++          "code": -32603,
++          "data": {
++            "kind": "internal"
++          },
++          "message": "internal"
++        },
++        {
++          "code": -32000,
++          "data": {
++            "kind": "needs_framed"
++          },
++          "message": "needs_framed"
++        }
++      ],
++      "name": "terminal.put_chunk",
++      "paramStructure": "by-name",
++      "params": [
++        {
++          "description": "The bytes, base64; at most 1 MB raw.",
++          "name": "data",
++          "required": true,
++          "schema": {
++            "description": "The bytes, base64; at most 1 MB raw.",
++            "type": "string"
++          }
++        },
++        {
++          "description": "Where these bytes start: exactly the bytes received so far.",
++          "name": "offset",
++          "required": true,
++          "schema": {
++            "description": "Where these bytes start: exactly the bytes received so far.",
++            "format": "uint",
++            "minimum": 0,
++            "type": "integer"
++          }
++        },
++        {
++          "name": "transfer",
++          "required": true,
++          "schema": {
++            "type": "string"
++          }
++        }
++      ],
++      "result": {
++        "name": "result",
++        "schema": {
++          "$ref": "#/components/schemas/PutPieceResult"
++        }
++      }
++    },
++    {
++      "description": "Between cores: the put is whole: the file lands as terminal.put lands it, never replacing another.",
++      "errors": [
++        {
++          "code": -32000,
++          "data": {
++            "kind": "not_found"
++          },
++          "message": "not_found"
++        },
++        {
++          "code": -32000,
++          "data": {
++            "kind": "finished"
++          },
++          "message": "finished"
++        },
++        {
++          "code": -32602,
++          "data": {
++            "kind": "invalid_params"
++          },
++          "message": "invalid_params"
++        },
++        {
++          "code": -32603,
++          "data": {
++            "kind": "internal"
++          },
++          "message": "internal"
++        },
++        {
++          "code": -32000,
++          "data": {
++            "kind": "needs_framed"
++          },
++          "message": "needs_framed"
++        }
++      ],
++      "name": "terminal.put_finish",
++      "paramStructure": "by-name",
++      "params": [
++        {
++          "name": "transfer",
++          "required": true,
++          "schema": {
++            "type": "string"
++          }
++        }
++      ],
++      "result": {
++        "name": "result",
++        "schema": {
++          "$ref": "#/components/schemas/PutResult"
++        }
++      }
++    },
++    {
++      "description": "Between cores: give up a put; what came is removed. Also happens when its connection or terminal goes.",
++      "errors": [
++        {
++          "code": -32602,
++          "data": {
++            "kind": "invalid_params"
++          },
++          "message": "invalid_params"
++        },
++        {
++          "code": -32000,
++          "data": {
++            "kind": "unavailable"
++          },
++          "message": "unavailable"
++        },
++        {
++          "code": -32000,
++          "data": {
++            "kind": "needs_framed"
++          },
++          "message": "needs_framed"
++        }
++      ],
++      "name": "terminal.put_abort",
++      "paramStructure": "by-name",
++      "params": [
++        {
++          "name": "transfer",
++          "required": true,
++          "schema": {
++            "type": "string"
++          }
++        }
++      ],
++      "result": {
++        "name": "result",
++        "schema": {
++          "$ref": "#/components/schemas/Empty"
++        }
++      }
++    },
++    {
+       "description": "Run one program here or on a machine (`on`) without a terminal; return its exit code and exactly what it wrote (base64). `argv` runs as given, `line` in that machine's shell. Everything it started ends with it: at its exit, at `timeout` (default 60 s), or when the caller goes away. A nonzero exit or a timeout is a result, not an error.",
+       "errors": [
+@@ -3550,5 +3900,5 @@
+         },
+         {
+-          "code": -32000,
++          "code": -32603,
+           "data": {
+             "kind": "internal"
+@@ -3626,5 +3976,5 @@
+     },
+     {
+-      "description": "Snapshot of matching terminals, then every fact change in order (created, lost, restarted, keep, finished, removed, status, turn, title, labels, size, doc) as `event` notifications, `heartbeat` every 15 s, and `missed` + fresh snapshot for a subscriber that fell behind.",
++      "description": "Snapshot of matching terminals, then every matching fact change in order (created, lost, restarted, keep, finished, removed, status, turn, title, labels, size, doc) as `event` notifications, `heartbeat` every 15 s, and `missed` + fresh snapshot for a subscriber that fell behind. Document-only subscriptions receive empty terminal snapshots.",
+       "errors": [
+         {
+@@ -3656,4 +4006,17 @@
+               "null"
+             ]
++          }
++        },
++        {
++          "description": "Documents by name (repeatable); a name ending in `*` is a prefix. Naming\nnarrows, so documents alone hear only them — name a terminal for both.",
++          "name": "docs",
++          "required": false,
++          "schema": {
++            "default": [],
++            "description": "Documents by name (repeatable); a name ending in `*` is a prefix. Naming\nnarrows, so documents alone hear only them — name a terminal for both.",
++            "items": {
++              "type": "string"
++            },
++            "type": "array"
+           }
+         },

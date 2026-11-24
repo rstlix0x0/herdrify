@@ -1,5 +1,5 @@
 ---
-status: approved
+status: superseded
 created: 2026-11-22
 sealed: b33ca3358102
 ---
