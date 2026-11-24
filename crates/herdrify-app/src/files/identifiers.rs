@@ -17,10 +17,6 @@
 //!   herdr-app decides, and a whitespace-only value is accepted here
 //! - deciding where a name is used, which the file shapes do
 
-use std::fmt;
-use std::str::FromStr;
-
-use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
 /// The refusal of an empty name.
@@ -42,10 +38,24 @@ pub struct EmptyValueError {
 }
 
 /// Defines a name newtype that refuses the empty string and nothing else.
+///
+/// `$module` is the public module the type is exported from, which its doctest imports it by, and
+/// `$example` is the value that doctest wraps. Every path the expansion names is absolute, so the
+/// caller needs no imports for it.
 macro_rules! name {
-    ($(#[$meta:meta])* $name:ident, $label:literal) => {
+    ($module:literal, $(#[$meta:meta])* $name:ident, $label:literal, $example:literal) => {
         $(#[$meta])*
-        #[derive(Debug, Clone, PartialEq, Eq, Hash, PartialOrd, Ord, Serialize, Deserialize)]
+        #[derive(
+            Debug,
+            Clone,
+            PartialEq,
+            Eq,
+            Hash,
+            PartialOrd,
+            Ord,
+            ::serde::Serialize,
+            ::serde::Deserialize,
+        )]
         #[serde(try_from = "String", into = "String")]
         pub struct $name(String);
 
@@ -59,18 +69,18 @@ macro_rules! name {
             /// # Examples
             ///
             /// ```
-            #[doc = concat!("# use herdrify_app::files::{EmptyValueError, ", stringify!($name), "};")]
+            #[doc = concat!("# use herdrify_app::{files::EmptyValueError, ", $module, "::", stringify!($name), "};")]
             /// # fn main() -> Result<(), EmptyValueError> {
-            #[doc = concat!("let value = ", stringify!($name), "::new(\"herdrify-host\")?;")]
-            /// assert_eq!(value.as_str(), "herdrify-host");
+            #[doc = concat!("let value = ", stringify!($name), "::new(\"", $example, "\")?;")]
+            #[doc = concat!("assert_eq!(value.as_str(), \"", $example, "\");")]
             #[doc = concat!("assert!(", stringify!($name), "::new(\"\").is_err());")]
             /// # Ok(())
             /// # }
             /// ```
-            pub fn new(value: impl Into<String>) -> Result<Self, EmptyValueError> {
+            pub fn new(value: impl Into<String>) -> Result<Self, $crate::files::EmptyValueError> {
                 let value = value.into();
                 if value.is_empty() {
-                    Err(EmptyValueError { label: $label })
+                    Err($crate::files::EmptyValueError { label: $label })
                 } else {
                     Ok(Self(value))
                 }
@@ -84,7 +94,7 @@ macro_rules! name {
         }
 
         impl TryFrom<String> for $name {
-            type Error = EmptyValueError;
+            type Error = $crate::files::EmptyValueError;
 
             fn try_from(value: String) -> Result<Self, Self::Error> {
                 Self::new(value)
@@ -97,80 +107,94 @@ macro_rules! name {
             }
         }
 
-        impl FromStr for $name {
-            type Err = EmptyValueError;
+        impl ::core::str::FromStr for $name {
+            type Err = $crate::files::EmptyValueError;
 
             fn from_str(value: &str) -> Result<Self, Self::Err> {
                 Self::new(value)
             }
         }
 
-        impl fmt::Display for $name {
-            fn fmt(&self, formatter: &mut fmt::Formatter<'_>) -> fmt::Result {
+        impl ::core::fmt::Display for $name {
+            fn fmt(&self, formatter: &mut ::core::fmt::Formatter<'_>) -> ::core::fmt::Result {
                 formatter.write_str(&self.0)
             }
         }
     };
 }
 
+pub(crate) use name;
+
 name! {
+    "files",
     /// The identifier of a node in a layout.
     ///
     /// Only the empty string is refused.
-    NodeId, "node id"
+    NodeId, "node id", "root"
 }
 
 name! {
+    "files",
     /// The name of a herdr-app mod.
     ///
     /// Only the empty string is refused. herdr-app decides which mods exist.
-    ModName, "mod name"
+    ModName, "mod name", "herdrify-host"
 }
 
 name! {
+    "files",
     /// The name of a layout.
     ///
     /// Only the empty string is refused.
-    LayoutName, "layout name"
+    LayoutName, "layout name", "main"
 }
 
 name! {
+    "files",
     /// The name of a theme.
     ///
     /// Only the empty string is refused.
-    ThemeName, "theme name"
+    ThemeName, "theme name", "win98"
 }
 
 name! {
+    "files",
     /// The address of a terminal, as a layout names the terminal it shows.
     ///
     /// Only the empty string is refused. herdr-core decides which addresses exist.
-    TerminalAddress, "terminal address"
+    TerminalAddress, "terminal address", "t2"
 }
 
 name! {
+    "files",
     /// The name of a colour in a theme.
     ///
     /// Only the empty string is refused.
-    ColorName, "colour name"
+    ColorName, "colour name", "accent"
 }
 
 name! {
+    "files",
     /// The name of a herdr-app command a key or a button runs.
     ///
     /// Only the empty string is refused. herdr-app decides which commands exist.
-    CommandName, "command name"
+    CommandName, "command name", "tab.new"
 }
 
 name! {
+    "files",
     /// A key chord in a keys file, such as `ctrl+b`.
     ///
     /// Only the empty string is refused. herdr-app decides which chords it understands.
-    Chord, "key chord"
+    Chord, "key chord", "ctrl+b"
 }
 
 #[cfg(test)]
 mod tests {
+    use std::fmt;
+
+    use serde::{Deserialize, Serialize};
+
     use super::*;
 
     /// Asserts that `new("")` refuses with `label`, in both the field and the displayed text.

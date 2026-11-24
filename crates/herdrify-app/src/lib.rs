@@ -18,5 +18,7 @@
 //! Layers:
 //!
 //! - [`files`], the layout, theme and keys files as pure data
+//! - [`protocol`], herdr-app's command-line language as pure data
 
 pub mod files;
+pub mod protocol;

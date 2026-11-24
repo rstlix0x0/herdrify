@@ -55,3 +55,6 @@ pub use layout::{
 pub use number::{Number, NumberError};
 #[doc(inline)]
 pub use theme::Theme;
+
+// The macro that defines a name newtype, for the protocol names to reuse.
+pub(crate) use identifiers::name;

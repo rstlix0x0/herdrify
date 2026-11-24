@@ -1,5 +1,5 @@
 ---
-status: approved
+status: done
 created: 2026-11-23
 depends-on: [03, 09]
 built-on: aab842c3c7d3
@@ -112,3 +112,39 @@ green. Commit `feat(herdrify-app): add the window status`.
 ## Proof
 
 - `cargo make dod` is green.
+
+## Review findings
+
+Tasks 1–3 reviewed together: SPEC COMPLIANT-WITH-AMENDMENTS, code 0🔴 3🟡 3🔵 1❓, spec 0🔴 1🟡 1🔵, blocking: none.
+- Verified (reviewer, mechanical): `KNOWN_COMMANDS` equals `evidence/herdr-app-0.1.17-commands.json` (jq vs the parsed Rust literal, diffed: 77 entries; names, arg names, required flags and order identical). `RECORDED_LS` equals `probe-views-output.txt:10-46` (cmp). `FRESH_WINDOW` equals `probe-window-output.txt:11-25` minus its `stdout=` prefix (cmp). `FLOATS_AND_ERRORS` equals `probe-views-output.txt:88-114` (cmp).
+- 🟡 open: `protocol/catalog.rs:5`, `:11`, `:71`, `protocol/mod.rs:18-19` — the docs call the table "the commands the supported herdr-app release lists"; it is 0.1.17 (`AppVersion::PROVEN`), while `MINIMUM` 0.1.16 lists 75 (no `pane.rename`, `pane.resize`).
+- 🟡 open: `protocol/listing.rs:86`, `:88`, `:119`, `:157`, `:179`, `:181` — the `name` and `folder` fields are bare `String` beside the `SpaceName`/`TabName`/`TerminalName`/`Folder` newtypes. The coder followed spec §5.6, which types them `String`; the field docs do not say why.
+- 🟡 open: `protocol/listing.rs:122` — the `TabEntry.settled` doc says the tab's terminals have settled; herdr-app 0.1.17's `tab.settle` description says a settled tab is put away (out of the lists, still running).
+- 🟡 open (Task 1 Proof): `command_info_decodes_a_listing` decodes a hand-typed `space.new` object (short `about`, plus `"extra":1`), not the fixture's object with its real `about` text.
+- 🔵 open: `protocol/catalog.rs:38` — `ArgInfo.name` is a bare `String`.
+- 🔵 open: `protocol/catalog.rs:458` — only count, uniqueness, two entries and `space.new`'s arity are tested. The plan's Risks leave the full check to plans 13 and 19.
+- 🔵 open: `protocol/listing.rs:229`, `:259`, `protocol/status.rs:159` — the byte-for-byte recorded literals carry a local home path and scratch paths into crate source.
+- 🔵 open: `protocol/status.rs:51` — `zoom`, `font_size`, `ui_font_size` are `f64`, not `files::Number`. The `//!` explains why (status is read-only), at the cost of `Eq` on `WindowStatus`.
+- ❓ open: `protocol/status.rs:65` — `agent: Option<TerminalAddress>`: every recorded status has `"agent": null`, so no recording shows its type.
+- Verified: `cargo test -p herdrify-app --lib protocol::` → `test result: ok. 33 passed; 0 failed` (the eleven new tests included).
+
+## Deviations
+
+- 2026-11-24 — Definition of Done: `cargo make dod` fails only in `herdrify-hc` `tests/live.rs::live_schema_matches_the_fixture` (installed `hc 0.1.22`, environment drift outside this chain). Gate run instead: workspace fmt-check, clippy `-D warnings`, `RUSTDOCFLAGS="-D warnings" cargo doc`, plus `cargo test -p herdrify-app` all-targets and `--doc` → `exit=0`, no warning/error lines; `132 passed`, `3 passed`, `116 passed`.
+- 2026-11-24 — The three tasks share `protocol/mod.rs`, so they ran one after the other and had one review.
+- 2026-11-24 — Task 3: the plan cites `probe-views-output.txt:88-113`, which is not valid JSON (the closing `}` is line 114). Built with lines 88-114. `probe-window-output.txt:11-25` starts with a `stdout=` prefix, which was removed from the literal.
+- 2026-11-24 — Task 3: the coder wrote the tests and the types in one step; no separate failing run was observed.
+- 2026-11-24 — Task 1: `KNOWN_COMMANDS` was generated with jq from the evidence file, not typed by hand.
+
+## Fix pass (2026-11-24, on the author's word "fix all of it")
+
+- fixed: the catalog docs and `protocol/mod.rs` name herdr-app 0.1.17 (`AppVersion::PROVEN`) and say once that 0.1.16 (`MINIMUM`) lists 75 commands, without `pane.rename` and `pane.resize`.
+- fixed: each plain-`String` field (`SpaceEntry.name`/`folder`, `TabEntry.name`, `TerminalEntry.name`, `RecentSpace.name`/`folder`, `ArgInfo.name`) documents why: spec §5.6 types it `String`, and it holds herdr-app's output unchecked so a value never fails to decode. A remote machine's folder need not be absolute.
+- fixed: `TabEntry.settled` doc matches herdr-app 0.1.17's `tab.settle` description: put away on this screen, out of the lists, still running.
+- fixed: `command_info_decodes_a_recorded_listing_entry` decodes the real `space.new` object (`jq -c '.[0]'` of the evidence file); new `command_info_ignores_unknown_fields`.
+- fixed: in the recorded test literals, `/Users/hiraq` became `/home/user` and `/private/tmp/hzw` became `/tmp/hzw`, and each literal is commented "recorded from herdr-app 0.1.17, with local paths replaced". This deviates from the byte-for-byte copy only in those path prefixes. `grep -rn 'hiraq\|/private/tmp' crates/herdrify-app/` prints nothing.
+- resolved ❓: `WindowStatus.agent` stays `Option<TerminalAddress>` (spec §5.7). Its doc says it names the focused agent's terminal and that a fresh window reports null, as every recording does.
+- kept (spec): `zoom`, `font_size`, `ui_font_size` stay `f64`. Spec §5.7: "Output numbers are `f64` because outputs are never written back."
+- kept (plan): the full `KNOWN_COMMANDS` check stays with plans 13 and 19, per this plan's Risks. The reviewer diffed all 77 entries against the evidence and found them identical.
+- kept: `known_commands_has_77_unique_names` returns `()`; it makes no fallible call, and a `Result` return trips clippy `unnecessary_wraps` under `-D warnings`.
+- Gate after the pass: `dod-app.sh` → `exit=0`, no warning/error lines; `140 passed`, `3 passed`, `123 passed`.
