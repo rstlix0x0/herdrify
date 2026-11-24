@@ -100,8 +100,9 @@ impl<T: Transport> Client<T> {
     ///
     /// # Errors
     ///
-    /// Returns [`Error::Transport`] when the program could not be started, the error of the failed
-    /// run when it did not succeed, and [`Error::InvalidVersion`] when its output is not a version.
+    /// Returns [`Error::Transport`] when the program could not be started or run, the error of the
+    /// failed run when it did not succeed, and [`Error::InvalidVersion`] when its output is not a
+    /// version.
     ///
     /// # Examples
     ///
@@ -197,8 +198,9 @@ impl<T: Transport> Client<T> {
     ///
     /// # Errors
     ///
-    /// Returns [`Error::Transport`] when the program could not be started, the error of the failed
-    /// run when it did not succeed, and [`Error::Decode`] when its output is not a command list.
+    /// Returns [`Error::Transport`] when the program could not be started or run, the error of the
+    /// failed run when it did not succeed, and [`Error::Decode`] when its output is not a command
+    /// list.
     ///
     /// # Examples
     ///
@@ -238,8 +240,8 @@ impl<T: Transport> Client<T> {
     ///
     /// # Errors
     ///
-    /// Returns [`Error::Transport`] when the program could not be started, the error of the failed
-    /// run when it did not succeed, and [`Error::Decode`] when its output is not a listing.
+    /// Returns [`Error::Transport`] when the program could not be started or run, the error of the
+    /// failed run when it did not succeed, and [`Error::Decode`] when its output is not a listing.
     ///
     /// # Examples
     ///
@@ -276,8 +278,9 @@ impl<T: Transport> Client<T> {
     ///
     /// # Errors
     ///
-    /// Returns [`Error::Transport`] when the program could not be started, the error of the failed
-    /// run when it did not succeed, and [`Error::Decode`] when its output is not a window status.
+    /// Returns [`Error::Transport`] when the program could not be started or run, the error of the
+    /// failed run when it did not succeed, and [`Error::Decode`] when its output is not a window
+    /// status.
     ///
     /// # Examples
     ///
@@ -370,8 +373,8 @@ impl<T: Transport> Client<T> {
     ///
     /// # Errors
     ///
-    /// Returns [`Error::Transport`] when the program could not be started, the error of the failed
-    /// run when it did not succeed, and [`Error::Decode`] when its stdout is not JSON.
+    /// Returns [`Error::Transport`] when the program could not be started or run, the error of the
+    /// failed run when it did not succeed, and [`Error::Decode`] when its stdout is not JSON.
     ///
     /// # Examples
     ///

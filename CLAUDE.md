@@ -6,7 +6,10 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 The Cargo workspace exists: nine crates, no features yet. `herdrify-hc` is implemented: the async
 SDK for herdr-core, at 0.1.0 (`HerdrCore` entrypoint over a typed client for all 32 methods,
-`ProcessTransport` over `hc connect`, event and attach streams). The other crates are still stubs. The architecture is decided:
+`ProcessTransport` over `hc connect`, event and attach streams). `herdrify-app` is implemented too:
+the async SDK for herdr-app, at 0.1.0 (the layout, theme and keys file models, and the `HerdrApp`
+entrypoint over `Client<T: Transport>`, with `ProcessTransport` over the `herdr-app` CLI). The
+other crates are still stubs. The architecture is decided:
 
 - **Approved ADRs** in `.claudestacks/sdlc/adrs/` (0001–0007). They are sealed and are the
   authority. A changed decision is a new superseding ADR, written with `/claudestacks-sdlc:adr`.
@@ -32,6 +35,10 @@ cargo run -q -p herdrify-cli                   # prints the command's name and v
 `cargo make dod` also runs the `herdrify-hc` live tests (`crates/herdrify-hc/tests/live*.rs`). They
 run when `hc` is on `PATH` and skip otherwise. Each starts a throwaway isolated core (its own
 session and scratch directory, no inherited `HC_*` variables) and never touches the default session.
+The `herdrify-app` live tests (`crates/herdrify-app/tests/live.rs`) run when `herdr-app` is on
+`PATH` and skip otherwise. Only the window scenario opens a window, an isolated one that never
+touches the person's; the drift test uses an isolated home with no window, and the rest are
+offline.
 
 CI runs `cargo make dod` on ubuntu, macos and windows, failing if its log has any warning or error
 line, and `cargo deny check` on ubuntu, for every push to `main` and every pull request.

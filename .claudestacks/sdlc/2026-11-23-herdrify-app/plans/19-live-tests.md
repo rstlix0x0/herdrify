@@ -1,5 +1,5 @@
 ---
-status: approved
+status: done
 created: 2026-11-23
 depends-on: [06, 13, 17]
 built-on: aab842c3c7d3
@@ -141,3 +141,47 @@ window`.
 
 - `cargo make dod` is green on the author's Mac with both live tests run, not skipped, and on CI
   with both skipped.
+
+## Review findings
+
+Reviewer (one pass, 2026-11-24): plan-compliant with amendments, blocking set empty. Gate re-run once: `dod-app.sh` → `exit=0`, no warning/error lines; `live` `5 passed` in 3.69 s with herdr-app and hc on `PATH`, so the window scenario ran. `cargo clippy -p herdrify-app --all-targets --all-features --target x86_64-pc-windows-msvc -- -D warnings` clean. After the run `pgrep -fl herdr-app` printed nothing; no new `/tmp/hfa*`. Isolation audit: every herdr-app and hc spawn (launch, status poll, `app()`, `hc()`, leftover and teardown `hc server stop`, teardown `app.quit`, the drift test) goes through `Isolation::command` or `Isolation::app_builder`; removals precede sets; nothing sends `window.close` or a `RawReply` command; `shutdown` runs on every path and `Drop` covers panics.
+
+- open 🟡 `tests/support/live_window.rs:143,156`: no offline test checks that `Isolation::command` and `app_builder` apply the env edits; removing the loop would pass every offline test and send the live run (teardown `app.quit` included) to the person's own window. A unix test running `sh` through both, printing `$HC_SESSION`/`$HERDR_APP_HOME`, would guard it.
+- open 🟡 `tests/support/live_window.rs:285`: the owner-check file `/tmp/hfa<pid>-owner` is shared by every isolation in the process and opened `create_new`; two tests meeting a leftover at once, or a stale file after a crash, fail spuriously.
+- open 🟡 `tests/live.rs:140,182`: `isolation_env_is_complete` and `isolation_removes_inherited_variables` return `()` (house rule: tests return `Result`).
+- open 🟡 `tests/live.rs:259`, `tests/support/live_window.rs:365,370,389`: libtest captures `println!` on passing tests, so the drift `warning:` line and every `skipped:` line never reach the gate log; "run, not skipped" cannot be read from it.
+- open 🔵 `tests/live.rs:272`: the park retry is never exercised.
+- open 🔵 `tests/live.rs:336`: the fixed 500 ms sleep before `keep` is timing-dependent; a bounded retry on `no running terminal` would be sturdier.
+- open 🔵 `tests/live.rs:374-377`: a `shutdown` error is dropped when the scenario also failed.
+- open 🔵 `tests/live.rs:5-6`: the `//!` implies the drift test skips without a window; it does not.
+- open 🔵 `tests/support/live_window.rs:57,98`: `EnvEdit` uses `None` for "remove"; `Isolation::new(pid, n)` takes two swappable `u32`s.
+- open 🔵 `tests/support/live_window.rs:213`: "elsewhere the temporary directory is already private" is unverified on Windows.
+- open 🔵 `tests/support/live_window.rs:463-486`: a failed `hc server stop` or kill is only `eprintln!`ed.
+- open ❓ Task 3 step 3: "tab.new shell" is sent as `new_tab().argv(SLEEP)`, never in its default-shell form.
+- open 🔵 (plan drift, recorded below): the 500 ms wait, `isolation_removes_inherited_variables` and `Scratch`, the drift test's home layout, `Child::kill` for `kill -KILL`.
+
+## Deviations
+
+- 2026-11-24: `cargo make dod` is replaced by the scoped gate (workspace fmt, clippy and doc; herdrify-app tests and doctests, live tests included); `cargo make dod` fails only in herdrify-hc's `tests/live.rs` `live_schema_matches_the_fixture` against the installed hc 0.1.22, outside this chain.
+- 2026-11-24 (step 7): `hc run --bg --json --no-parent` followed at once by `terminal.keep` is refused on herdr-app 0.1.17: `Refused { invocation: "do terminal.keep", message: "no running terminal \"t6\"" }`. The window learns of the core's terminal a moment later, so the scenario waits 500 ms before `keep`, as `evidence/probe-gaps/src/main.rs:112` did. Built that way.
+- 2026-11-24: `herdr-app commands` writes its assets into `HERDR_APP_HOME`, so the drift test's home is a `Scratch` directory with `x/{state,config,run}` (removed on drop), not an empty one.
+- 2026-11-24: the harness adds `Scratch` (0700 home, owner and symlink refusal, isolated `hc server stop` on a leftover) and the offline test `isolation_removes_inherited_variables` (synthetic inherited `HC_*` names), which guards the remove-then-set order.
+- 2026-11-24: `Drop`'s `kill -KILL <pid>` is `Child::kill` (SIGKILL on unix); `shutdown` runs the same blocking teardown through `spawn_blocking` and marks the guard done.
+- 2026-11-24: leftover `/tmp/hfa48416-0` and `/tmp/hfa48416-1` (2026-11-23) predate this run and were left untouched.
+
+## Fix pass (2026-11-24, on the author's word "fix all of open findings")
+
+- fixed 🟡 live_window.rs:143,156: `Isolation::apply` / `apply_to_builder`; offline tests `a_command_runs_in_the_isolated_environment` (sh through `apply` and `Isolation::command`, over a parent env holding `HC_SESSION`, `HERDR_APP_HOME`, `HC_GUARD`) and `the_sdk_entrypoint_runs_in_the_isolated_environment` (script through `HerdrApp::builder().program(..)`); no herdr-app starts. Mutation 1 (both loops skipped) → `left: "mine|/home/me/.config/herdr-app|leak"` vs `right: "hfa4242-5|/tmp/hfa4242-5|unset"`; mutation 2 (Remove sets `x`) → both red; restored.
+- fixed 🟡 :285: owner file is `/tmp/<session>-owner` (includes `<n>`); a stale one is removed first.
+- fixed 🟡 live.rs:140,182: both return `Result` and use `?`; `#[cfg(unix)]`, as they assert `/tmp` paths.
+- fixed 🟡 live.rs:259 etc.: `live_window::notice` writes straight to `io::stderr().lock()`, which libtest does not capture (probe: `println!`/`eprintln!` hidden on pass, a direct write shown); real output under `PATH=/usr/bin:/bin`: `skipped: herdr-app is not on PATH` printed beside `test isolated_window_scenario ... ok`.
+- fixed 🔵 :272/:336: `retry_refused(attempts, pause, transient, attempt)` serves park (one retry, 500 ms) and keep (`no running terminal`, 50 × 100 ms; the fixed sleep is gone); offline tests `a_refusal_that_passes_is_tried_again`, `a_refusal_that_stays_ends_after_the_attempts`, `any_other_refusal_is_not_tried_again`; mutation red, restored.
+- fixed 🔵 :374-377 (both errors reported), :5-6 (what skips when), live_window.rs:57,98 (`EnvEdit` enum, `IsolationId`), :213 (owner check is unix-only, said so), :463-486 (`shutdown` returns the kill / `hc server stop` / home-removal failure; `Drop` prints).
+- fixed ❓ step 3: the scenario sends `tabs().new_tab()` in its default-shell form and asserts `TabMade` with a terminal.
+- `cargo test -p herdrify-app --test live` → `10 passed` (four runs), drift and window tests ran.
+- Gate after the pass (all five fixes together): `dod-app.sh` → `exit=0`, no warning/error lines; 253 unit, catalog 5, client_fake 8, files_roundtrip 3, live 10 (ran, not skipped), 447 + 29 doctests; `cargo clippy -p herdrify-app --all-targets --all-features --target x86_64-pc-windows-msvc -- -D warnings` clean; `cargo deny check` → `advisories ok, bans ok, licenses ok, sources ok`; the seven §2 greps print nothing; `pgrep -fl herdr-app` prints nothing.
+
+## Deviations (fix pass)
+
+- 2026-11-24: the drift notice reads `hfa-live: herdr-app <v> differs from the proven <p>: …`, not `warning: …`: CI fails on any log line matching `^ *(warning|error)`, and a newer herdr-app must pass with a notice.
+- 2026-11-24: the 500 ms wait before `keep` (step 7) is replaced by the bounded retry above.

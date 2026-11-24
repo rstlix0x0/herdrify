@@ -25,9 +25,10 @@ use crate::protocol::{Invocation, RunOutput};
 
 /// Something that can run a herdr-app invocation to completion.
 ///
-/// A run that starts returns its [`RunOutput`] whatever its exit status, so a refusal by the window
-/// is an `Ok`. Only a run that could not start is a [`TransportError`]. Implementors are shared
-/// between tasks, so they are `Send + Sync + 'static`, and the future they return is `Send`.
+/// A run that completes returns its [`RunOutput`] whatever its exit status, so a refusal by the
+/// window is an `Ok`. A [`TransportError`] means no output could be collected: the program could
+/// not be started, or the operating system failed while it ran. Implementors are shared between
+/// tasks, so they are `Send + Sync + 'static`, and the future they return is `Send`.
 ///
 /// # Examples
 ///
@@ -51,17 +52,19 @@ use crate::protocol::{Invocation, RunOutput};
 ///     }
 /// }
 ///
-/// # #[tokio::main(flavor = "current_thread")]
-/// # async fn main() -> Result<(), TransportError> {
 /// let transport = Fixed(RunOutput {
 ///     exit: Exit::Code(0),
 ///     stdout: b"{}".to_vec(),
 ///     stderr: Vec::new(),
 /// });
-/// let output = transport.run(&Invocation::status()).await?;
-/// assert_eq!(output.exit, Exit::Code(0));
-/// # Ok(())
-/// # }
+/// let status = Invocation::status();
+/// let run = transport.run(&status);
+/// # let mut context = std::task::Context::from_waker(std::task::Waker::noop());
+/// # let run = std::pin::pin!(run);
+/// # let std::task::Poll::Ready(Ok(output)) = run.poll(&mut context) else {
+/// #     panic!("the fixed transport answers at once");
+/// # };
+/// # assert_eq!(output.exit, Exit::Code(0));
 /// ```
 ///
 /// The bounds hold for every implementor, so generic code can share a transport between tasks and
@@ -86,7 +89,8 @@ pub trait Transport: Send + Sync + 'static {
     ///
     /// # Errors
     ///
-    /// Returns a [`TransportError`] when the program could not be started.
+    /// Returns a [`TransportError`] when the program could not be started, or when the operating
+    /// system failed while it ran (reading its output or waiting for it).
     fn run(
         &self,
         invocation: &Invocation,

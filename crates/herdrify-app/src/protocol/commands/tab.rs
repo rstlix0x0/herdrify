@@ -92,6 +92,11 @@ impl TabNew {
         self.focus = Some(focus);
         self
     }
+
+    /// What the tab holds, for the entrypoint to fill in the options of its form.
+    pub(crate) const fn content_mut(&mut self) -> &mut TabContent {
+        &mut self.content
+    }
 }
 
 impl Command for TabNew {

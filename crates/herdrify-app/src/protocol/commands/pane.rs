@@ -72,6 +72,11 @@ impl PaneSplit {
         self.pane = Some(pane);
         self
     }
+
+    /// What the new half holds, for the entrypoint to fill in the options of its form.
+    pub(crate) const fn content_mut(&mut self) -> &mut PaneContent {
+        &mut self.content
+    }
 }
 
 impl Command for PaneSplit {

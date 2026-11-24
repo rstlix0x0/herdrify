@@ -1,9 +1,10 @@
 [package]
 name        = "herdrify-app"
 description = "Async client for herdr-app and its layout, theme and keys files."
-version     = "0.0.0"
+version     = "0.1.0"
 readme      = "README.md"
-publish     = false
+keywords    = ["herdr", "terminal", "async", "client", "layout"]
+categories  = ["api-bindings", "asynchronous"]
 
 edition.workspace      = true
 rust-version.workspace = true

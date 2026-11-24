@@ -45,7 +45,7 @@ use crate::protocol::{AppVersion, Exit, Failure, InvalidAppVersion};
 /// ```
 #[derive(Debug, ThisError)]
 pub enum Error {
-    /// The program could not be started.
+    /// The program could not be started, or the operating system failed while it ran.
     #[error(transparent)]
     Transport(#[from] TransportError),
     /// The window answered with an error.

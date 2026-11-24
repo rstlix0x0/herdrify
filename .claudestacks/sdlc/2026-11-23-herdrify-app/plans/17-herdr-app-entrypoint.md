@@ -1,5 +1,5 @@
 ---
-status: approved
+status: done
 created: 2026-11-23
 depends-on: [15, 16]
 built-on: aab842c3c7d3
@@ -171,3 +171,44 @@ Commit `feat(herdrify-app): add the root re-exports and the prelude`.
 ## Proof
 
 - `cargo make dod` is green, and the `Box<dyn` grep shows exactly one justified hit.
+
+## Review findings
+
+Reviewer (one pass, 2026-11-24, over Tasks 1–4): blocking set = the 🔴 below. Gate re-run: `dod-app.sh` → `exit=0`, no warning/error lines; clippy `-D warnings` on `x86_64-pc-windows-msvc` green (type check only).
+
+- fixed 🔴 Task 2: `new_tab()` and `split()` hard-coded shell content, so `tab.new` folder/argv/task/props and `pane.split` argv/props were unreachable through `Call`. `Call<T, TabNew>` now has `.argv`, `.task`, `.folder` and `.props`; `Call<T, PaneSplit>` has `.argv` and `.props`. They go through crate-private `TabNew::content_mut`/`PaneSplit::content_mut`, and a setter of the other form changes nothing. New tests `tab_content_setters_set_the_program_and_the_mod_properties`, `pane_content_setters_set_the_program_and_the_mod_properties`, `a_setter_of_the_other_form_changes_nothing`, `the_refused_content_setters_name_their_wire_argument` (red first: E0599). `cargo test -p herdrify-app herdr_app` → `test result: ok. 52 passed; 0 failed; 0 ignored; 0 measured; 198 filtered out`; `dod-app.sh` → `exit=0`, 250 unit, 5 + 3 integration, 447 + 29 doctests.
+- open 🟡 `herdr_app/builder.rs:163`: the test writes and execs a script in a multi-threaded test binary where other tests fork; possible ETXTBSY flake on Linux (same pattern as `adapter/process.rs`).
+- open 🟡 `herdr_app/entry.rs:58`: the hand-written `Clone` (no `T: Clone` bound) has no test over a non-`Clone` transport; reverting to `#[derive(Clone)]` would pass the gate.
+- open 🔵 `herdr_app/builder.rs:81`: `home(impl AsRef<Path>)` differs from `ProcessTransportBuilder::home(impl Into<PathBuf>)`.
+- open 🔵 `herdr_app/call.rs:138`: the `// dyn:` line cites "exception #5" without naming the list.
+- open 🔵 `herdr_app/fake.rs:42`: unused `#[derive(Default)]` on `Script`.
+- open 🔵 `herdr_app/fake.rs:128`: redundant `#[cfg(test)]` on `mod tests` inside a test-only module.
+- open 🔵 `herdr_app/layouts.rs:96`: the `layouts().set` doctest uses `.expect(..)`.
+- open 🔵 `herdr_app/mod.rs:9`: "a program that only wants herdr-app needs this module alone" — examples also import `protocol` or the prelude.
+- open 🔵 `herdr_app/spaces.rs:57`: the private `call` helper and hand-written `Debug` are repeated in nine Ops structs.
+- open 🔵 `herdr_app/terminals.rs:43`: "acts on the focused terminal unless `.terminal(..)`" is false for keep, park, peek, kill, pin, unpin and `agents().focus`.
+- open 🔵 `herdr_app/terminals.rs:101`: "briefly" is not supported by the command's description.
+- open 🔵 `herdr_app/window.rs:140`: "Two commands end the running app or restart it" omits `quit()`; `close` quits only on Linux.
+- open 🔵 `herdr_app/window.rs:308`: "a call made after this one is refused" is not checkable and "refused" means something else in this crate.
+- open 🔵 (plan drift, recorded below): `herdr_app/fake.rs` and the split per-group tests.
+
+## Deviations
+
+- 2026-11-24: `cargo make dod` is replaced by the scoped gate (workspace fmt, clippy and doc; herdrify-app tests and doctests); `cargo make dod` fails only in herdrify-hc's `tests/live.rs` `live_schema_matches_the_fixture` against the installed hc 0.1.22, outside this chain.
+- 2026-11-24: the `grep -rn 'Box<dyn' crates/herdrify-app/src` check is judged on library code. Tests and doctests of plans 02–16 return `Box<dyn std::error::Error>` (about 120 hits); `grep -rn 'Box<dyn' crates/herdrify-app/src | grep -v 'std::error::Error'` → `herdr_app/call.rs:141` (`BoxedCall`, under its `// dyn:` line) and the test alias `adapter/process.rs:284`.
+- 2026-11-24: "an in-file scripted transport" became one test-only `herdr_app/fake.rs` (`Script`), because `Client` keeps its transport private and five test modules read the recorded argv.
+- 2026-11-24: `every_space_tab_pane_method_builds_its_command` and `every_remaining_method_builds_its_command` are split into one test per group file (`every_space_method_builds_its_command`, …); `every_command_is_reachable` checks the set of sent names equals the 77 `KNOWN_COMMANDS`.
+- 2026-11-24: beyond spec §8's examples, `space.new` has `.this_computer()` and every optional argument of every command has a setter (terminal open/keep/show/select, `app.settings`, `app.feedback`, `layout.reset`, `overlay.close`, the tab/split content setters).
+- 2026-11-24: the prelude holds `HerdrApp`, `Error`, the nine closed §5.9 enums, `Focus` and `At` (the enums `HerdrApp` methods take); `Pin` and `Machine` are left out.
+
+## Fix pass (2026-11-24, on the author's word "fix all of open findings")
+
+- fixed 🟡 builder.rs:163: the script test retries `connect` on `io::ErrorKind::ExecutableFileBusy` (up to 20 × 50 ms).
+- fixed 🟡 entry.rs:58: test `a_clone_runs_through_the_same_transport_even_when_the_transport_is_not_clone` over a non-`Clone` transport; mutation `#[derive(Clone)]` → `error[E0599]`; restored.
+- fixed 🔵 builder.rs:81: `home(impl Into<PathBuf>)`, passed straight through.
+- fixed 🔵 call.rs:138: the `// dyn:` line names "justified exception 5 in the static-dispatch rules".
+- fixed 🔵 spaces.rs:57: crate-private `ops_plumbing!` in `call.rs` generates `new`, the private `call` and `Debug` for all nine Ops structs; `OverlayOps::close` goes through it.
+- fixed 🔵 fake.rs:42/128 (unused derive, redundant cfg), layouts.rs:96 (doctest without `.expect`), mod.rs:9, terminals.rs:43/101, window.rs:140/308 (wording checked against the 0.1.17 commands fixture).
+- recorded 🔵 plan drift: already under Deviations.
+- `cargo test -p herdrify-app --lib herdr_app` → `53 passed`; `--doc herdr_app` → `182 passed`.
+- Gate after the pass (all five fixes together): `dod-app.sh` → `exit=0`, no warning/error lines; 253 unit, catalog 5, client_fake 8, files_roundtrip 3, live 10 (ran, not skipped), 447 + 29 doctests; `cargo clippy -p herdrify-app --all-targets --all-features --target x86_64-pc-windows-msvc -- -D warnings` clean; `cargo deny check` → `advisories ok, bans ok, licenses ok, sources ok`; the seven §2 greps print nothing; `pgrep -fl herdr-app` prints nothing.
