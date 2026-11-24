@@ -1,4 +1,4 @@
-//! Offline checks that the SDK matches the hc 0.1.21 `OpenRPC` document.
+//! Offline checks that the SDK matches the hc 0.1.22 `OpenRPC` document.
 //!
 //! The document is a copy kept beside this file, so these checks need no `hc` and no network.
 //! Four things are checked: the method names, the parameter names each request sends, the
@@ -14,29 +14,31 @@ use std::time::Duration;
 
 use herdrify_hc::protocol::{
     Argv, AttachResult, CallerId, Children, Command, CoreInfo, DisplayFacts, DocGet, DocGetResult,
-    DocName, DocSet, DocSetResult, DocVersion, Edit, Environment, EventsSubscribe, ExecCommand,
-    ExecResult, FileEdit, FileName, FileRead, FileReadResult, FileResult, FileWrite, FirstMessage,
-    Foreground, Generation, HelloParams, HelloResult, HolderInfo, IdleOrWorking, InitialSize,
-    InterruptResult, Keep, KeyName, KeysResult, LabelChange, LabelChanges, LabelKey, LabelValue,
-    Labels, ListResult, LoginSession, Machine, MachineAdd, MachineConnect, MachineExec,
+    DocName, DocSet, DocSetResult, DocVersion, Edit, EmptyResult, Environment, EventsSubscribe,
+    ExecCommand, ExecResult, FileEdit, FileName, FileRead, FileReadResult, FileResult, FileWrite,
+    FirstMessage, Foreground, Generation, HelloParams, HelloResult, HolderInfo, IdleOrWorking,
+    InitialSize, InterruptResult, Keep, KeyName, KeysResult, LabelChange, LabelChanges, LabelKey,
+    LabelValue, Labels, ListResult, LoginSession, Machine, MachineAdd, MachineConnect, MachineExec,
     MachineList, MachineListResult, MachineName, MachineRename, MachineRm, MachineTarget,
-    MachineView, Method, PutResult, ReadResult, RemotePath, RemoveResult, RpcDiscover, RunResult,
-    SendResult, ServerRestart, ServerStatus, ServerStop, SessionName, Status, StatusResult,
-    StopResult, SubscribeResult, TemplateInfo, TemplatesList, TemplatesResult, Terminal,
-    TerminalAttach, TerminalGet, TerminalInterrupt, TerminalKeep, TerminalKeys, TerminalKill,
-    TerminalLabel, TerminalList, TerminalName, TerminalPut, TerminalRead, TerminalRef, TerminalRm,
-    TerminalRun, TerminalSend, TerminalWait, WaitResult, WaitTarget,
+    MachineView, Method, PutBeginResult, PutPieceResult, PutResult, ReadResult, RemotePath,
+    RemoveResult, RpcDiscover, RunResult, SendResult, ServerRestart, ServerStatus, ServerStop,
+    SessionName, Status, StatusResult, StopResult, SubscribeResult, TemplateInfo, TemplatesList,
+    TemplatesResult, Terminal, TerminalAttach, TerminalGet, TerminalInterrupt, TerminalKeep,
+    TerminalKeys, TerminalKill, TerminalLabel, TerminalList, TerminalName, TerminalPut,
+    TerminalPutAbort, TerminalPutBegin, TerminalPutChunk, TerminalPutFinish, TerminalRead,
+    TerminalRef, TerminalRm, TerminalRun, TerminalSend, TerminalWait, TransferId, WaitResult,
+    WaitTarget,
 };
 use serde::Serialize;
 use serde::de::DeserializeOwned;
 use serde_json::{Value, json};
 
-use schema_instance::instance;
+use schema_instance::{STRING_OVERRIDES, instance};
 
 type TestResult = Result<(), Box<dyn std::error::Error>>;
 
 fn fixture() -> Result<Value, serde_json::Error> {
-    serde_json::from_str(include_str!("fixtures/hc-0.1.21.openrpc.json"))
+    serde_json::from_str(include_str!("fixtures/hc-0.1.22.openrpc.json"))
 }
 
 #[test]
@@ -68,6 +70,37 @@ fn instance_applies_the_value_rules() -> TestResult {
     assert_eq!(doc["value"], json!("x"));
     let labelled = instance(&fixture, "RunResult")?;
     assert_eq!(labelled["labels"], json!({"k": "x"}));
+    Ok(())
+}
+
+#[test]
+fn instance_uses_a_string_override() -> TestResult {
+    let fixture = fixture()?;
+    assert_eq!(
+        instance(&fixture, "PutBeginResult")?,
+        json!({"transfer": "0123456789abcdef"})
+    );
+    Ok(())
+}
+
+#[test]
+fn every_string_override_names_a_property_in_the_fixture() -> TestResult {
+    let fixture = fixture()?;
+    let stale: Vec<String> = STRING_OVERRIDES
+        .iter()
+        .filter(|(schema, property, _)| {
+            fixture
+                .pointer(&format!(
+                    "/components/schemas/{schema}/properties/{property}"
+                ))
+                .is_none()
+        })
+        .map(|(schema, property, _)| format!("{schema}.{property}"))
+        .collect();
+    assert!(
+        stale.is_empty(),
+        "overrides that match no property in the fixture: {stale:?}"
+    );
     Ok(())
 }
 
@@ -163,6 +196,10 @@ fn machine() -> Result<MachineName, Box<dyn Error>> {
     Ok(MachineName::new("m1")?)
 }
 
+fn transfer() -> Result<TransferId, Box<dyn Error>> {
+    Ok(TransferId::new("0123456789abcdef")?)
+}
+
 fn caller() -> CallerId {
     CallerId::new("c")
 }
@@ -219,6 +256,7 @@ fn server_cases() -> Result<Vec<Case>, Box<dyn Error>> {
         plain::<EventsSubscribe>(
             &EventsSubscribe::new()
                 .children_of(terminal()?)
+                .docs([DocName::new("d")?])
                 .labels(labels()?)
                 .terminal(terminal()?),
             &EventsSubscribe::new(),
@@ -410,6 +448,22 @@ fn terminal_cases() -> Result<Vec<Case>, Box<dyn Error>> {
             &TerminalPut::new(terminal()?, FileName::new("f"), vec![1]),
             &TerminalPut::new(terminal()?, FileName::new("f"), vec![1]),
         )?,
+        plain::<TerminalPutBegin>(
+            &TerminalPutBegin::new(terminal()?, FileName::new("f"), 1, transfer()?),
+            &TerminalPutBegin::new(terminal()?, FileName::new("f"), 1, transfer()?),
+        )?,
+        plain::<TerminalPutChunk>(
+            &TerminalPutChunk::new(transfer()?, 0, vec![1]),
+            &TerminalPutChunk::new(transfer()?, 0, vec![1]),
+        )?,
+        plain::<TerminalPutFinish>(
+            &TerminalPutFinish::new(transfer()?),
+            &TerminalPutFinish::new(transfer()?),
+        )?,
+        plain::<TerminalPutAbort>(
+            &TerminalPutAbort::new(transfer()?),
+            &TerminalPutAbort::new(transfer()?),
+        )?,
     ]);
     Ok(cases)
 }
@@ -548,7 +602,7 @@ fn file_and_doc_cases() -> Result<Vec<Case>, Box<dyn Error>> {
     ])
 }
 
-/// Every one of the SDK's 32 methods, each built through its own `Method` type.
+/// Every one of the SDK's 36 methods, each built through its own `Method` type.
 fn cases() -> Result<Vec<Case>, Box<dyn Error>> {
     let mut cases = server_cases()?;
     cases.extend(terminal_cases()?);
@@ -604,7 +658,7 @@ fn method_names_equal_the_fixture() -> TestResult {
     let theirs = fixture_methods(&fixture)?;
     let theirs_set: BTreeSet<&str> = theirs.iter().map(|method| method.name.as_str()).collect();
     assert_eq!(ours_set, theirs_set);
-    assert_eq!(ours_set.len(), 32);
+    assert_eq!(ours_set.len(), 36);
     Ok(())
 }
 
@@ -713,6 +767,7 @@ fn schema_types_round_trip_fixture_instances() -> TestResult {
     check_round_trip::<DocGetResult>(fixture, "DocGetResult", report);
     check_round_trip::<DocSetResult>(fixture, "DocSetResult", report);
     check_round_trip::<Edit>(fixture, "Edit", report);
+    check_round_trip::<EmptyResult>(fixture, "Empty", report);
     check_round_trip::<ExecResult>(fixture, "ExecResult", report);
     check_round_trip::<FileReadResult>(fixture, "FileReadResult", report);
     check_round_trip::<FileResult>(fixture, "FileResult", report);
@@ -729,6 +784,8 @@ fn schema_types_round_trip_fixture_instances() -> TestResult {
     check_round_trip::<Machine>(fixture, "Machine", report);
     check_round_trip::<MachineListResult>(fixture, "MachineListResult", report);
     check_round_trip::<MachineView>(fixture, "MachineView", report);
+    check_round_trip::<PutBeginResult>(fixture, "PutBeginResult", report);
+    check_round_trip::<PutPieceResult>(fixture, "PutPieceResult", report);
     check_round_trip::<PutResult>(fixture, "PutResult", report);
     check_round_trip::<ReadResult>(fixture, "ReadResult", report);
     check_round_trip::<RemoveResult>(fixture, "RemoveResult", report);
@@ -780,6 +837,10 @@ fn every_method_reads_its_reply_into_the_schema_type() {
         reply_of::<KeysResult, TerminalKeys>(),
         reply_of::<InterruptResult, TerminalInterrupt>(),
         reply_of::<PutResult, TerminalPut>(),
+        reply_of::<PutBeginResult, TerminalPutBegin>(),
+        reply_of::<PutPieceResult, TerminalPutChunk>(),
+        reply_of::<PutResult, TerminalPutFinish>(),
+        reply_of::<EmptyResult, TerminalPutAbort>(),
         reply_of::<StatusResult, ServerStatus>(),
         reply_of::<StopResult, ServerStop>(),
         reply_of::<StopResult, ServerRestart>(),
@@ -797,5 +858,5 @@ fn every_method_reads_its_reply_into_the_schema_type() {
         reply_of::<FileResult, FileEdit>(),
         reply_of::<Value, RpcDiscover>(),
     ];
-    assert_eq!(names.len(), 32);
+    assert_eq!(names.len(), 36);
 }

@@ -1,5 +1,5 @@
 ---
-status: approved
+status: done
 created: 2026-11-24
 depends-on: [05]
 built-on: 2db7af9df077
@@ -128,3 +128,25 @@ skips. The run does not belong in the Definition of Done, which runs on 0.1.22. 
 
 - `cargo test -p herdrify-hc --test live -- --nocapture` passes on hc 0.1.22 with no skip lines.
 - After the runs, no `/tmp/hfy*` directory is left.
+
+## Review findings
+
+Reviewer verdict: COMPLIANT, code 0🔴 1🟡 4🔵, plan 0🔴 0🟡 2🔵 1❓, nothing blocking. DoD re-run green on hc 0.1.22 (`-p herdrify-hc`: fmt, clippy -D warnings, doc -D warnings; `--test live` 19 passed, no skip line).
+
+- 🟡 `tests/live.rs:48-60` `put_unsupported` skipped on the method list alone, so a skip on a 0.1.22+ core would pass silently — fixed: it returns `Result<bool, TestError>`; a missing `terminal.put_begin` on a core at 0.1.22 or newer fails the test (`hc <v> must list terminal.put_begin in hello, but does not`), and below 0.1.22 it prints the unchanged skip line. `cargo test -p herdrify-hc --test live -- --nocapture` (hc 0.1.22) → `test result: ok. 19 passed; 0 failed`, no skip line.
+- 🔵 `tests/live.rs:12-13` the module doc repeated "with" and said the core refuses with `Error::NeedsNewerCore` — fixed: the client refuses, before sending anything.
+- 🔵 `tests/live.rs:49-50` the `put_unsupported` doc said it always prints — fixed: it prints only when the method is missing.
+- 🔵 `doc_changes_until` closure parameter `seen` shadowed the outer binding — fixed: the outer binding is `outcome`.
+- 🔵 `live_events_docs` asserts the literal `"events.subscribe docs"` while `Error::DOCS_OPTION` exists — kept on purpose: the literal pins the public value.
+- 🔵 Task 3 evidence did not name the branch `live_events_docs` ran — fixed: the refusal branch prints `hfy-live: docs refused by the client on hc <version>`; the 0.1.21 run was repeated and `evidence/live-tests-0.1.21-after.txt` now shows that line.
+- ❓ Task 3 evidence did not record the leftover check — fixed: the evidence file now lists `/tmp/hf*` before and after the run and the `--hc-launchd` processes.
+- 🔵 the three task commits do not exist yet — by instruction (do not commit).
+
+## Deviations
+
+- 2026-11-24: Task 1 uses `tokio::time::timeout(..).await??` for the `HerdrCore` calls, since the file's `within` helper takes only `Result<_, Error>`; it adds a `put_unsupported` helper so the skip notice is written once.
+- 2026-11-24: Task 2 compares against `CoreVersion::parse("0.1.22")?` because `CoreVersion::DOCS_MINIMUM` is `pub(crate)`.
+- 2026-11-24: Task 3 ran the scratch copy of the hc 0.1.21 release (archive sha256 `1ab38dd9…f05ffed`, equal to `evidence/hc-0.1.21-binary.txt`), with `HC_*` unset, as `cargo test -p herdrify-hc --test live --test live_herdr_core --no-fail-fast -- --nocapture`. Output in `evidence/live-tests-0.1.21-after.txt`: live 18 passed, 1 failed (`live_schema_matches_the_fixture`, naming the 0.1.21 differences); live_herdr_core 5 passed; two `hfy-live: skipped, no terminal.put_begin on hc 0.1.21` lines; `hfy-live: docs refused by the client on hc 0.1.21`.
+- 2026-11-24: The plan-level Proof "no `/tmp/hfy*` directory is left" does not hold literally: `/tmp/hfy.4K8V` (with `hfa48416-0`, `hfa48416-1`) dates from 2026-11-23, before this chain, and does not match `LiveCore`'s naming; no run here added one. A `herdr-core --hc-launchd` (pid 99744, started 2026-11-23 20:17, not an `hfy` session) predates this run and was left untouched.
+- 2026-11-24: Plan 06 ran while plan 05's review fix was in flight (disjoint files) and plan 07 Tasks 1–2 ran alongside it (disjoint files); plan 07's gate ran after.
+- 2026-11-24: Not committed (instruction: do not commit).

@@ -1,5 +1,5 @@
 ---
-status: approved
+status: done
 created: 2026-11-24
 depends-on: [02, 03, 04]
 built-on: 2db7af9df077
@@ -113,3 +113,19 @@ hc 0.1.22`.
 - `cmp crates/herdrify-hc/tests/fixtures/hc-0.1.22.openrpc.json
   .claudestacks/sdlc/2026-11-24-herdrify-hc-0-1-22/evidence/hc-0.1.22-schema.json` prints
   nothing.
+
+## Review findings
+
+Reviewer verdict: SPEC COMPLIANT, 0🔴 1🟡 3🔵, no drift. DoD re-run green (`-p herdrify-hc`: fmt, clippy -D warnings, doc -D warnings, schema_coverage 8, doc 98; fixture `cmp` identical).
+
+- 🟡 `tests/fixtures/hc-0.1.22.openrpc.json` was untracked while the 0.1.21 fixture's deletion was staged, so a commit of the index alone would not compile — fixed: the new fixture is staged (`git add`).
+- 🔵 `schema_coverage.rs:426-441` the four put cases built ids with `TransferId::random()` — fixed: a `transfer()` helper returns the fixed `TransferId::new("0123456789abcdef")?`. `cargo test -p herdrify-hc --test schema_coverage` → `test result: ok. 9 passed; 0 failed`.
+- 🔵 `support/schema_instance.rs:19-22` the `STRING_OVERRIDES` doc said "whose schema says `string`", though an entry applies whatever the type, and a stale entry went unnoticed — fixed: the doc states the real rule, and the new test `every_string_override_names_a_property_in_the_fixture` fails on an entry naming no fixture property (seen failing with a bogus entry: `overrides that match no property in the fixture: ["NoSuchSchema.nothing"]`, then removed). Same command, 9 passed.
+- 🔵 `support/schema_instance.rs:111-113` the override lookup ran before the `BYTE_PROPERTIES` check and was discarded when it won — fixed: folded into the else-if chain. Same command, 9 passed; clippy and rustdoc `-D warnings` clean.
+
+## Deviations
+
+- 2026-11-24: Task 2 changed the two count asserts at `schema_coverage.rs:617` and `:810`; the plan's `:607` and `:800` were stale line references.
+- 2026-11-24: Task 2 live proof: `cargo test -p herdrify-hc --test schema_coverage --test live` → live 16 passed (including `live_schema_matches_the_fixture`), schema_coverage 8 passed; `cargo test -p herdrify-hc --all-targets` → 0 failed.
+- 2026-11-24: The 0.1.21 mentions left in `crates/herdrify-hc/README.md`, `CHANGELOG.md`, `examples/README.md` and `examples/connect/README.md` are plan 07 Task 2's.
+- 2026-11-24: Not committed (instruction: do not commit).

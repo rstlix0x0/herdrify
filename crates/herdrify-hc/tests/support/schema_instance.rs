@@ -3,6 +3,10 @@
 //! Every optional property is set, so a type that drops or renames a property cannot round-trip
 //! the instance. The values are the simplest ones the schema allows: `"x"` for text, the first
 //! word of an enum, and the smallest integer the schema accepts that is at least 1.
+//!
+//! Two tables override those values. `BYTE_PROPERTIES` lists the text the SDK reads as base64
+//! bytes. `STRING_OVERRIDES` lists the values the SDK validates, such as a transfer id, where `"x"`
+//! would be refused: each entry names the schema, the property and the text to use instead.
 
 use serde_json::{Map, Value, json};
 
@@ -11,6 +15,11 @@ const BASE64_BYTES: &str = "eAo=";
 
 /// The properties whose schema says `string` but whose value the SDK reads as base64 bytes.
 const BYTE_PROPERTIES: [(&str, &str); 2] = [("ExecResult", "stdout"), ("ExecResult", "stderr")];
+
+/// The properties whose value the SDK validates, as `(schema, property, value)`. An entry replaces
+/// the built value of that property whatever type its schema gives.
+pub const STRING_OVERRIDES: [(&str, &str, &str); 1] =
+    [("PutBeginResult", "transfer", "0123456789abcdef")];
 
 /// Builds the instance of the component schema called `schema_name`.
 ///
@@ -101,6 +110,11 @@ fn build_object(
         for (property, property_schema) in properties {
             let value = if BYTE_PROPERTIES.contains(&(owner.as_str(), property.as_str())) {
                 json!(BASE64_BYTES)
+            } else if let Some((_, _, text)) = STRING_OVERRIDES
+                .iter()
+                .find(|(schema, name, _)| (*schema, *name) == (owner.as_str(), property.as_str()))
+            {
+                json!(text)
             } else {
                 build(fixture, property_schema, building)?
             };
