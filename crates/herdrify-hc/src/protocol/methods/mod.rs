@@ -43,5 +43,6 @@ pub use templates::TemplatesList;
 pub use terminal::{
     Command, Keep, LabelChange, LabelChanges, TerminalAttach, TerminalGet, TerminalInterrupt,
     TerminalKeep, TerminalKeys, TerminalKill, TerminalLabel, TerminalList, TerminalPut,
-    TerminalRead, TerminalRm, TerminalRun, TerminalSend, TerminalWait, WaitTarget,
+    TerminalPutAbort, TerminalPutBegin, TerminalPutChunk, TerminalPutFinish, TerminalRead,
+    TerminalRm, TerminalRun, TerminalSend, TerminalWait, WaitTarget,
 };

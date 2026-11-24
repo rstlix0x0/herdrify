@@ -1,5 +1,5 @@
 ---
-status: approved
+status: done
 created: 2026-11-24
 built-on: 2db7af9df077
 ---
@@ -172,3 +172,24 @@ green except the known `live_schema_matches_the_fixture` failure (Task 1). Commi
 
 - `cargo test -p herdrify-hc --all-targets` and `cargo test -p herdrify-hc --doc` pass.
 - `cargo clippy -p herdrify-hc --all-targets --all-features -- -D warnings` is clean.
+
+## Review findings
+
+Reviewer verdict: SPEC COMPLIANT, 0🔴 1🟡 8🔵, nothing blocking. DoD re-run green (`-p herdrify-hc`: fmt, clippy -D warnings, doc -D warnings, lib 351, doc 87, client_fake 98, schema_coverage 7).
+
+- 🟡 `herdr_core/entry.rs:234` the `docs` doc said doc events come on top of terminal events; with `docs` alone the core sends only doc events and an empty snapshot — fixed: reworded to match `events.rs`, and the refusal named as `HerdrCoreError::Call` holding `Error::NeedsNewerCore`. `cargo test -p herdrify-hc --doc` → `test result: ok. 95 passed`; `RUSTDOCFLAGS="-D warnings" cargo doc -p herdrify-hc --all-features --no-deps` clean.
+- 🔵 `client.rs:1-17` `//!` Responsibilities missed the docs guard — fixed.
+- 🔵 `client.rs:645` `events_subscribe` summary only named terminals — fixed.
+- 🔵 `client.rs:653` "checked before the connection's end" was ambiguous — fixed: "returned even when the connection has ended, ahead of `Error::Closed`".
+- 🔵 `error.rs:82-85` `option` doc said "as the caller named it" — fixed: the option the client refused, as the client names it.
+- 🔵 `herdr_core/fake.rs:3-5` uneven `//!` wrap — fixed.
+- 🔵 `client.rs:660` the guard was proven only in `tests/client_fake.rs` — fixed: the decision is a private `docs_refusal(&CoreVersion, &EventsSubscribe) -> Option<Error>`, called first in `events_subscribe` as before, with four colocated tests (0.1.21 refused, 0.1.22-rc.1 refused, 0.1.22 sent, no docs on 0.1.21 sent). `cargo test -p herdrify-hc --lib connection` → 64 passed; client_fake 106 passed.
+- 🔵 `error.rs:322-335` the exact-message test repeated the message-table row — fixed: the table row is removed; `needs_newer_core_message_is_exact` stays.
+- 🔵 `option: &'static str` is open text for a closed set — fixed within the plan's shape: the field type stays (later plans match `option: "events.subscribe docs"`), and the value is named once as `pub const Error::DOCS_OPTION`, used by the client; the field doc says its values are the `Error::*_OPTION` constants. Test `docs_option_names_the_events_subscribe_docs_option`.
+
+## Deviations
+
+- 2026-11-24: Task 2 added `#[cfg_attr(not(test), expect(dead_code, ..))]` on `DOCS_MINIMUM` because nothing outside tests used it until Task 3; Task 3 removed it. Clippy is clean with no unfulfilled expectation.
+- 2026-11-24: Task 3 also gave `tests/client_fake.rs` a `connected_at(version)` helper (`connected()` delegates to it at 0.1.21), to script 0.1.22 and pre-release hellos.
+- 2026-11-24: Run interleaved with plans 01, 02 and 04 in shared batches (disjoint files per task).
+- 2026-11-24: Not committed (instruction: do not commit).

@@ -225,6 +225,15 @@ impl CoreVersion {
         text: Cow::Borrowed("0.1.21"),
     };
 
+    /// The first core version whose `events.subscribe` accepts `docs`: 0.1.22.
+    pub(crate) const DOCS_MINIMUM: Self = Self {
+        major: 0,
+        minor: 1,
+        patch: 22,
+        pre: Vec::new(),
+        text: Cow::Borrowed("0.1.22"),
+    };
+
     /// Parses `text` as `MAJOR.MINOR.PATCH` with an optional `-pre-release` and `+build`.
     ///
     /// The three numbers are decimals that fit a `u64` with no leading zero, and each pre-release
@@ -394,6 +403,15 @@ mod tests {
             assert!(version >= CoreVersion::MINIMUM, "{text}");
             assert_eq!(version.to_string(), text);
         }
+        Ok(())
+    }
+
+    #[test]
+    fn docs_minimum_is_0_1_22() -> TestResult {
+        assert_eq!(CoreVersion::DOCS_MINIMUM, CoreVersion::parse("0.1.22")?);
+        assert_eq!(CoreVersion::DOCS_MINIMUM.to_string(), "0.1.22");
+        assert!(CoreVersion::DOCS_MINIMUM > CoreVersion::MINIMUM);
+        assert!(CoreVersion::DOCS_MINIMUM > CoreVersion::parse("0.1.22-rc.1")?);
         Ok(())
     }
 

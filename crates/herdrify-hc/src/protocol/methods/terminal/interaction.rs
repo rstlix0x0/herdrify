@@ -7,13 +7,13 @@
 //! Responsibilities:
 //!
 //! - the `Params` type of `terminal.read`, `terminal.attach`, `terminal.send`, `terminal.wait`,
-//!   `terminal.keys`, `terminal.interrupt` and `terminal.put`, each with its wire name and reply
-//!   type
+//!   `terminal.keys` and `terminal.interrupt`, each with its wire name and reply type
 //! - [`WaitTarget`], which names what a wait watches
 //!
 //! Non-responsibilities:
 //!
 //! - the requests that start, list, end or label a terminal, which `lifecycle` holds
+//! - the request that sends a file to a terminal, which `put` holds
 //! - sending the request or reading the reply, which the client does
 //! - deciding which terminals, keys or sizes the core accepts, which the core decides
 
@@ -23,8 +23,8 @@ use serde::Serialize;
 
 use crate::protocol::methods::seconds::Seconds;
 use crate::protocol::{
-    AttachResult, CallerId, Children, DisplayFacts, FileName, IdleOrWorking, InterruptResult,
-    KeyName, KeysResult, Method, PutResult, ReadResult, SendResult, TerminalRef, WaitResult,
+    AttachResult, CallerId, Children, DisplayFacts, IdleOrWorking, InterruptResult, KeyName,
+    KeysResult, Method, ReadResult, SendResult, TerminalRef, WaitResult,
 };
 
 /// The parameters of `terminal.read`.
@@ -383,35 +383,6 @@ impl Method for TerminalInterrupt {
     type Output = InterruptResult;
 }
 
-/// The parameters of `terminal.put`.
-///
-/// The data is sent as base64 text.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize)]
-pub struct TerminalPut {
-    terminal: TerminalRef,
-    name: FileName,
-    #[serde(serialize_with = "crate::protocol::base64::serialize")]
-    data: Vec<u8>,
-}
-
-impl TerminalPut {
-    /// A `terminal.put` request that stores `data` in `terminal` under `name`.
-    #[must_use]
-    pub const fn new(terminal: TerminalRef, name: FileName, data: Vec<u8>) -> Self {
-        Self {
-            terminal,
-            name,
-            data,
-        }
-    }
-}
-
-impl Method for TerminalPut {
-    const NAME: &'static str = "terminal.put";
-    type Params = Self;
-    type Output = PutResult;
-}
-
 #[cfg(test)]
 mod tests {
     use std::collections::BTreeSet;
@@ -421,9 +392,9 @@ mod tests {
     use serde_json::{Value, json};
 
     use crate::protocol::{
-        CallerId, Children, DisplayFacts, FileName, IdleOrWorking, KeyName, Method, TerminalAttach,
-        TerminalInterrupt, TerminalKeys, TerminalPut, TerminalRead, TerminalRef, TerminalSend,
-        TerminalWait, WaitTarget,
+        CallerId, Children, DisplayFacts, IdleOrWorking, KeyName, Method, TerminalAttach,
+        TerminalInterrupt, TerminalKeys, TerminalRead, TerminalRef, TerminalSend, TerminalWait,
+        WaitTarget,
     };
 
     type TestResult = Result<(), Box<dyn Error>>;
@@ -525,17 +496,6 @@ mod tests {
             json!({"terminal": "t7", "keys": ["ctrl+c"], "caller": "c"})
         );
         assert_eq!(TerminalKeys::NAME, "terminal.keys");
-        Ok(())
-    }
-
-    #[test]
-    fn terminal_put_encodes_data() -> TestResult {
-        let put = TerminalPut::new(t7()?, FileName::new("a.png"), b"x\n".to_vec());
-        assert_eq!(
-            serde_json::to_value(put)?,
-            json!({"terminal": "t7", "name": "a.png", "data": "eAo="})
-        );
-        assert_eq!(TerminalPut::NAME, "terminal.put");
         Ok(())
     }
 

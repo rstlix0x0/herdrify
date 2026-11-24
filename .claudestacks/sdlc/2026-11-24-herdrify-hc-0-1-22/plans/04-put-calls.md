@@ -1,5 +1,5 @@
 ---
-status: approved
+status: done
 created: 2026-11-24
 depends-on: [02, 03]
 built-on: 2db7af9df077
@@ -182,3 +182,30 @@ the known `live_schema_matches_the_fixture` failure (Task 1). Commit
 
 - `cargo test -p herdrify-hc --all-targets` and `cargo test -p herdrify-hc --doc` pass.
 - `cargo clippy -p herdrify-hc --all-targets --all-features -- -D warnings` is clean.
+
+## Review findings
+
+Reviewer verdict: SPEC COMPLIANT, 0🔴 1🟡 5🔵, nothing blocking. DoD re-run green (`-p herdrify-hc`: fmt, clippy -D warnings, doc -D warnings, lib 356, doc 96, client_fake 106, schema_coverage 7).
+
+- 🟡 `tests/client_fake.rs:1109-1111` the `TRANSFER_FINISHED` fixture was invented ("the transfer is already finished") — fixed: it now carries the reply herdr-core 0.1.22 sent in probe E3, `{"code":-32000,"data":{"hint":"nothing there to read it","kind":"finished"},"message":"t3 has finished"}`, described as the refusal of a piece put to a terminal that ended mid-put. `cargo test -p herdrify-hc --test client_fake` → `test result: ok. 106 passed`.
+- 🔵 `tests/client_fake.rs:1008` `put_calls_send_their_method_and_params` connected with a 0.1.21 hello — fixed: `connected_at("0.1.22")`. Same command, 106 passed.
+- 🔵 `herdr_core/put.rs:53-58` the abort list left out a begin that fails without a core refusal — fixed. `cargo test -p herdrify-hc --doc` → `test result: ok. 96 passed`.
+- 🔵 `client.rs:496,523,549,571` `# Errors` before `# Examples` — fixed crate-wide: 11 items reordered to the M-CANONICAL-DOCS order (Examples, Errors, Panics, Safety) in `client.rs` (5), `transfer.rs` (4), `herdr_core/put.rs` (1), `identifiers.rs` (1); sections moved whole, no wording changed. `RUSTDOCFLAGS="-D warnings" cargo doc --workspace --all-features --no-deps` clean.
+- 🔵 `client.rs:507` the only `.expect` in a `client.rs` doc example — fixed: the example uses `?`. `cargo test -p herdrify-hc --doc` → 98 passed.
+- 🔵 `herdr_core/put.rs:56-57` "the core drops the put when the connection goes" rested on the core's hint text — fixed: the doc states the observed terminal case and attributes the connection case to the core's own refusal text, quoted verbatim ("it was aborted, or its terminal or connection went").
+- Noted by the fix coder: `put_in_pieces_aborts_after_a_refused_finish` used a piece refusal as a stand-in — fixed: new `FINISH_TOO_EARLY` fixture, the reply 0.1.22 recorded for a finish before all bytes (`{"code":-32602,"data":{"hint":"see `hc schema`","kind":"invalid_params"},"message":"got 0 of 3 bytes"}`), and the test asserts kind `InvalidParams`. `put_in_pieces_ignores_a_failed_abort` keeps an arbitrary abort refusal, commented as such: 0.1.22 answers `{}` to every abort, so no recorded abort refusal exists.
+
+## Gate
+
+With hc 0.1.22 on `PATH`, after all four plans:
+- `(set -o pipefail; cargo make dod 2>&1 | tee target/dod.log)` → exit 105, with exactly one failure: `live_schema_matches_the_fixture` (`crates/herdrify-hc/tests/live.rs:626`), the known failure plan 05 Task 2 fixes. The log has no `warning`/`error` line except cargo's `error: test failed, to rerun pass -p herdrify-hc --test live`.
+- `cargo make dod` stops at the first failing test binary, so the rest ran as `cargo test --workspace --all-targets --all-features --no-fail-fast` plus `--doc`: every other target ok (herdrify-hc lib 356, client_fake 106, live 15 of 16, live_herdr_core 5, schema_coverage 7, adapter_stream 4; herdrify-app lib 253, live 10; doc tests 447 + 29 + 96), `error: 1 target failed` (the drift test).
+- After the last fix: `cargo fmt --all -- --check` clean; `cargo clippy --workspace --all-targets --all-features -- -D warnings` clean; `RUSTDOCFLAGS="-D warnings" cargo doc --workspace --all-features --no-deps` clean.
+- Leftovers: `/tmp/hfa48416-0`, `/tmp/hfa48416-1` and `/tmp/hfy.4K8V` date from 2026-11-23 (before this run); no `--hc-launchd` core of an `hfy` session runs.
+
+## Deviations
+
+- 2026-11-24: Task 2 added `#[cfg_attr(not(test), expect(dead_code, ..))]` on `TerminalHandle::ops()` (no non-test caller until Task 3); Task 3 removed it. Clippy is clean with no unfulfilled expectation.
+- 2026-11-24: `refused_by_core` is a named wrapper over the existing `HerdrCoreError::refusal().is_some()`, which is true exactly for `Call(Error::Rpc)`.
+- 2026-11-24: The gate was run with `--no-fail-fast` after `cargo make dod` stopped at the known failure, so every target's result is recorded.
+- 2026-11-24: Not committed (instruction: do not commit).

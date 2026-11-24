@@ -14,4 +14,5 @@ pub use crate::herdr_core::{HerdrCore, HerdrCoreError, Started, TerminalHandle};
 #[doc(no_inline)]
 pub use crate::protocol::{
     Children, DisplayFacts, ErrorKind, Event, EventKind, IdleOrWorking, Keep, Notification,
+    TransferId,
 };

@@ -77,6 +77,17 @@ pub enum Error {
         /// The oldest supported version.
         minimum: CoreVersion,
     },
+    /// The core is supported but too old for an option the caller asked for.
+    #[error("{option} needs herdr-core {needs} or newer; this core is {found}")]
+    NeedsNewerCore {
+        /// The option the client refused, as the client names it. The values are the
+        /// `Error::*_OPTION` constants, today only [`Error::DOCS_OPTION`].
+        option: &'static str,
+        /// The oldest core version that has the option.
+        needs: CoreVersion,
+        /// The version this core reported.
+        found: CoreVersion,
+    },
     /// The core reported a version that is not `MAJOR.MINOR.PATCH`.
     #[error("herdr-core reported version \"{found}\", which is not MAJOR.MINOR.PATCH")]
     InvalidVersion {
@@ -95,6 +106,20 @@ pub enum Error {
     /// The attach stream has ended while the connection is still open.
     #[error("the terminal.attach stream is closed")]
     StreamClosed,
+}
+
+impl Error {
+    /// The option [`Client::events_subscribe`](crate::Client::events_subscribe) refuses on a core
+    /// older than 0.1.22, as [`Error::NeedsNewerCore`] names it.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use herdrify_hc::Error;
+    ///
+    /// assert_eq!(Error::DOCS_OPTION, "events.subscribe docs");
+    /// ```
+    pub const DOCS_OPTION: &'static str = "events.subscribe docs";
 }
 
 /// Why a connection ended.
@@ -298,6 +323,26 @@ mod tests {
             assert_eq!(error.to_string(), text);
         }
         Ok(())
+    }
+
+    #[test]
+    fn needs_newer_core_message_is_exact() -> TestResult {
+        let error = Error::NeedsNewerCore {
+            option: Error::DOCS_OPTION,
+            needs: CoreVersion::parse("0.1.22")?,
+            found: CoreVersion::parse("0.1.21")?,
+        };
+        assert_eq!(
+            error.to_string(),
+            "events.subscribe docs needs herdr-core 0.1.22 or newer; this core is 0.1.21"
+        );
+        assert!(error.source().is_none());
+        Ok(())
+    }
+
+    #[test]
+    fn docs_option_names_the_events_subscribe_docs_option() {
+        assert_eq!(Error::DOCS_OPTION, "events.subscribe docs");
     }
 
     #[test]

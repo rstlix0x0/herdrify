@@ -36,10 +36,6 @@ macro_rules! refusing_identifier {
         impl $name {
             #[doc = concat!("Wraps `value` as a ", $what, ".")]
             ///
-            /// # Errors
-            ///
-            #[doc = concat!("Returns [`EmptyValueError`] naming the ", $what, " when `value` is empty.")]
-            ///
             /// # Examples
             ///
             /// ```
@@ -51,6 +47,10 @@ macro_rules! refusing_identifier {
             /// # Ok(())
             /// # }
             /// ```
+            ///
+            /// # Errors
+            ///
+            #[doc = concat!("Returns [`EmptyValueError`] naming the ", $what, " when `value` is empty.")]
             pub fn new(value: impl Into<String>) -> Result<Self, EmptyValueError> {
                 let value = value.into();
                 if value.is_empty() {

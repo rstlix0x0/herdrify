@@ -13,12 +13,12 @@
 //! - [`WaitResult`]: the reply to `terminal.wait`, and the `wait` object of other replies
 //! - [`KeysResult`]: the reply to `terminal.keys`
 //! - [`InterruptResult`]: the reply to `terminal.interrupt`
-//! - [`PutResult`]: the reply to `terminal.put`
 //! - [`AttachResult`]: the reply to `terminal.attach`
 //! - [`RunResult`]: the reply to `terminal.run`: a terminal record, plus what a wait gathered
 //!
 //! Non-responsibilities:
 //!
+//! - the replies of `terminal.put` and of the put in pieces, which `put` holds
 //! - deciding what the core accepts or reports, which the core decides
 
 use std::collections::BTreeMap;
@@ -152,17 +152,6 @@ pub struct InterruptResult {
     pub key: String,
 }
 
-/// The reply to `terminal.put`.
-///
-/// It says where the file landed.
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
-pub struct PutResult {
-    /// Where the file landed, as the terminal's machine sees it.
-    pub path: String,
-    /// How many bytes were stored.
-    pub bytes: u64,
-}
-
 /// The reply to `terminal.attach`.
 ///
 /// It names the stream channel the terminal's output arrives on, and the terminal as it is.
@@ -292,8 +281,8 @@ mod tests {
     use serde_json::Value;
 
     use super::{
-        AttachResult, InterruptResult, KeysResult, ListResult, PutResult, ReadResult, RemoveResult,
-        RunResult, SendResult, WaitResult,
+        AttachResult, InterruptResult, KeysResult, ListResult, ReadResult, RemoveResult, RunResult,
+        SendResult, WaitResult,
     };
     use crate::protocol::{StatusWord, WaitReason};
 
@@ -591,20 +580,6 @@ mod tests {
     "key": "esc"
 }"#;
         let value: InterruptResult = serde_json::from_str(wire)?;
-        assert_eq!(
-            serde_json::to_value(&value)?,
-            serde_json::from_str::<Value>(wire)?
-        );
-        Ok(())
-    }
-
-    #[test]
-    fn put_result_round_trips_a_populated_value() -> TestResult {
-        let wire = r#"{
-    "path": "/tmp/f",
-    "bytes": 3
-}"#;
-        let value: PutResult = serde_json::from_str(wire)?;
         assert_eq!(
             serde_json::to_value(&value)?,
             serde_json::from_str::<Value>(wire)?

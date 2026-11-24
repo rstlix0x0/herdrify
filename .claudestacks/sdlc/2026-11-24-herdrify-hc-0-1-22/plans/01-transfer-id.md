@@ -1,5 +1,5 @@
 ---
-status: approved
+status: done
 created: 2026-11-24
 built-on: 2db7af9df077
 ---
@@ -105,3 +105,19 @@ Done is green except the known `live_schema_matches_the_fixture` failure (Task 1
 
 - `cargo test -p herdrify-hc --lib` and `cargo test -p herdrify-hc --doc` pass.
 - `cargo clippy -p herdrify-hc --all-targets --all-features -- -D warnings` is clean.
+
+## Review findings
+
+Reviewer verdict: SPEC COMPLIANT, 0🔴 0🟡 5🔵, nothing blocking. DoD re-run green (`-p herdrify-hc`: fmt, clippy -D warnings, doc -D warnings, lib 351, doc 87, client_fake 98, schema_coverage 7).
+
+- 🔵 `transfer.rs:97` comment said "two hashes of the same input" while the code hashes 0 and 1 — fixed: the comment now says the two independently seeded hashes take distinct inputs. `cargo test -p herdrify-hc --lib` → `test result: ok. 354 passed`.
+- 🔵 `transfer.rs:273` test helper used `unwrap_or_default()` on JSON encoding — fixed: the helper returns `Result` and propagates with `?`. Same command, 354 passed; clippy clean.
+- 🔵 `transfer.rs:308` deserialize refusal only checked `is_err()` — fixed: it now asserts the message contains `must be 16 to 64 hex digits`. Same command, 354 passed.
+- 🔵 `InvalidTransferId` kept `value` private behind a `value()` accessor, unlike its sibling errors — fixed: `pub value: String`, accessor removed. `cargo test --workspace --all-targets --all-features --no-fail-fast` → only `live_schema_matches_the_fixture` fails (known); herdrify-hc lib 363, client_fake 106, doc 98.
+- 🔵 no compile-time Send/Sync check on `TransferId` itself — fixed: `transfer_id_is_send_sync_static`. `cargo test -p herdrify-hc --lib protocol::transfer` → 8 passed.
+
+## Deviations
+
+- 2026-11-24: Run interleaved with plans 02–04 in shared batches, because the plans' file sets are disjoint task by task (01/T1 ran beside 02/T1, 03/T1 and 03/T2).
+- 2026-11-24: Not committed. The instruction to execute said "do not commit"; the plan's commit messages are left for the author.
+- 2026-11-24: Board row at start: `plan 01 approved … execute 01` (clean).

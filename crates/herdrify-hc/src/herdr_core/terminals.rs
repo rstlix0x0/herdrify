@@ -1,9 +1,10 @@
 //! The terminal methods: run and list terminals, and act on one through its handle.
 //!
 //! [`TerminalOps`] holds the methods that are not about one terminal: `terminal.run`,
-//! `terminal.list` and a wait on the caller's own children. [`TerminalHandle`] holds every method
-//! about one terminal, so its reference is named once. Running a terminal returns [`Started`]: the
-//! core's answer and the handle on the new terminal.
+//! `terminal.list`, a wait on the caller's own children, and the calls of a file transfer that
+//! name the transfer instead of the terminal. [`TerminalHandle`] holds every method about one
+//! terminal, so its reference is named once. Running a terminal returns [`Started`]: the core's
+//! answer and the handle on the new terminal.
 //!
 //! Responsibilities:
 //!
@@ -26,13 +27,14 @@ use crate::adapter::ProcessTransport;
 use crate::connection::{AttachStream, Client};
 use crate::port::Transport;
 use crate::protocol::{
-    CallerId, Children, Command, DisplayFacts, EventsSubscribe, FileName, IdleOrWorking,
-    InitialSize, InterruptResult, Keep, KeyName, KeysResult, LabelChange, LabelChanges, LabelKey,
-    LabelValue, ListResult, MachineName, PutResult, ReadResult, RemotePath, RemoveResult,
-    RunResult, SendResult, Terminal, TerminalAttach, TerminalGet, TerminalInterrupt, TerminalKeep,
-    TerminalKeys, TerminalKill, TerminalLabel, TerminalList, TerminalName, TerminalPut,
-    TerminalRead, TerminalRef, TerminalRm, TerminalRun, TerminalSend, TerminalWait, WaitResult,
-    WaitTarget,
+    CallerId, Children, Command, DisplayFacts, EmptyResult, EventsSubscribe, FileName,
+    IdleOrWorking, InitialSize, InterruptResult, Keep, KeyName, KeysResult, LabelChange,
+    LabelChanges, LabelKey, LabelValue, ListResult, MachineName, PutBeginResult, PutPieceResult,
+    PutResult, ReadResult, RemotePath, RemoveResult, RunResult, SendResult, Terminal,
+    TerminalAttach, TerminalGet, TerminalInterrupt, TerminalKeep, TerminalKeys, TerminalKill,
+    TerminalLabel, TerminalList, TerminalName, TerminalPut, TerminalPutAbort, TerminalPutBegin,
+    TerminalPutChunk, TerminalPutFinish, TerminalRead, TerminalRef, TerminalRm, TerminalRun,
+    TerminalSend, TerminalWait, TransferId, WaitResult, WaitTarget,
 };
 
 /// The terminal methods that are not about one terminal.
@@ -90,6 +92,75 @@ impl<T: Transport> TerminalOps<T> {
     pub fn wait_children(&self, children: Children) -> Call<T, TerminalWait> {
         let params = TerminalWait::new(WaitTarget::Children(children));
         Call::new(self.client.clone(), Ok(params))
+    }
+
+    /// `terminal.put_chunk`: sends `data` as the piece of the open transfer `transfer` that starts
+    /// `offset` bytes into the file.
+    ///
+    /// Open the transfer with [`TerminalHandle::put_begin`], and close it with
+    /// [`put_finish`](Self::put_finish) or drop it with [`put_abort`](Self::put_abort).
+    ///
+    /// # Examples
+    ///
+    /// ```no_run
+    /// use herdrify_hc::HerdrCore;
+    /// use herdrify_hc::protocol::TransferId;
+    ///
+    /// # async fn run() -> Result<(), herdrify_hc::HerdrCoreError> {
+    /// let core = HerdrCore::local().await?;
+    /// let shell = core.terminals().handle("t1")?;
+    /// let transfer = TransferId::random();
+    /// shell.put_begin("a.txt", 5, transfer.clone()).await?;
+    /// let held = core.terminals().put_chunk(transfer, 0, "hello").await?;
+    /// println!("the core holds {} bytes", held.bytes);
+    /// # Ok(())
+    /// # }
+    /// ```
+    pub fn put_chunk(
+        &self,
+        transfer: TransferId,
+        offset: u64,
+        data: impl Into<Vec<u8>>,
+    ) -> Call<T, TerminalPutChunk> {
+        let params = TerminalPutChunk::new(transfer, offset, data.into());
+        Call::new(self.client.clone(), Ok(params))
+    }
+
+    /// `terminal.put_finish`: closes the open transfer `transfer` and stores the file.
+    ///
+    /// # Examples
+    ///
+    /// ```no_run
+    /// use herdrify_hc::HerdrCore;
+    /// use herdrify_hc::protocol::TransferId;
+    ///
+    /// # async fn run(transfer: TransferId) -> Result<(), herdrify_hc::HerdrCoreError> {
+    /// let core = HerdrCore::local().await?;
+    /// let stored = core.terminals().put_finish(transfer).await?;
+    /// println!("stored {} bytes at {}", stored.bytes, stored.path);
+    /// # Ok(())
+    /// # }
+    /// ```
+    pub fn put_finish(&self, transfer: TransferId) -> Call<T, TerminalPutFinish> {
+        Call::new(self.client.clone(), Ok(TerminalPutFinish::new(transfer)))
+    }
+
+    /// `terminal.put_abort`: drops the open transfer `transfer` and what it received.
+    ///
+    /// # Examples
+    ///
+    /// ```no_run
+    /// use herdrify_hc::HerdrCore;
+    /// use herdrify_hc::protocol::TransferId;
+    ///
+    /// # async fn run(transfer: TransferId) -> Result<(), herdrify_hc::HerdrCoreError> {
+    /// let core = HerdrCore::local().await?;
+    /// core.terminals().put_abort(transfer).await?;
+    /// # Ok(())
+    /// # }
+    /// ```
+    pub fn put_abort(&self, transfer: TransferId) -> Call<T, TerminalPutAbort> {
+        Call::new(self.client.clone(), Ok(TerminalPutAbort::new(transfer)))
     }
 
     /// A handle on the terminal `reference` names, such as `t3` or a terminal's name.
@@ -212,6 +283,47 @@ impl<T: Transport> TerminalHandle<T> {
             FileName::new(name),
             data.into(),
         ))
+    }
+
+    /// `terminal.put_begin`: opens the transfer `transfer` to store `bytes` bytes as a file called
+    /// `name` for the terminal, to be sent in pieces.
+    ///
+    /// The terminal must be on this core: a handle for `m/t7` is refused by the core with
+    /// `machine_unknown`. Use [`put`](Self::put) for such a terminal. Send the pieces with
+    /// [`TerminalOps::put_chunk`], then close the transfer with [`TerminalOps::put_finish`], or
+    /// drop it with [`TerminalOps::put_abort`].
+    ///
+    /// # Examples
+    ///
+    /// ```no_run
+    /// use herdrify_hc::HerdrCore;
+    /// use herdrify_hc::protocol::TransferId;
+    ///
+    /// # async fn run() -> Result<(), herdrify_hc::HerdrCoreError> {
+    /// let core = HerdrCore::local().await?;
+    /// let shell = core.terminals().handle("t1")?;
+    /// let opened = shell.put_begin("a.txt", 5, TransferId::random()).await?;
+    /// println!("transfer {}", opened.transfer.as_str());
+    /// # Ok(())
+    /// # }
+    /// ```
+    pub fn put_begin(
+        &self,
+        name: impl Into<String>,
+        bytes: u64,
+        transfer: TransferId,
+    ) -> Call<T, TerminalPutBegin> {
+        self.call(TerminalPutBegin::new(
+            self.reference.clone(),
+            FileName::new(name),
+            bytes,
+            transfer,
+        ))
+    }
+
+    /// The terminal methods that are not about one terminal, over this handle's connection.
+    pub(super) fn ops(&self) -> TerminalOps<T> {
+        TerminalOps::new(self.client.clone())
     }
 
     /// `terminal.keep`: with [`Keep::On`], a lost program is replaced with a shell in place
@@ -345,6 +457,10 @@ invoke_by! {
     TerminalKeys => KeysResult, terminal_keys;
     TerminalInterrupt => InterruptResult, terminal_interrupt;
     TerminalPut => PutResult, terminal_put;
+    TerminalPutBegin => PutBeginResult, terminal_put_begin;
+    TerminalPutChunk => PutPieceResult, terminal_put_chunk;
+    TerminalPutFinish => PutResult, terminal_put_finish;
+    TerminalPutAbort => EmptyResult, terminal_put_abort;
     TerminalAttach => AttachStream, terminal_attach;
 }
 
@@ -616,8 +732,9 @@ mod tests {
         IdleOrWorking, InitialSize, Keep, KeyName, LabelChange, LabelChanges, LabelKey, LabelValue,
         Labels, MachineName, RemotePath, TerminalAttach, TerminalGet, TerminalInterrupt,
         TerminalKeep, TerminalKeys, TerminalKill, TerminalLabel, TerminalList, TerminalName,
-        TerminalPut, TerminalRead, TerminalRef, TerminalRm, TerminalRun, TerminalSend,
-        TerminalWait, WaitTarget,
+        TerminalPut, TerminalPutAbort, TerminalPutBegin, TerminalPutChunk, TerminalPutFinish,
+        TerminalRead, TerminalRef, TerminalRm, TerminalRun, TerminalSend, TerminalWait, TransferId,
+        WaitTarget,
     };
 
     type TestResult = Result<(), TestError>;
@@ -957,6 +1074,73 @@ mod tests {
             json!({"terminal": "t2", "ended": true, "reason": "exit", "turn": 0, "children": []});
         let (sent, _) = serve(&mut peer, shell.wait(), waited).await?;
         assert_eq!(sent["method"], "terminal.wait");
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn put_begin_names_this_terminal() -> TestResult {
+        let (client, mut peer) = connected().await?;
+        let shell = HerdrCore::from_client(client).terminals().handle("t2")?;
+        let id = TransferId::new("0123456789abcdef")?;
+        let call = shell.put_begin("a.txt", 3, id.clone());
+        assert_eq!(
+            request_of(&call)?,
+            &TerminalPutBegin::new(t("t2")?, FileName::new("a.txt"), 3, id)
+        );
+        let (sent, opened) =
+            serve(&mut peer, call, json!({"transfer": "0123456789abcdef"})).await?;
+        assert_eq!(sent["method"], "terminal.put_begin");
+        assert_eq!(
+            sent["params"],
+            json!({"terminal": "t2", "name": "a.txt", "bytes": 3, "transfer": "0123456789abcdef"})
+        );
+        assert_eq!(opened?.transfer.as_str(), "0123456789abcdef");
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn put_chunk_finish_abort_send_the_transfer() -> TestResult {
+        let (client, mut peer) = connected().await?;
+        let terminals = HerdrCore::from_client(client).terminals();
+        let id = TransferId::new("0123456789abcdef")?;
+
+        let chunk = terminals.put_chunk(id.clone(), 4, b"hello".to_vec());
+        assert_eq!(
+            request_of(&chunk)?,
+            &TerminalPutChunk::new(id.clone(), 4, b"hello".to_vec())
+        );
+        let (sent, held) = serve(&mut peer, chunk, json!({"bytes": 9})).await?;
+        assert_eq!(sent["method"], "terminal.put_chunk");
+        assert_eq!(
+            sent["params"],
+            json!({"transfer": "0123456789abcdef", "offset": 4, "data": "aGVsbG8="})
+        );
+        assert_eq!(held?.bytes, 9);
+
+        let finish = terminals.put_finish(id.clone());
+        assert_eq!(request_of(&finish)?, &TerminalPutFinish::new(id.clone()));
+        let (sent, stored) =
+            serve(&mut peer, finish, json!({"path": "/tmp/a", "bytes": 9})).await?;
+        assert_eq!(sent["method"], "terminal.put_finish");
+        assert_eq!(sent["params"], json!({"transfer": "0123456789abcdef"}));
+        assert_eq!(stored?.path, "/tmp/a");
+
+        let abort = terminals.put_abort(id.clone());
+        assert_eq!(request_of(&abort)?, &TerminalPutAbort::new(id));
+        let (sent, _) = serve(&mut peer, abort, json!({})).await?;
+        assert_eq!(sent["method"], "terminal.put_abort");
+        assert_eq!(sent["params"], json!({"transfer": "0123456789abcdef"}));
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn handle_ops_share_the_handle_client() -> TestResult {
+        let (client, mut peer) = connected().await?;
+        let shell = HerdrCore::from_client(client).terminals().handle("t2")?;
+        let id = TransferId::new("0123456789abcdef")?;
+        let (sent, aborted) = serve(&mut peer, shell.ops().put_abort(id), json!({})).await?;
+        assert_eq!(sent["method"], "terminal.put_abort");
+        aborted?;
         Ok(())
     }
 }

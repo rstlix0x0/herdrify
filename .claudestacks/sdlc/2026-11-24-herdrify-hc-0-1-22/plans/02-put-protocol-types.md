@@ -1,5 +1,5 @@
 ---
-status: approved
+status: done
 created: 2026-11-24
 depends-on: [01]
 built-on: 2db7af9df077
@@ -146,3 +146,21 @@ Commit `feat(herdrify-hc): add the put-in-pieces replies`.
 
 - `cargo test -p herdrify-hc --all-targets` and `cargo test -p herdrify-hc --doc` pass.
 - `cargo clippy -p herdrify-hc --all-targets --all-features -- -D warnings` is clean.
+
+## Review findings
+
+Reviewer verdict: SPEC COMPLIANT, 0🔴 0🟡 5🔵, nothing blocking. DoD re-run green (`-p herdrify-hc`: fmt, clippy -D warnings, doc -D warnings, lib 351, doc 87, schema_coverage 7, client_fake 100).
+
+- 🔵 `methods/terminal/mod.rs:5` `//!` line over 100 chars — fixed: re-wrapped. `awk 'length>100'` over the three put module files prints nothing.
+- 🔵 `methods/terminal/put.rs:3-4` said every type holds raw bytes, and used "serialised" — fixed: names `TerminalPut` and `TerminalPutChunk`, "serialized".
+- 🔵 `types/terminal/put.rs:1` `//!` block lacked the "why it is separate" paragraph — fixed: added.
+- 🔵 `EmptyResult` also decoded the JSON array `[]` — fixed: a hand-written `Deserialize` accepts only a JSON object (entries ignored); `empty_result_refuses_everything_but_an_object` refuses `[]`, `[1]`, `null`, `true`, `0`, `"x"` (seen failing first). `cargo test -p herdrify-hc --lib protocol::types::terminal` → 57 passed.
+- 🔵 the moved `PutResult` and `TerminalPut` had no `# Examples` — fixed: one doctest each. `cargo test -p herdrify-hc --doc` → 98 passed.
+- Also fixed (coder note): `types/terminal/results.rs:21` non-responsibility line widened to "the replies of `terminal.put` and of the put in pieces, which `put` holds".
+
+## Deviations
+
+- 2026-11-24: Task 3 was built before Task 2, by one coder. Task 2's request types name Task 3's replies (`PutBeginResult`, `PutPieceResult`, `EmptyResult`) as their `Method::Output`, so Task 2 cannot compile first; both tasks also edit `protocol/mod.rs`. End state is the plan's.
+- 2026-11-24: Task 1 ran beside plan 01 Task 1 (it uses no `TransferId`), before plan 01 was done.
+- 2026-11-24: Coders ran `--lib`, `--doc`, `--test schema_coverage --test client_fake` in place of `--all-targets`; the orchestrator ran the live targets in the gate (see plan 04).
+- 2026-11-24: Not committed (instruction: do not commit).

@@ -1,9 +1,10 @@
 //! A fake core for `HerdrCore`'s unit tests, over the connection layer's in-memory link.
 //!
-//! [`connected`] answers the handshake and returns a client and the peer, and [`serve`] runs one
-//! call against the peer: it reads the request the call sent, answers it with a given result and
-//! returns both the request and the call's output. [`request_of`] reads the request a call has
-//! built, for comparing it with one built from the `protocol` types by hand.
+//! [`connected`] answers the handshake and returns a client and the peer, [`connected_at`] does the
+//! same for a core of a chosen version, and [`serve`] runs one call against the peer: it reads the
+//! request the call sent, answers it with a given result and returns both the request and the
+//! call's output. [`request_of`] reads the request a call has built, for comparing it with one
+//! built from the `protocol` types by hand.
 
 use std::error::Error as StdError;
 use std::future::IntoFuture;
@@ -15,20 +16,50 @@ use crate::connection::Client;
 use crate::connection::memory_link::{MemoryPeer, MemoryTransport, link};
 use crate::protocol::{Channel, Frame, FrameKind};
 
-/// The reply a core sends to `hello`.
-const HELLO_REPLY: &str = r#"{"id":0,"jsonrpc":"2.0","result":{"core":{"id":"c","name":"n"},"features":[],"framed":true,"generation":1,"methods":[],"version":"0.1.21"}}"#;
+/// The version `connected` answers `hello` with.
+const DEFAULT_VERSION: &str = "0.1.21";
+
+/// The reply a core of `version` sends to `hello`.
+fn hello_reply(version: &str) -> String {
+    json!({
+        "id": 0,
+        "jsonrpc": "2.0",
+        "result": {
+            "core": {"id": "c", "name": "n"},
+            "features": [],
+            "framed": true,
+            "generation": 1,
+            "methods": [],
+            "version": version,
+        },
+    })
+    .to_string()
+}
 
 /// A test failure.
 pub(super) type TestError = Box<dyn StdError + Send + Sync>;
 
-/// A client connected over the in-memory link, and the peer on its other end.
+/// A client connected over the in-memory link to a core of version 0.1.21, and the peer on its
+/// other end.
 ///
 /// # Errors
 ///
 /// Fails when the handshake does not complete.
 pub(super) async fn connected() -> Result<(Client<MemoryTransport>, MemoryPeer), TestError> {
+    connected_at(DEFAULT_VERSION).await
+}
+
+/// A client connected over the in-memory link to a core that answers `hello` with `version`, and
+/// the peer on its other end.
+///
+/// # Errors
+///
+/// Fails when the handshake does not complete.
+pub(super) async fn connected_at(
+    version: &str,
+) -> Result<(Client<MemoryTransport>, MemoryPeer), TestError> {
     let (transport, mut peer) = link();
-    peer.reply_line(HELLO_REPLY);
+    peer.reply_line(&hello_reply(version));
     let client = Client::connect(transport).await?;
     peer.line().await?;
     Ok((client, peer))

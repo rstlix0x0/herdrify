@@ -26,8 +26,8 @@ use crate::adapter::ProcessTransport;
 use crate::connection::{Client, ConnectionEnd, Subscription};
 use crate::port::Transport;
 use crate::protocol::{
-    EventsSubscribe, ExecCommand, ExecResult, HelloResult, MachineExec, MachineName, RemotePath,
-    RpcDiscover, TemplatesList, TemplatesResult, TerminalRef,
+    DocName, EventsSubscribe, ExecCommand, ExecResult, HelloResult, MachineExec, MachineName,
+    RemotePath, RpcDiscover, TemplatesList, TemplatesResult, TerminalRef,
 };
 
 /// One connection to herdr-core, with every method reachable from plain values.
@@ -231,6 +231,39 @@ impl<T: Transport> Call<T, EventsSubscribe> {
         self.try_with(|subscribe| Ok(subscribe.children_of(parent?)))
     }
 
+    /// The change events of the docs named `names`; a name ending in `*` stands for every doc
+    /// whose name starts with the text before it.
+    ///
+    /// With `docs` alone the core sends only the matching doc events: no terminal events, and an
+    /// empty snapshot. With `terminal`, `labels` or `children_of` also set, both kinds of event
+    /// arrive.
+    ///
+    /// This needs a core of version 0.1.22 or newer. Awaiting the call against an older core
+    /// fails with [`HerdrCoreError::Call`] holding
+    /// [`Error::NeedsNewerCore`](crate::Error::NeedsNewerCore), before anything is sent.
+    ///
+    /// An empty name is reported by the `.await` as [`HerdrCoreError::Empty`].
+    ///
+    /// # Examples
+    ///
+    /// ```no_run
+    /// use herdrify_hc::HerdrCore;
+    ///
+    /// # async fn run() -> Result<(), herdrify_hc::HerdrCoreError> {
+    /// let core = HerdrCore::local().await?;
+    /// let subscription = core.events().docs(["settings", "ui.*"]).await?;
+    /// # drop(subscription);
+    /// # Ok(())
+    /// # }
+    /// ```
+    pub fn docs<S: Into<String>>(self, names: impl IntoIterator<Item = S>) -> Self {
+        let names: Result<Vec<DocName>, _> = names
+            .into_iter()
+            .map(|name| DocName::new(name.into()))
+            .collect();
+        self.try_with(|subscribe| Ok(subscribe.docs(names?)))
+    }
+
     /// Only the events of terminals that carry every one of these labels.
     pub fn labels<K: Into<String>, V: Into<String>>(
         self,
@@ -262,7 +295,7 @@ mod tests {
 
     use super::HerdrCore;
     use crate::herdr_core::HerdrCoreError;
-    use crate::herdr_core::fake::{TestError, connected, request_of, serve};
+    use crate::herdr_core::fake::{TestError, connected, connected_at, request_of, serve};
     use crate::protocol::{
         Argv, Environment, EventsSubscribe, ExecCommand, LabelKey, LabelValue, Labels, MachineExec,
         MachineName, RemotePath, TerminalRef,
@@ -345,6 +378,33 @@ mod tests {
             .children_of(TerminalRef::new("t2")?)
             .labels(labels);
         assert_eq!(request_of(&call)?, &expected);
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn events_docs_option_sends_the_names() -> TestResult {
+        let (client, mut peer) = connected_at("0.1.22").await?;
+        let call = HerdrCore::from_client(client).events().docs(["a", "b*"]);
+        let result = json!({"channel": 1, "seq": 1, "terminals": []});
+        let (sent, output) = serve(&mut peer, call, result).await?;
+        assert_eq!(sent["method"], "events.subscribe");
+        assert_eq!(sent["params"]["docs"], json!(["a", "b*"]));
+        output?;
+        Ok(())
+    }
+
+    #[tokio::test]
+    async fn events_docs_option_refuses_an_empty_name() -> TestResult {
+        let (client, mut peer) = connected_at("0.1.22").await?;
+        let result = HerdrCore::from_client(client)
+            .events()
+            .docs(["a", ""])
+            .await;
+        assert!(matches!(
+            &result,
+            Err(HerdrCoreError::Empty(error)) if error.to_string() == "doc name must not be empty"
+        ));
+        assert!(!peer.has_unread());
         Ok(())
     }
 
